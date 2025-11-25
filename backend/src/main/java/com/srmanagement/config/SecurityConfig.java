@@ -65,7 +65,9 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // CSRF 비활성화 (JWT 사용)
+                // CSRF 비활성화: JWT 토큰 기반 인증을 사용하므로 CSRF 보호가 필요하지 않음
+                // JWT 토큰 자체가 요청의 인증 수단이며, 쿠키를 사용하지 않으므로
+                // CSRF 공격에 취약하지 않음 (Stateless REST API)
                 .csrf(csrf -> csrf.disable())
                 
                 // 세션 관리 설정 (Stateless)

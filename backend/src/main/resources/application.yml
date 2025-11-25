@@ -26,8 +26,9 @@ spring:
         dialect: org.hibernate.dialect.H2Dialect
 
 # JWT 설정
+# NOTE: 프로덕션 환경에서는 환경 변수로 설정하세요: JWT_SECRET
 jwt:
-  secret: your-256-bit-secret-key-here-must-be-at-least-256-bits-long-for-HS256
+  secret: ${JWT_SECRET:bXktc2VjcmV0LWtleS1mb3ItZGV2ZWxvcG1lbnQtb25seS1wbGVhc2UtY2hhbmdlLWluLXByb2R1Y3Rpb24=}
   access-token-validity: 1800000   # 30분 (밀리초)
   refresh-token-validity: 604800000 # 7일 (밀리초)
 
