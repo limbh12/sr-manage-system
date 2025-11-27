@@ -1,0 +1,18 @@
+image: gitpod/workspace-full
+
+tasks:
+  - init: |
+      cd frontend
+      npm ci
+    command: |
+      cd frontend
+      npm run dev -- --host 0.0.0.0 --port 5173
+
+ports:
+  - port: 5173
+    onOpen: open-preview
+
+vscode:
+  extensions:
+    - dbaeumer.vscode-eslint
+    - esbenp.prettier-vscode

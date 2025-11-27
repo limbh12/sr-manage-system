@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and Lint (frontend)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install dependencies (frontend)
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint (frontend)
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Build (frontend)
+        working-directory: frontend
+        run: npm run build
+
+      - name: List build output
+        run: |
+          if [ -d frontend/dist ]; then
+            echo "frontend/dist exists:"
+            ls -la frontend/dist || true
+          else
+            echo "No frontend/dist found"
+          fi
+
+      - name: Upload frontend dist artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
