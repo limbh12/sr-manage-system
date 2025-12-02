@@ -1,9 +1,7 @@
 import api from './api';
 import { LoginRequest, RegisterRequest, TokenResponse, User } from '../types';
 import * as mockAuthService from './mock/authServiceMock';
-
-// 백엔드 서버가 실행되지 않을 때를 대비해 true로 설정 (실제 운영 시 환경변수로 제어)
-const USE_MOCK = true; // import.meta.env.VITE_USE_MOCK === 'true';
+import { USE_MOCK } from '../config';
 
 /**
  * 로그인

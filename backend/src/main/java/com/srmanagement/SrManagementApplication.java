@@ -24,15 +24,24 @@ public class SrManagementApplication {
     @Bean
     public CommandLineRunner initData(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         return args -> {
-            if (!userRepository.existsByUsername("admin")) {
-                User admin = User.builder()
+            // admin 사용자 생성 또는 비밀번호 업데이트
+            User admin = userRepository.findByUsername("admin").orElse(null);
+            
+            if (admin == null) {
+                admin = User.builder()
                         .username("admin")
-                        .password(passwordEncoder.encode("admin"))
+                        .name("Administrator")
+                        .password(passwordEncoder.encode("admin123"))
                         .email("admin@example.com")
                         .role(Role.ADMIN)
                         .build();
                 userRepository.save(admin);
-                System.out.println("Admin user created: admin / admin");
+                System.out.println("Admin user created: admin / admin123");
+            } else {
+                // 비밀번호를 admin123으로 강제 업데이트
+                admin.setPassword(passwordEncoder.encode("admin123"));
+                userRepository.save(admin);
+                System.out.println("Admin user password updated to: admin123");
             }
         };
     }

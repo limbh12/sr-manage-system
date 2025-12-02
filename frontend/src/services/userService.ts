@@ -1,9 +1,7 @@
 import api from './api';
 import { PageResponse, User, UserUpdateRequest, UserCreateRequest } from '../types';
 import * as mockUserService from './mock/userServiceMock';
-
-// 백엔드 서버가 실행되지 않을 때를 대비해 true로 설정 (실제 운영 시 환경변수로 제어)
-const USE_MOCK = true; // import.meta.env.VITE_USE_MOCK === 'true';
+import { USE_MOCK } from '../config';
 
 /**
  * 사용자 목록 조회 (관리자 전용)

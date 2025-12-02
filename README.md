@@ -14,7 +14,7 @@ SR(Service Request) 관리 시스템은 서비스 요청을 효율적으로 관�
 - **Language**: Java 17+
 - **Build Tool**: Maven
 - **Authentication**: JWT (JSON Web Token)
-- **Database**: MySQL 8.x / PostgreSQL
+- **Database**: CUBRID 10.x+ / MySQL 8.x / PostgreSQL
 
 ### Frontend
 - **Framework**: React 18.x
@@ -85,7 +85,7 @@ sr-manage-system/
 ### 사전 요구사항
 - Java 17 이상
 - Node.js 18 이상
-- MySQL 8.x 또는 PostgreSQL
+- CUBRID 10.x 이상 (또는 MySQL/PostgreSQL)
 
 ### Backend 실행
 ### Backend 실행
@@ -131,16 +131,22 @@ npm run dev
 
 ## 환경 설정
 
+상세한 설정 방법 및 운영 가이드는 [docs/OPERATION_GUIDE.md](docs/OPERATION_GUIDE.md)를 참조하세요.
+
 ### Backend 환경 변수 (application.yml)
 ```yaml
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/sr_management
+    url: jdbc:cubrid:localhost:33000:sr_db:::
     username: your_username
     password: your_password
+    driver-class-name: cubrid.jdbc.driver.CUBRIDDriver
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none # CUBRID 사용 시 none 권장 (schema.sql 사용)
+    properties:
+      hibernate:
+        dialect: com.srmanagement.config.CubridDialect
 
 jwt:
   secret: your_jwt_secret_key

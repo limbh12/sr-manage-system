@@ -22,7 +22,8 @@ import java.time.LocalDateTime;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_seq_gen")
+    @SequenceGenerator(name = "user_seq_gen", sequenceName = "user_seq", allocationSize = 1)
     private Long id;
 
     /** 사용자명 (로그인 ID) */
@@ -43,7 +44,7 @@ public class User {
 
     /** 사용자 역할 (ADMIN, USER) */
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(name = "user_role", nullable = false, length = 20)
     @Builder.Default
     private Role role = Role.USER;
 

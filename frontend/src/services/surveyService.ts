@@ -1,8 +1,7 @@
 import api from './api';
 import { OpenApiSurvey, OpenApiSurveyCreateRequest, PageResponse, OpenApiSurveySearch } from '../types';
 import * as mockSurveyService from './mock/surveyServiceMock';
-
-const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
+import { USE_MOCK } from '../config';
 
 /**
  * 설문 목록 조회

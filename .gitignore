@@ -3,6 +3,7 @@
 
 # Log files
 *.log
+nohup.out
 
 # Package files
 *.jar

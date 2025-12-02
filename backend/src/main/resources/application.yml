@@ -78,3 +78,25 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
+---
+# CUBRID 프로필
+spring:
+  config:
+    activate:
+      on-profile: cubrid
+  datasource:
+    url: "jdbc:cubrid:localhost:33000:IROS_AAUTH:::"
+    username: soa
+    password: soa
+    driver-class-name: cubrid.jdbc.driver.CUBRIDDriver
+  sql:
+    init:
+      mode: never
+      continue-on-error: true
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        dialect: com.srmanagement.config.CubridDialect

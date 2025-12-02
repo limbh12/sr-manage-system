@@ -22,7 +22,8 @@ import java.time.LocalDateTime;
 public class Sr {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "sr_seq_gen")
+    @SequenceGenerator(name = "sr_seq_gen", sequenceName = "sr_seq", allocationSize = 1)
     private Long id;
 
     /** SR ID (SR-YYMM-XXXX) */

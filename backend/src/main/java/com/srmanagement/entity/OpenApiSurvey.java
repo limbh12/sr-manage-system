@@ -18,7 +18,8 @@ import java.time.LocalDateTime;
 public class OpenApiSurvey {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "open_api_survey_seq_gen")
+    @SequenceGenerator(name = "open_api_survey_seq_gen", sequenceName = "open_api_survey_seq", allocationSize = 1)
     private Long id;
 
     @Column(nullable = false, length = 100)

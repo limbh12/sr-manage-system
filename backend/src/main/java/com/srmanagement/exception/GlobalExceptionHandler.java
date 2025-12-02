@@ -117,9 +117,12 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception ex) {
+        // 에러 로그 출력
+        ex.printStackTrace();
+        
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .error("INTERNAL_SERVER_ERROR")
-                .message("An unexpected error occurred")
+                .message("An unexpected error occurred: " + ex.getMessage())
                 .timestamp(LocalDateTime.now())
                 .build();
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);

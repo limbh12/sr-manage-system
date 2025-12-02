@@ -22,6 +22,13 @@
         <jjwt.version>0.12.3</jjwt.version>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>cubrid</id>
+            <url>https://maven.cubrid.org</url>
+        </repository>
+    </repositories>
+
     <dependencies>
         <!-- Spring Boot Starters -->
         <dependency>
@@ -74,6 +81,12 @@
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>cubrid</groupId>
+            <artifactId>cubrid-jdbc</artifactId>
+            <version>11.0.14.0388</version>
             <scope>runtime</scope>
         </dependency>
 

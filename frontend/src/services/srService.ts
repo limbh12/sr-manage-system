@@ -1,8 +1,7 @@
 import api from './api';
 import { Sr, SrCreateRequest, SrUpdateRequest, SrStatusUpdateRequest, PageResponse, SrStatus, Priority, SrHistory, SrHistoryCreateRequest } from '../types';
 import * as mockSrService from './mock/srServiceMock';
-
-const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
+import { USE_MOCK } from '../config';
 
 interface GetSrListParams {
   page?: number;
