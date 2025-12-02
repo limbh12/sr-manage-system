@@ -74,6 +74,21 @@ logging:
     org.hibernate.SQL: OFF        # 쿼리 로그 (성능 영향 있음)
 ```
 
+### 1.6 빌드 및 실행 주의사항
+
+Maven 빌드 시 반드시 `backend` 디렉토리 내부에서 명령어를 실행해야 합니다.
+
+```bash
+# 올바른 예시
+cd backend
+mvn clean package
+
+# 잘못된 예시 (루트 디렉토리에서 실행 시 .m2 폴더가 루트에 생성됨)
+mvn -f backend/pom.xml clean package
+```
+
+프로젝트 설정(`backend/.mvn/maven.config`)에 의해 로컬 저장소 경로가 상대 경로(`-Dmaven.repo.local=./.m2/repository`)로 지정되어 있어, 실행 위치에 따라 `.m2` 폴더가 생성되는 위치가 달라질 수 있습니다.
+
 ---
 
 ## 2. 프론트엔드 설정 (Frontend)
