@@ -82,16 +82,21 @@ logging:
 
 ### 2.1 API 프록시 설정 (개발 환경)
 
-`vite.config.ts`에서 개발 서버의 API 프록시를 설정합니다. 백엔드 서버 주소가 변경되면 이 부분을 수정해야 합니다.
+개발 서버의 API 프록시 대상(백엔드 서버 주소)은 `frontend/.env` 파일에서 설정할 수 있습니다.
+
+```properties
+# .env 파일
+VITE_API_URL=http://localhost:8080
+```
+
+`vite.config.ts`는 이 환경 변수를 로드하여 프록시 설정을 자동으로 구성합니다.
 
 ```typescript
-server: {
-  port: 5173,
-  proxy: {
-    '/api': {
-      target: 'http://localhost:8080', // 백엔드 서버 주소
-      changeOrigin: true,
-    },
+// vite.config.ts (참고용)
+proxy: {
+  '/api': {
+    target: env.VITE_API_URL || 'http://localhost:8080',
+    changeOrigin: true,
   },
 },
 ```
