@@ -23,6 +23,7 @@ pom.xml.releaseBackup
 pom.xml.versionsBackup
 pom.xml.next
 release.properties
+.m2/
 
 # Gradle
 .gradle/
@@ -84,3 +85,6 @@ coverage/
 # Test results
 test-results/
 test-output/
+
+# Script output
+script_output.txt
