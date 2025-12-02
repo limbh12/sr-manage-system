@@ -89,6 +89,35 @@ mvn -f backend/pom.xml clean package
 
 프로젝트 설정(`backend/.mvn/maven.config`)에 의해 로컬 저장소 경로가 상대 경로(`-Dmaven.repo.local=./.m2/repository`)로 지정되어 있어, 실행 위치에 따라 `.m2` 폴더가 생성되는 위치가 달라질 수 있습니다.
 
+### 1.7 백엔드 실행 및 종료 스크립트
+
+백엔드 서버의 간편한 실행과 종료를 위해 스크립트를 제공합니다.
+
+**실행 스크립트 (`start.sh`)**
+- 위치: `backend/scripts/start.sh`
+- 기능:
+  - `backend/logs` 디렉토리 자동 생성
+  - JAR 파일이 없으면 자동 빌드 (`mvn clean package`)
+  - `nohup`을 사용하여 백그라운드 실행
+  - 로그를 `backend/logs/server.log` 파일에 저장
+  - 중복 실행 방지
+
+**종료 스크립트 (`stop.sh`)**
+- 위치: `backend/scripts/stop.sh`
+- 기능:
+  - 8080 포트를 사용하는 프로세스 안전 종료 (`kill`)
+  - 종료 실패 시 강제 종료 (`kill -9`)
+
+**사용법:**
+```bash
+# 프로젝트 루트에서 실행
+./backend/scripts/start.sh  # 서버 시작
+./backend/scripts/stop.sh   # 서버 종료
+
+# 로그 확인
+tail -f backend/logs/server.log
+```
+
 ---
 
 ## 2. 프론트엔드 설정 (Frontend)
