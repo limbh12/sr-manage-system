@@ -106,6 +106,22 @@ npm run build
 ```
 빌드 결과물은 `frontend/dist` 디렉토리에 생성되며, 이를 웹 서버(Nginx, Apache 등)에 배포합니다.
 
+### 2.3 Mock 데이터 모드 설정
+
+백엔드 서버 없이 프론트엔드만 단독으로 개발하거나 테스트할 때 Mock(가짜) 데이터를 사용할 수 있습니다.
+
+1. `frontend` 디렉토리에 `.env` 파일을 생성하거나 수정합니다.
+2. `VITE_USE_MOCK` 환경 변수를 설정합니다.
+
+```properties
+# .env 파일
+VITE_USE_MOCK=true  # Mock 모드 활성화
+# VITE_USE_MOCK=false # 실제 백엔드 API 사용 (기본값)
+```
+
+- **true**: `src/services/mock` 디렉토리의 Mock 데이터를 사용합니다.
+- **false (또는 설정 없음)**: 실제 백엔드 API(`http://localhost:8080`)를 호출합니다.
+
 ---
 
 ## 3. 운영 체크리스트
