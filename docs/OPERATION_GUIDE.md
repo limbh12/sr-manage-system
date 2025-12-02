@@ -118,6 +118,23 @@ mvn -f backend/pom.xml clean package
 tail -f backend/logs/server.log
 ```
 
+### 1.8 API 테스트 스크립트
+
+백엔드 API의 정상 동작 여부를 확인하기 위한 자동화 테스트 스크립트를 제공합니다.
+
+- **위치**: `backend/scripts/backend_test_script.sh`
+- **기능**:
+  - 회원가입, 로그인, 토큰 갱신
+  - 사용자 조회, 조직 검색
+  - 설문 조사(OpenApiSurvey) 조회
+  - SR 생성, 조회, 수정, 상태 변경, 이력 관리, 삭제 등 주요 시나리오 테스트
+
+**사용법:**
+```bash
+# 백엔드 서버가 실행 중인 상태에서 실행
+./backend/scripts/backend_test_script.sh
+```
+
 ---
 
 ## 2. 프론트엔드 설정 (Frontend)
