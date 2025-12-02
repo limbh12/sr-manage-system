@@ -67,4 +67,12 @@ public interface SrRepository extends JpaRepository<Sr, Long> {
      * @return Page<Sr>
      */
     Page<Sr> findByAssigneeId(Long assigneeId, Pageable pageable);
+
+    /**
+     * 특정 패턴의 SR ID 중 가장 마지막 값을 조회
+     * @param pattern SR ID 패턴 (예: SR-2412-%)
+     * @return 가장 큰 SR ID
+     */
+    @Query("SELECT s.srId FROM Sr s WHERE s.srId LIKE :pattern ORDER BY s.srId DESC LIMIT 1")
+    String findLastSrId(@Param("pattern") String pattern);
 }

@@ -29,6 +29,10 @@ public class User {
     @Column(nullable = false, unique = true, length = 50)
     private String username;
 
+    /** 사용자 이름 (실명) */
+    @Column(nullable = false, length = 50)
+    private String name;
+
     /** 암호화된 비밀번호 */
     @Column(nullable = false)
     private String password;

@@ -24,6 +24,9 @@ public class UserResponse {
     /** 사용자명 */
     private String username;
 
+    /** 사용자 이름 */
+    private String name;
+
     /** 이메일 */
     private String email;
 
@@ -42,6 +45,7 @@ public class UserResponse {
         return UserResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())
+                .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())
                 .createdAt(user.getCreatedAt())

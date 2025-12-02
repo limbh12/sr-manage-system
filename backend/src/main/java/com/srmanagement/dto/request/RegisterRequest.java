@@ -20,6 +20,11 @@ public class RegisterRequest {
     @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
     private String username;
 
+    /** 사용자 이름 */
+    @NotBlank(message = "Name is required")
+    @Size(min = 2, max = 50, message = "Name must be between 2 and 50 characters")
+    private String name;
+
     /** 비밀번호 */
     @NotBlank(message = "Password is required")
     @Size(min = 6, max = 100, message = "Password must be between 6 and 100 characters")

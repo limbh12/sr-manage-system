@@ -1,10 +1,11 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { SrState, Sr, SrCreateRequest, SrUpdateRequest, SrStatusUpdateRequest, Priority, SrStatus } from '../types';
+import { SrState, Sr, SrCreateRequest, SrUpdateRequest, SrStatusUpdateRequest, Priority, SrStatus, SrHistory, SrHistoryCreateRequest } from '../types';
 import * as srService from '../services/srService';
 
 const initialState: SrState = {
   srList: [],
   currentSr: null,
+  srHistories: [],
   totalElements: 0,
   totalPages: 0,
   currentPage: 0,
@@ -60,6 +61,41 @@ export const fetchSrByIdAsync = createAsyncThunk<Sr, number, { rejectValue: stri
     }
   }
 );
+
+/**
+ * SR 이력 목록 조회 액션
+ */
+export const fetchSrHistoriesAsync = createAsyncThunk<SrHistory[], number, { rejectValue: string }>(
+  'sr/fetchHistories',
+  async (id, { rejectWithValue }) => {
+    try {
+      return await srService.getSrHistories(id);
+    } catch (error) {
+      if (error instanceof Error) {
+        return rejectWithValue(error.message);
+      }
+      return rejectWithValue('Failed to fetch SR histories');
+    }
+  }
+);
+
+/**
+ * SR 이력(댓글) 생성 액션
+ */
+export const createSrHistoryAsync = createAsyncThunk<
+  SrHistory,
+  { id: number; data: SrHistoryCreateRequest },
+  { rejectValue: string }
+>('sr/createHistory', async ({ id, data }, { rejectWithValue }) => {
+  try {
+    return await srService.createSrHistory(id, data);
+  } catch (error) {
+    if (error instanceof Error) {
+      return rejectWithValue(error.message);
+    }
+    return rejectWithValue('Failed to create SR history');
+  }
+});
 
 /**
  * SR 생성 액션
@@ -141,6 +177,9 @@ const srSlice = createSlice({
     },
     setCurrentSr: (state, action: PayloadAction<Sr | null>) => {
       state.currentSr = action.payload;
+      if (action.payload === null) {
+        state.srHistories = [];
+      }
     },
   },
   extraReducers: (builder) => {
@@ -173,6 +212,21 @@ const srSlice = createSlice({
       .addCase(fetchSrByIdAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || 'Failed to fetch SR';
+      })
+      // SR 이력 조회
+      .addCase(fetchSrHistoriesAsync.pending, (state) => {
+        // 이력 로딩은 전체 로딩을 유발하지 않도록 처리할 수도 있지만, 여기서는 간단히
+        // state.loading = true; 
+      })
+      .addCase(fetchSrHistoriesAsync.fulfilled, (state, action) => {
+        state.srHistories = action.payload;
+      })
+      .addCase(fetchSrHistoriesAsync.rejected, (state, action) => {
+        // state.error = action.payload || 'Failed to fetch SR histories';
+      })
+      // SR 이력 생성
+      .addCase(createSrHistoryAsync.fulfilled, (state, action) => {
+        state.srHistories.unshift(action.payload);
       })
       // SR 생성
       .addCase(createSrAsync.pending, (state) => {

@@ -4,6 +4,9 @@ interface SrListProps {
   srList: Sr[];
   onSelectSr: (sr: Sr) => void;
   onDeleteSr: (id: number) => void;
+  totalElements: number;
+  page: number;
+  size?: number;
 }
 
 /**
@@ -81,78 +84,78 @@ const getPriorityLabel = (priority: Priority): string => {
 /**
  * SR 목록 컴포넌트
  */
-function SrList({ srList, onSelectSr, onDeleteSr }: SrListProps) {
-  if (srList.length === 0) {
-    return (
-      <div className="card">
-        <p style={{ textAlign: 'center', color: '#666' }}>
-          등록된 SR이 없습니다.
-        </p>
-      </div>
-    );
-  }
-
+function SrList({ srList, onSelectSr, onDeleteSr, totalElements, page, size = 10 }: SrListProps) {
   return (
     <div className="table-container">
       <table className="table">
         <thead>
           <tr>
+            <th>No</th>
             <th>ID</th>
             <th>제목</th>
             <th>상태</th>
             <th>우선순위</th>
-            <th>요청자</th>
+            <th>접수자</th>
             <th>담당자</th>
-            <th>생성일</th>
+            <th>등록일(접수일)</th>
             <th>작업</th>
           </tr>
         </thead>
         <tbody>
-          {srList.map((sr) => (
-            <tr key={sr.id}>
-              <td>{sr.id}</td>
-              <td>
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onSelectSr(sr);
-                  }}
-                  style={{ color: '#1976d2', textDecoration: 'none' }}
-                >
-                  {sr.title}
-                </a>
-              </td>
-              <td>
-                <span className={getStatusBadgeClass(sr.status)}>
-                  {getStatusLabel(sr.status)}
-                </span>
-              </td>
-              <td>
-                <span className={getPriorityBadgeClass(sr.priority)}>
-                  {getPriorityLabel(sr.priority)}
-                </span>
-              </td>
-              <td>{sr.requester.username}</td>
-              <td>{sr.assignee?.username || '-'}</td>
-              <td>{new Date(sr.createdAt).toLocaleDateString()}</td>
-              <td>
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => onSelectSr(sr)}
-                  style={{ marginRight: '8px' }}
-                >
-                  상세
-                </button>
-                <button
-                  className="btn btn-danger"
-                  onClick={() => onDeleteSr(sr.id)}
-                >
-                  삭제
-                </button>
+          {srList.length === 0 ? (
+            <tr>
+              <td colSpan={9} style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                등록된 SR이 없습니다.
               </td>
             </tr>
-          ))}
+          ) : (
+            srList.map((sr, index) => (
+              <tr key={sr.id}>
+                <td>{totalElements - (page * size) - index}</td>
+                <td>{sr.srId || '-'}</td>
+                <td>
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onSelectSr(sr);
+                    }}
+                    style={{ color: '#1976d2', textDecoration: 'none' }}
+                  >
+                    {sr.title}
+                  </a>
+                </td>
+                <td>
+                  <span className={getStatusBadgeClass(sr.status)}>
+                    {getStatusLabel(sr.status)}
+                  </span>
+                </td>
+                <td>
+                  <span className={getPriorityBadgeClass(sr.priority)}>
+                    {getPriorityLabel(sr.priority)}
+                  </span>
+                </td>
+                <td>{sr.requester.name || sr.requester.username}</td>
+                <td>{sr.assignee ? (sr.assignee.name || sr.assignee.username) : '-'}</td>
+                <td>{new Date(sr.createdAt).toLocaleDateString()}</td>
+                <td>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => onSelectSr(sr)}
+                    style={{ marginRight: '8px' }}
+                  >
+                    상세
+                  </button>
+                  <button
+                    className="btn btn-danger"
+                    onClick={() => onDeleteSr(sr.id)}
+                  >
+                    삭제
+                  </button>
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>

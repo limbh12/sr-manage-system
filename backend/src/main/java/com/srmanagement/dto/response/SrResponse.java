@@ -19,14 +19,20 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class SrResponse {
 
-    /** SR ID */
+    /** SR ID (DB PK) */
     private Long id;
+
+    /** SR ID (SR-YYMM-XXXX) */
+    private String srId;
 
     /** SR 제목 */
     private String title;
 
     /** SR 설명 */
     private String description;
+
+    /** 처리 내용 */
+    private String processingDetails;
 
     /** SR 상태 */
     private SrStatus status;
@@ -46,6 +52,15 @@ public class SrResponse {
     /** 수정 일시 */
     private LocalDateTime updatedAt;
 
+    /** OPEN API 현황조사 ID */
+    private Long openApiSurveyId;
+
+    /** 요청자 이름 */
+    private String applicantName;
+
+    /** 요청자 연락처 */
+    private String applicantPhone;
+
     /**
      * Sr 엔티티를 SrResponse로 변환
      * @param sr Sr 엔티티
@@ -54,14 +69,19 @@ public class SrResponse {
     public static SrResponse from(Sr sr) {
         return SrResponse.builder()
                 .id(sr.getId())
+                .srId(sr.getSrId())
                 .title(sr.getTitle())
                 .description(sr.getDescription())
+                .processingDetails(sr.getProcessingDetails())
                 .status(sr.getStatus())
                 .priority(sr.getPriority())
                 .requester(UserResponse.from(sr.getRequester()))
                 .assignee(sr.getAssignee() != null ? UserResponse.from(sr.getAssignee()) : null)
                 .createdAt(sr.getCreatedAt())
                 .updatedAt(sr.getUpdatedAt())
+                .openApiSurveyId(sr.getOpenApiSurveyId())
+                .applicantName(sr.getApplicantName())
+                .applicantPhone(sr.getApplicantPhone())
                 .build();
     }
 }

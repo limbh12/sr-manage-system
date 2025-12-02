@@ -313,11 +313,16 @@ body {
 
 /* 로그인 페이지 */
 .login-page {
-  min-height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   background-color: var(--background-color);
+  z-index: 1000;
 }
 
 .login-container {
@@ -423,4 +428,144 @@ body {
   justify-content: flex-end;
   gap: 12px;
   margin-top: 24px;
+}
+
+/* Markdown 스타일 */
+.markdown-body {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #333;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.markdown-body p {
+  margin-bottom: 12px;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  padding-left: 24px;
+  margin-bottom: 12px;
+}
+
+.markdown-body blockquote {
+  margin: 0 0 12px 0;
+  padding: 0 12px;
+  border-left: 4px solid #dfe2e5;
+  color: #6a737d;
+}
+
+.markdown-body pre {
+  background-color: #f6f8fa;
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin-bottom: 12px;
+}
+
+.markdown-body code {
+  font-family: SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+  background-color: rgba(27, 31, 35, 0.05);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-size: 85%;
+}
+
+.markdown-body pre code {
+  background-color: transparent;
+  padding: 0;
+  font-size: 100%;
+}
+
+.markdown-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.markdown-body table th,
+.markdown-body table td {
+  border: 1px solid #dfe2e5;
+  padding: 6px 13px;
+}
+
+.markdown-body table th {
+  background-color: #f6f8fa;
+  font-weight: 600;
+}
+
+.markdown-body img {
+  max-width: 100%;
+  box-sizing: content-box;
+}
+
+/* 유틸리티 및 추가 스타일 */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 768px) {
+  .grid-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+  color: #444;
+}
+
+.mb-4 {
+  margin-bottom: 16px;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-gray {
+  color: #757575;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.space-y-4 > * + * {
+  margin-top: 16px;
+}
+
+.flex-end {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }

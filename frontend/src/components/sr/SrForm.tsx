@@ -1,5 +1,10 @@
 import { useState, FormEvent, useEffect } from 'react';
-import { Sr, SrCreateRequest, SrUpdateRequest, Priority } from '../../types';
+import { Sr, SrCreateRequest, SrUpdateRequest, Priority, OpenApiSurvey, User } from '../../types';
+import SurveySearchModal from './SurveySearchModal';
+import * as surveyService from '../../services/surveyService';
+import * as userService from '../../services/userService';
+import OpenApiSurveyInfoCard from './OpenApiSurveyInfoCard';
+import { formatPhoneNumber } from '../../utils/formatUtils';
 
 interface SrFormProps {
   sr?: Sr | null;
@@ -14,41 +19,138 @@ interface SrFormProps {
 function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [processingDetails, setProcessingDetails] = useState('');
   const [priority, setPriority] = useState<Priority>('MEDIUM');
+  const [applicantName, setApplicantName] = useState('');
+  const [applicantPhone, setApplicantPhone] = useState('');
+  const [assigneeId, setAssigneeId] = useState<number | undefined>(undefined);
+  const [assigneeOptions, setAssigneeOptions] = useState<User[]>([]);
+  const [showSurveyModal, setShowSurveyModal] = useState(false);
+  const [modalInitialKeyword, setModalInitialKeyword] = useState('');
+  const [selectedSurvey, setSelectedSurvey] = useState<OpenApiSurvey | null>(null);
+  const [openApiSurveyId, setOpenApiSurveyId] = useState<number | undefined>(undefined);
 
   const isEditMode = !!sr;
+
+  useEffect(() => {
+    userService.getUserOptions().then(setAssigneeOptions).catch(console.error);
+  }, []);
 
   useEffect(() => {
     if (sr) {
       setTitle(sr.title);
       setDescription(sr.description || '');
+      setProcessingDetails(sr.processingDetails || '');
       setPriority(sr.priority);
+      setAssigneeId(sr.assignee?.id);
+      setApplicantName(sr.applicantName || '');
+      setApplicantPhone(formatPhoneNumber(sr.applicantPhone || ''));
+
+      if (sr.openApiSurveyId) {
+        setOpenApiSurveyId(sr.openApiSurveyId);
+        // 기존 연결된 설문 정보 로드
+        surveyService.getSurveyById(sr.openApiSurveyId).then(setSelectedSurvey).catch(console.error);
+      }
     }
   }, [sr]);
+
+  useEffect(() => {
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (showSurveyModal) return;
+        onCancel();
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => {
+      window.removeEventListener('keydown', handleEsc);
+    };
+  }, [onCancel, showSurveyModal]);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     
+    const commonData = {
+      title,
+      description,
+      priority,
+      openApiSurveyId,
+      assigneeId,
+      applicantName,
+      applicantPhone,
+    };
+
     if (isEditMode) {
-      const updateData: SrUpdateRequest = {
-        title,
-        description,
-        priority,
-      };
-      onSubmit(updateData);
+      onSubmit({
+        ...commonData,
+        processingDetails,
+      } as SrUpdateRequest);
     } else {
-      const createData: SrCreateRequest = {
-        title,
-        description,
-        priority,
-      };
-      onSubmit(createData);
+      onSubmit(commonData as SrCreateRequest);
+    }
+  };
+
+  const handleSurveySelect = (survey: OpenApiSurvey) => {
+    setSelectedSurvey(survey);
+    setOpenApiSurveyId(survey.id);
+    
+    // 자동 입력
+    setApplicantName(survey.contactName);
+    setApplicantPhone(formatPhoneNumber(survey.contactPhone));
+    
+    if (!title) {
+      setTitle(`[${survey.organizationName}] ${survey.systemName} 관련 요청`);
+    }
+    
+    setShowSurveyModal(false);
+  };
+
+  const handleRequesterSearch = async () => {
+    const keyword = applicantName || applicantPhone;
+    if (!keyword) {
+      alert('이름 또는 전화번호를 입력해주세요.');
+      return;
+    }
+
+    try {
+      const response = await surveyService.getSurveyList(0, 10, { keyword });
+      if (response.content.length === 0) {
+        alert('검색 결과가 없습니다.');
+      } else if (response.content.length === 1) {
+        handleSurveySelect(response.content[0]);
+      } else {
+        // 여러개면 모달 열기 (여러개일 경우 모달에서 다시 검색하게 됨)
+        setModalInitialKeyword(keyword);
+        setShowSurveyModal(true);
+      }
+    } catch (error) {
+      console.error('Search failed', error);
+      alert('검색 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleRemoveSurvey = () => {
+    setSelectedSurvey(null);
+    setOpenApiSurveyId(undefined);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+    }
+  };
+
+  const handleRequesterKeyDown = (e: React.KeyboardEvent) => {
+    if (e.nativeEvent.isComposing) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleRequesterSearch();
     }
   };
 
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    <div className="modal-overlay">
+      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '1000px', width: '90%' }}>
         <div className="modal-header">
           <h2 className="modal-title">{isEditMode ? 'SR 수정' : 'SR 등록'}</h2>
           <button className="modal-close" onClick={onCancel}>
@@ -57,6 +159,45 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
         </div>
 
         <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label className="form-label">요청자 정보</label>
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <div style={{ flex: 1 }}>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={applicantName}
+                  onChange={(e) => setApplicantName(e.target.value)}
+                  onKeyDown={handleRequesterKeyDown}
+                  placeholder="이름"
+                  disabled={loading}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={applicantPhone}
+                  onChange={(e) => setApplicantPhone(formatPhoneNumber(e.target.value))}
+                  onKeyDown={handleRequesterKeyDown}
+                  placeholder="전화번호"
+                  disabled={loading}
+                />
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleRequesterSearch}
+                disabled={loading}
+              >
+                검색 및 자동입력
+              </button>
+            </div>
+            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+              * 이름 또는 전화번호 입력 후 검색 시 OPEN API 현황정보가 자동 연동됩니다.
+            </div>
+          </div>
+
           <div className="form-group">
             <label htmlFor="title" className="form-label">
               제목 *
@@ -67,27 +208,94 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
               className="form-input"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="SR 제목을 입력하세요"
               required
               disabled={loading}
             />
           </div>
 
+          {/* OPEN API 현황조사 정보 표시 영역 */}
+          <div className="form-group">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <label className="form-label" style={{ marginBottom: 0 }}>
+                OPEN API 현황조사 정보
+              </label>
+              {!selectedSurvey ? (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ fontSize: '12px', padding: '4px 8px' }}
+                  onClick={() => {
+                    setModalInitialKeyword('');
+                    setShowSurveyModal(true);
+                  }}
+                >
+                  불러오기
+                </button>
+              ) : (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ fontSize: '12px', padding: '4px 8px' }}
+                    onClick={() => {
+                      setModalInitialKeyword('');
+                      setShowSurveyModal(true);
+                    }}
+                  >
+                    변경
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    style={{ fontSize: '12px', padding: '4px 8px' }}
+                    onClick={handleRemoveSurvey}
+                  >
+                    삭제
+                  </button>
+                </div>
+              )}
+            </div>
+            
+            {selectedSurvey && (
+              <OpenApiSurveyInfoCard survey={selectedSurvey} />
+            )}
+          </div>
+
           <div className="form-group">
             <label htmlFor="description" className="form-label">
-              설명
+              요청사항
             </label>
             <textarea
               id="description"
               className="form-input"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="SR 설명을 입력하세요"
-              rows={5}
+              placeholder="SR 요청사항을 입력하세요 (Markdown 지원)"
+              rows={10}
               disabled={loading}
               style={{ resize: 'vertical' }}
             />
           </div>
+
+          {isEditMode && (
+            <div className="form-group">
+              <label htmlFor="processingDetails" className="form-label">
+                처리내용
+              </label>
+              <textarea
+                id="processingDetails"
+                className="form-input"
+                value={processingDetails}
+                onChange={(e) => setProcessingDetails(e.target.value)}
+                placeholder="처리내용을 입력하세요 (Markdown 지원)"
+                rows={10}
+                disabled={loading}
+                style={{ resize: 'vertical' }}
+              />
+            </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="priority" className="form-label">
@@ -107,6 +315,26 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
             </select>
           </div>
 
+          <div className="form-group">
+            <label htmlFor="assignee" className="form-label">
+              담당자
+            </label>
+            <select
+              id="assignee"
+              className="form-select"
+              value={assigneeId || ''}
+              onChange={(e) => setAssigneeId(e.target.value ? Number(e.target.value) : undefined)}
+              disabled={loading}
+            >
+              <option value="">미지정</option>
+              {assigneeOptions.map((user) => (
+                <option key={user.id} value={user.id}>
+                  {user.name} ({user.email})
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="modal-footer">
             <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={loading}>
               취소
@@ -117,6 +345,14 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
           </div>
         </form>
       </div>
+
+      {showSurveyModal && (
+        <SurveySearchModal
+          onSelect={handleSurveySelect}
+          onClose={() => setShowSurveyModal(false)}
+          initialKeyword={modalInitialKeyword}
+        />
+      )}
     </div>
   );
 }

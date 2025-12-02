@@ -49,6 +49,16 @@ public class UserController {
     }
 
     /**
+     * 사용자 목록 조회 (옵션용)
+     * @return List<UserResponse>
+     */
+    @GetMapping("/options")
+    public ResponseEntity<java.util.List<UserResponse>> getUserOptions() {
+        java.util.List<UserResponse> response = userService.getAllUsersList();
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * 특정 사용자 정보 조회
      * @param id 사용자 ID
      * @return UserResponse
@@ -56,6 +66,19 @@ public class UserController {
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
         UserResponse response = userService.getUserById(id);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 사용자 정보 수정 (관리자 전용)
+     * @param id 사용자 ID
+     * @param request 수정 요청 DTO
+     * @return UserResponse
+     */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> updateUser(@PathVariable Long id, @RequestBody com.srmanagement.dto.request.UserUpdateRequest request) {
+        UserResponse response = userService.updateUser(id, request);
         return ResponseEntity.ok(response);
     }
 }

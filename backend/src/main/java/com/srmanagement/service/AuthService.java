@@ -99,6 +99,7 @@ public class AuthService {
         // 사용자 생성
         User user = User.builder()
                 .username(request.getUsername())
+                .name(request.getName())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .email(request.getEmail())
                 .role(Role.USER)

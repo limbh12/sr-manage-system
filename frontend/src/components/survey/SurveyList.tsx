@@ -1,0 +1,164 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { OpenApiSurvey, OpenApiSurveySearch } from '../../types';
+import * as surveyService from '../../services/surveyService';
+
+function SurveyList() {
+  const navigate = useNavigate();
+  const [surveys, setSurveys] = useState<OpenApiSurvey[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [pageSize] = useState(10);
+  const [totalElements, setTotalElements] = useState(0);
+  const [search, setSearch] = useState<OpenApiSurveySearch>({
+    keyword: '',
+    currentMethod: '',
+    desiredMethod: '',
+  });
+
+  useEffect(() => {
+    loadSurveys();
+  }, []);
+
+  const loadSurveys = async (searchParams?: OpenApiSurveySearch) => {
+    setLoading(true);
+    try {
+      const response = await surveyService.getSurveyList(page, pageSize, searchParams || search);
+      setSurveys(response.content);
+      setTotalElements(response.totalElements);
+    } catch (error) {
+      console.error(error);
+      alert('목록을 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    loadSurveys(search);
+  };
+
+  const handleReset = () => {
+    const resetSearch = { keyword: '', currentMethod: '', desiredMethod: '' };
+    setSearch(resetSearch);
+    loadSurveys(resetSearch);
+  };
+
+  return (
+    <div>
+      <div className="page-header">
+        <h2 className="page-title">OPEN API 현황조사 목록</h2>
+        <button onClick={() => navigate('/survey/new')} className="btn btn-primary">
+          신규 등록
+        </button>
+      </div>
+
+      {/* 검색 필터 */}
+      <div className="card mb-4" style={{ padding: '16px' }}>
+        <form onSubmit={handleSearch} className="grid-2" style={{ alignItems: 'end', gap: '16px' }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">검색어</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="기관명, 부서, 시스템명 검색"
+              value={search.keyword}
+              onChange={(e) => setSearch({ ...search, keyword: e.target.value })}
+            />
+          </div>
+          <div className="grid-2" style={{ gap: '16px' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">현재방식</label>
+              <select
+                className="form-select"
+                value={search.currentMethod}
+                onChange={(e) => setSearch({ ...search, currentMethod: e.target.value as any })}
+              >
+                <option value="">전체</option>
+                <option value="CENTRAL">중앙형</option>
+                <option value="DISTRIBUTED">분산형</option>
+              </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">희망방식</label>
+              <select
+                className="form-select"
+                value={search.desiredMethod}
+                onChange={(e) => setSearch({ ...search, desiredMethod: e.target.value as any })}
+              >
+                <option value="">전체</option>
+                <option value="CENTRAL_IMPROVED">중앙개선형</option>
+                <option value="DISTRIBUTED_IMPROVED">분산개선형</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex-end" style={{ gridColumn: '1 / -1', marginTop: '8px' }}>
+            <button type="button" onClick={handleReset} className="btn btn-secondary">초기화</button>
+            <button type="submit" className="btn btn-primary">검색</button>
+          </div>
+        </form>
+      </div>
+
+      {loading ? (
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+        </div>
+      ) : (
+        <div className="card table-container">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>기관명</th>
+                <th>부서</th>
+                <th>담당자</th>
+                <th>시스템명</th>
+                <th>현재방식</th>
+                <th>희망방식</th>
+                <th>등록일</th>
+                <th>관리</th>
+              </tr>
+            </thead>
+            <tbody>
+              {surveys.length === 0 ? (
+                <tr>
+                  <td colSpan={9} style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                    등록된 데이터가 없습니다.
+                  </td>
+                </tr>
+              ) : (
+                surveys.map((survey, index) => (
+                  <tr key={survey.id}>
+                    <td>{totalElements - (page * pageSize) - index}</td>
+                    <td>{survey.organizationName}</td>
+                    <td>{survey.department}</td>
+                    <td>{survey.contactName}</td>
+                    <td>{survey.systemName}</td>
+                    <td>
+                      {survey.currentMethod === 'CENTRAL' ? '중앙형' : '분산형'}
+                    </td>
+                    <td>
+                      {survey.desiredMethod === 'CENTRAL_IMPROVED' ? '중앙개선형' : '분산개선형'}
+                    </td>
+                    <td>{new Date(survey.createdAt).toLocaleDateString()}</td>
+                    <td>
+                      <button 
+                        className="btn btn-sm btn-secondary"
+                        onClick={() => navigate(`/survey/${survey.id}`)}
+                      >
+                        상세
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default SurveyList;

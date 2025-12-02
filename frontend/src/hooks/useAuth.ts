@@ -71,6 +71,13 @@ export const useAuth = () => {
     dispatch(clearError());
   }, [dispatch]);
 
+  /**
+   * 인증 상태 확인 (사용자 정보 갱신)
+   */
+  const checkAuth = useCallback(async () => {
+    await dispatch(fetchCurrentUserAsync());
+  }, [dispatch]);
+
   return {
     user,
     isAuthenticated,
@@ -80,5 +87,6 @@ export const useAuth = () => {
     register,
     logout,
     resetError,
+    checkAuth,
   };
 };

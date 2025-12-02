@@ -59,6 +59,7 @@ SR Management System의 데이터베이스 스키마 설계 문서입니다.
 |--------|-------------|----------|------|
 | id | BIGINT | PK, AUTO_INCREMENT | 사용자 고유 ID |
 | username | VARCHAR(50) | NOT NULL, UNIQUE | 사용자명 (로그인 ID) |
+| name | VARCHAR(50) | NOT NULL | 사용자 이름 (실명) |
 | password | VARCHAR(255) | NOT NULL | 암호화된 비밀번호 |
 | email | VARCHAR(100) | NOT NULL, UNIQUE | 이메일 주소 |
 | role | VARCHAR(20) | NOT NULL, DEFAULT 'USER' | 사용자 역할 (ADMIN, USER) |
@@ -74,6 +75,7 @@ SR Management System의 데이터베이스 스키마 설계 문서입니다.
 CREATE TABLE users (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(50) NOT NULL,
     password VARCHAR(255) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
     role VARCHAR(20) NOT NULL DEFAULT 'USER',
@@ -93,17 +95,21 @@ SR 정보를 저장하는 테이블
 | 컬럼명 | 데이터 타입 | 제약조건 | 설명 |
 |--------|-------------|----------|------|
 | id | BIGINT | PK, AUTO_INCREMENT | SR 고유 ID |
+| sr_id | VARCHAR(20) | NOT NULL, UNIQUE | SR 식별 번호 (예: SR-2412-0001) |
 | title | VARCHAR(200) | NOT NULL | SR 제목 |
 | description | TEXT | NULL | SR 상세 설명 |
+| processing_details | TEXT | NULL | 처리 내용 |
 | status | VARCHAR(20) | NOT NULL, DEFAULT 'OPEN' | SR 상태 |
 | priority | VARCHAR(20) | NOT NULL, DEFAULT 'MEDIUM' | 우선순위 |
 | requester_id | BIGINT | FK (users.id), NOT NULL | 요청자 ID |
 | assignee_id | BIGINT | FK (users.id), NULL | 담당자 ID |
+| open_api_survey_id | BIGINT | NULL | 연관된 Open API 현황조사 ID |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성 일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정 일시 |
 
 **인덱스**
 - PRIMARY KEY (id)
+- UNIQUE INDEX idx_sr_sr_id (sr_id)
 - INDEX idx_sr_status (status)
 - INDEX idx_sr_priority (priority)
 - INDEX idx_sr_requester_id (requester_id)
@@ -118,15 +124,19 @@ SR 정보를 저장하는 테이블
 ```sql
 CREATE TABLE sr (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    sr_id VARCHAR(20) NOT NULL UNIQUE,
     title VARCHAR(200) NOT NULL,
     description TEXT,
+    processing_details TEXT,
     status VARCHAR(20) NOT NULL DEFAULT 'OPEN',
     priority VARCHAR(20) NOT NULL DEFAULT 'MEDIUM',
     requester_id BIGINT NOT NULL,
     assignee_id BIGINT,
+    open_api_survey_id BIGINT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
+    INDEX idx_sr_sr_id (sr_id),
     INDEX idx_sr_status (status),
     INDEX idx_sr_priority (priority),
     INDEX idx_sr_requester_id (requester_id),
@@ -140,7 +150,53 @@ CREATE TABLE sr (
 
 ---
 
-### 3. refresh_tokens (리프레시 토큰)
+### 3. sr_history (SR 이력)
+
+SR 변경 이력 및 댓글을 저장하는 테이블
+
+| 컬럼명 | 데이터 타입 | 제약조건 | 설명 |
+|--------|-------------|----------|------|
+| id | BIGINT | PK, AUTO_INCREMENT | 이력 고유 ID |
+| sr_id | BIGINT | FK (sr.id), NOT NULL | 관련 SR ID |
+| content | TEXT | NOT NULL | 이력 내용 (변경 내역 또는 댓글) |
+| history_type | VARCHAR(20) | NOT NULL | 이력 유형 (COMMENT, STATUS_CHANGE, etc.) |
+| previous_value | TEXT | NULL | 변경 전 값 (상세 변경 추적용) |
+| new_value | TEXT | NULL | 변경 후 값 (상세 변경 추적용) |
+| created_by | BIGINT | FK (users.id), NOT NULL | 작성자 ID |
+| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성 일시 |
+
+**인덱스**
+- PRIMARY KEY (id)
+- INDEX idx_sr_history_sr_id (sr_id)
+- INDEX idx_sr_history_created_at (created_at)
+
+**외래 키**
+- FK_sr_history_sr: sr_id → sr(id)
+- FK_sr_history_user: created_by → users(id)
+
+**DDL (MySQL)**
+```sql
+CREATE TABLE sr_history (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    sr_id BIGINT NOT NULL,
+    content TEXT NOT NULL,
+    history_type VARCHAR(20) NOT NULL,
+    previous_value TEXT,
+    new_value TEXT,
+    created_by BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    
+    INDEX idx_sr_history_sr_id (sr_id),
+    INDEX idx_sr_history_created_at (created_at),
+    
+    CONSTRAINT fk_sr_history_sr FOREIGN KEY (sr_id) REFERENCES sr(id) ON DELETE CASCADE,
+    CONSTRAINT fk_sr_history_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+---
+
+### 4. refresh_tokens (리프레시 토큰)
 
 JWT Refresh Token을 저장하는 테이블
 
@@ -173,6 +229,144 @@ CREATE TABLE refresh_tokens (
     INDEX idx_refresh_tokens_expiry_date (expiry_date),
     
     CONSTRAINT fk_refresh_tokens_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+---
+
+### 4. open_api_survey (Open API 현황조사)
+
+Open API 기술지원 현황조사 정보를 저장하는 테이블
+
+| 컬럼명 | 데이터 타입 | 제약조건 | 설명 |
+|--------|-------------|----------|------|
+| id | BIGINT | PK, AUTO_INCREMENT | 조사 고유 ID |
+| organization_name | VARCHAR(100) | NOT NULL | 기관명 |
+| department | VARCHAR(100) | NOT NULL | 부서명 |
+| contact_name | VARCHAR(50) | NOT NULL | 담당자명 |
+| contact_phone | VARCHAR(20) | NOT NULL | 담당자 연락처 |
+| contact_email | VARCHAR(100) | NOT NULL | 담당자 이메일 |
+| received_file_name | VARCHAR(255) | NULL | 수신 파일명 |
+| received_date | DATE | NOT NULL | 수신 일자 |
+| system_name | VARCHAR(100) | NOT NULL | 시스템명 |
+| current_method | VARCHAR(20) | NOT NULL | 현행 방식 (CENTRAL, DISTRIBUTED) |
+| desired_method | VARCHAR(20) | NOT NULL | 희망 방식 (CENTRAL_IMPROVED, DISTRIBUTED_IMPROVED) |
+| reason_for_distributed | TEXT | NULL | 분산개선형 선택 사유 |
+| maintenance_operation | VARCHAR(30) | NOT NULL | 유지보수 운영인력 (INTERNAL, PROFESSIONAL_RESIDENT, PROFESSIONAL_NON_RESIDENT, OTHER) |
+| maintenance_location | VARCHAR(20) | NOT NULL | 유지보수 수행장소 |
+| maintenance_address | VARCHAR(255) | NULL | 유지보수 주소 |
+| maintenance_note | TEXT | NULL | 유지보수 담당자 정보 |
+| operation_env | VARCHAR(20) | NOT NULL | 운영환경 구분 |
+| server_location | VARCHAR(255) | NULL | 서버 위치 |
+| web_server_os | VARCHAR(20) | NULL | WEB 서버 OS |
+| web_server_os_type | VARCHAR(50) | NULL | WEB 서버 OS 종류 |
+| web_server_os_version | VARCHAR(50) | NULL | WEB 서버 OS 버전 |
+| web_server_type | VARCHAR(20) | NULL | WEB 서버 종류 |
+| web_server_type_other | VARCHAR(50) | NULL | WEB 서버 종류 (기타) |
+| web_server_version | VARCHAR(50) | NULL | WEB 서버 버전 |
+| was_server_os | VARCHAR(20) | NULL | WAS 서버 OS |
+| was_server_os_type | VARCHAR(50) | NULL | WAS 서버 OS 종류 |
+| was_server_os_version | VARCHAR(50) | NULL | WAS 서버 OS 버전 |
+| was_server_type | VARCHAR(20) | NULL | WAS 서버 종류 |
+| was_server_type_other | VARCHAR(50) | NULL | WAS 서버 종류 (기타) |
+| was_server_version | VARCHAR(50) | NULL | WAS 서버 버전 |
+| db_server_os | VARCHAR(20) | NULL | DB 서버 OS |
+| db_server_os_type | VARCHAR(50) | NULL | DB 서버 OS 종류 |
+| db_server_os_version | VARCHAR(50) | NULL | DB 서버 OS 버전 |
+| db_server_type | VARCHAR(20) | NULL | DB 서버 종류 |
+| db_server_type_other | VARCHAR(50) | NULL | DB 서버 종류 (기타) |
+| db_server_version | VARCHAR(50) | NULL | DB 서버 버전 |
+| dev_language | VARCHAR(20) | NULL | 개발 언어 |
+| dev_language_other | VARCHAR(50) | NULL | 개발 언어 (기타) |
+| dev_language_version | VARCHAR(50) | NULL | 개발 언어 버전 |
+| dev_framework | VARCHAR(20) | NULL | 개발 프레임워크 |
+| dev_framework_other | VARCHAR(50) | NULL | 개발 프레임워크 (기타) |
+| dev_framework_version | VARCHAR(50) | NULL | 개발 프레임워크 버전 |
+| other_requests | TEXT | NULL | 기타 요청사항 |
+| note | TEXT | NULL | 비고 |
+| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성 일시 |
+| updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정 일시 |
+
+**인덱스**
+- PRIMARY KEY (id)
+- INDEX idx_survey_org_name (organization_name)
+- INDEX idx_survey_created_at (created_at)
+
+**DDL (MySQL)**
+```sql
+CREATE TABLE open_api_survey (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    organization_name VARCHAR(100) NOT NULL,
+    department VARCHAR(100) NOT NULL,
+    contact_name VARCHAR(50) NOT NULL,
+    contact_phone VARCHAR(20) NOT NULL,
+    contact_email VARCHAR(100) NOT NULL,
+    received_file_name VARCHAR(255),
+    received_date DATE NOT NULL,
+    system_name VARCHAR(100) NOT NULL,
+    current_method VARCHAR(20) NOT NULL,
+    desired_method VARCHAR(20) NOT NULL,
+    reason_for_distributed TEXT,
+    maintenance_operation VARCHAR(20) NOT NULL,
+    maintenance_location VARCHAR(20) NOT NULL,
+    maintenance_address VARCHAR(255),
+    maintenance_note TEXT,
+    operation_env VARCHAR(20) NOT NULL,
+    server_location VARCHAR(255),
+    web_server_os VARCHAR(20),
+    web_server_os_type VARCHAR(50),
+    web_server_os_version VARCHAR(50),
+    web_server_type VARCHAR(20),
+    web_server_type_other VARCHAR(50),
+    web_server_version VARCHAR(50),
+    was_server_os VARCHAR(20),
+    was_server_os_type VARCHAR(50),
+    was_server_os_version VARCHAR(50),
+    was_server_type VARCHAR(20),
+    was_server_type_other VARCHAR(50),
+    was_server_version VARCHAR(50),
+    db_server_os VARCHAR(20),
+    db_server_os_type VARCHAR(50),
+    db_server_os_version VARCHAR(50),
+    db_server_type VARCHAR(20),
+    db_server_type_other VARCHAR(50),
+    db_server_version VARCHAR(50),
+    dev_language VARCHAR(20),
+    dev_language_other VARCHAR(50),
+    dev_language_version VARCHAR(50),
+    dev_framework VARCHAR(20),
+    dev_framework_other VARCHAR(50),
+    dev_framework_version VARCHAR(50),
+    other_requests TEXT,
+    note TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    INDEX idx_survey_org_name (organization_name),
+    INDEX idx_survey_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+### 5. organizations (행정기관)
+
+행정표준코드 및 기관명 정보를 저장하는 테이블
+
+| 컬럼명 | 데이터 타입 | 제약조건 | 설명 |
+|--------|-------------|----------|------|
+| code | VARCHAR(20) | PK | 행정표준코드 |
+| name | VARCHAR(100) | NOT NULL | 기관명 |
+
+**인덱스**
+- PRIMARY KEY (code)
+- INDEX idx_organizations_name (name)
+
+**DDL (MySQL)**
+```sql
+CREATE TABLE organizations (
+    code VARCHAR(20) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    
+    INDEX idx_organizations_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
@@ -222,25 +416,59 @@ CREATE TABLE refresh_tokens (
 
 ---
 
-## 초기 데이터
+### 초기 데이터
 
 ### 관리자 계정 생성
 
 ```sql
 -- 비밀번호는 BCrypt로 암호화된 값 (예: 'admin123')
-INSERT INTO users (username, password, email, role, created_at)
-VALUES ('admin', '$2a$10$N.zmN8YXqK7M6hLfr7xkqOkzxZQd8V8qe6X9jvJX8x8x8x8x8x8x8', 'admin@example.com', 'ADMIN', NOW());
+INSERT INTO users (username, name, password, email, role, created_at)
+VALUES ('admin', '관리자', '$2a$10$N.zmN8YXqK7M6hLfr7xkqOkzxZQd8V8qe6X9jvJX8x8x8x8x8x8x8', 'admin@example.com', 'ADMIN', NOW());
 ```
 
 ### 샘플 SR 데이터
 
 ```sql
-INSERT INTO sr (title, description, status, priority, requester_id, created_at, updated_at)
+INSERT INTO sr (sr_id, title, description, status, priority, requester_id, created_at, updated_at)
 VALUES 
-    ('로그인 오류 수정', '로그인 시 500 에러가 발생합니다.', 'OPEN', 'HIGH', 1, NOW(), NOW()),
-    ('대시보드 UI 개선', '대시보드 레이아웃 개선이 필요합니다.', 'IN_PROGRESS', 'MEDIUM', 1, NOW(), NOW()),
-    ('보고서 기능 추가', '월별 보고서 출력 기능을 추가해주세요.', 'OPEN', 'LOW', 1, NOW(), NOW());
+    ('SR-2412-0001', '로그인 오류 수정', '로그인 시 500 에러가 발생합니다.', 'OPEN', 'HIGH', 1, NOW(), NOW()),
+    ('SR-2412-0002', '대시보드 UI 개선', '대시보드 레이아웃 개선이 필요합니다.', 'IN_PROGRESS', 'MEDIUM', 1, NOW(), NOW()),
+    ('SR-2412-0003', '보고서 기능 추가', '월별 보고서 출력 기능을 추가해주세요.', 'OPEN', 'LOW', 1, NOW(), NOW());
 ```
+
+---
+
+## PostgreSQL DDL
+
+MySQL DDL과 다른 부분만 표시합니다.
+
+```sql
+-- users 테이블
+CREATE TABLE users (
+    id BIGSERIAL PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(50) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    role VARCHAR(20) NOT NULL DEFAULT 'USER',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- sr 테이블
+CREATE TABLE sr (
+    id BIGSERIAL PRIMARY KEY,
+    sr_id VARCHAR(20) NOT NULL UNIQUE,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    processing_details TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'OPEN',
+    priority VARCHAR(20) NOT NULL DEFAULT 'MEDIUM',
+    requester_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    assignee_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    open_api_survey_id BIGINT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
 ---
 
@@ -272,12 +500,78 @@ CREATE TABLE sr (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- sr_history 테이블
+CREATE TABLE sr_history (
+    id BIGSERIAL PRIMARY KEY,
+    sr_id BIGINT NOT NULL REFERENCES sr(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    history_type VARCHAR(20) NOT NULL,
+    created_by BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 -- refresh_tokens 테이블
 CREATE TABLE refresh_tokens (
     id BIGSERIAL PRIMARY KEY,
     token VARCHAR(500) NOT NULL UNIQUE,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     expiry_date TIMESTAMP NOT NULL
+);
+
+-- open_api_survey 테이블
+CREATE TABLE open_api_survey (
+    id BIGSERIAL PRIMARY KEY,
+    organization_name VARCHAR(100) NOT NULL,
+    department VARCHAR(100) NOT NULL,
+    contact_name VARCHAR(50) NOT NULL,
+    contact_phone VARCHAR(20) NOT NULL,
+    contact_email VARCHAR(100) NOT NULL,
+    received_file_name VARCHAR(255),
+    received_date DATE NOT NULL,
+    system_name VARCHAR(100) NOT NULL,
+    current_method VARCHAR(20) NOT NULL,
+    desired_method VARCHAR(20) NOT NULL,
+    reason_for_distributed TEXT,
+    maintenance_operation VARCHAR(20) NOT NULL,
+    maintenance_location VARCHAR(20) NOT NULL,
+    maintenance_address VARCHAR(255),
+    maintenance_note TEXT,
+    operation_env VARCHAR(20) NOT NULL,
+    server_location VARCHAR(255),
+    web_server_os VARCHAR(20),
+    web_server_os_type VARCHAR(50),
+    web_server_os_version VARCHAR(50),
+    web_server_type VARCHAR(20),
+    web_server_type_other VARCHAR(50),
+    web_server_version VARCHAR(50),
+    was_server_os VARCHAR(20),
+    was_server_os_type VARCHAR(50),
+    was_server_os_version VARCHAR(50),
+    was_server_type VARCHAR(20),
+    was_server_type_other VARCHAR(50),
+    was_server_version VARCHAR(50),
+    db_server_os VARCHAR(20),
+    db_server_os_type VARCHAR(50),
+    db_server_os_version VARCHAR(50),
+    db_server_type VARCHAR(20),
+    db_server_type_other VARCHAR(50),
+    db_server_version VARCHAR(50),
+    dev_language VARCHAR(20),
+    dev_language_other VARCHAR(50),
+    dev_language_version VARCHAR(50),
+    dev_framework VARCHAR(20),
+    dev_framework_other VARCHAR(50),
+    dev_framework_version VARCHAR(50),
+    other_requests TEXT,
+    note TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- organizations 테이블
+CREATE TABLE organizations (
+    code VARCHAR(20) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL
 );
 
 -- updated_at 자동 갱신을 위한 트리거 함수 (PostgreSQL)
@@ -291,6 +585,11 @@ $$ language 'plpgsql';
 
 CREATE TRIGGER update_sr_updated_at
     BEFORE UPDATE ON sr
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_survey_updated_at
+    BEFORE UPDATE ON open_api_survey
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 ```

@@ -12,7 +12,7 @@ SR(Service Request) 관리 시스템은 서비스 요청을 효율적으로 관�
 ### Backend
 - **Framework**: Spring Boot 3.x
 - **Language**: Java 17+
-- **Build Tool**: Gradle
+- **Build Tool**: Maven
 - **Authentication**: JWT (JSON Web Token)
 - **Database**: MySQL 8.x / PostgreSQL
 
@@ -31,8 +31,7 @@ sr-manage-system/
 │   ├── API.md              # API 명세서
 │   └── DATABASE.md         # 데이터베이스 설계 문서
 ├── backend/                 # Spring Boot 백엔드
-│   ├── build.gradle
-│   ├── settings.gradle
+│   ├── pom.xml
 │   └── src/main/
 │       ├── java/com/srmanagement/
 │       │   ├── config/      # 설정 클래스
@@ -71,10 +70,15 @@ sr-manage-system/
 - SR 상태 관리 (OPEN → IN_PROGRESS → RESOLVED → CLOSED)
 - SR 우선순위 설정 (LOW, MEDIUM, HIGH, CRITICAL)
 - 담당자 지정
+- 변경 이력 및 상세 비교 (Diff View)
 
 ### 사용자 관리
 - 회원가입/로그인
 - 역할 기반 권한 관리 (ADMIN, USER)
+
+### 기타
+- 행정기관 검색 (행정표준코드 기반)
+- OPEN API 현황조사 관리 (등록/수정/조회, 파일 첨부 및 다운로드)
 
 ## 실행 방법
 
@@ -84,22 +88,32 @@ sr-manage-system/
 - MySQL 8.x 또는 PostgreSQL
 
 ### Backend 실행
+### Backend 실행
 
 ```bash
 cd backend
 
 # 데이터베이스 설정 (application.yml 수정 필요)
-# Gradle Wrapper 실행 권한 부여 (Unix/Linux/Mac)
-chmod +x gradlew
 
 # 빌드
-./gradlew build
+mvn clean package
 
 # 실행
-./gradlew bootRun
+mvn spring-boot:run
+```
+### Frontend 실행
+
+#### 1. Dev Container 환경 (VS Code)
+VS Code에서 Dev Container로 프로젝트를 열었다면, 의존성 설치(`npm install`)가 자동으로 완료됩니다.
+터미널에서 바로 개발 서버를 실행하세요.
+
+```bash
+cd frontend
+npm run dev
 ```
 
-### Frontend 실행
+#### 2. 로컬 환경 (Node.js 직접 설치)
+Node.js가 설치된 로컬 환경에서 실행하는 경우:
 
 ```bash
 cd frontend
@@ -137,6 +151,11 @@ jwt:
 ## API 문서
 
 상세한 API 명세는 [docs/API.md](docs/API.md)를 참조하세요.
+
+## 변경 이력
+
+프로젝트의 주요 변경 사항은 `docs/HISTORY_YYYYMMDD.md` 형식의 파일로 날짜별로 관리됩니다.
+가장 최신의 변경 이력은 [docs/HISTORY_20251202.md](docs/HISTORY_20251202.md)에서 확인할 수 있습니다.
 
 ## 데이터베이스 설계
 

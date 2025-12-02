@@ -7,6 +7,7 @@ import { useAuth } from '../../hooks/useAuth';
 function RegisterForm() {
   const { register, loading, error, resetError } = useAuth();
   const [username, setUsername] = useState('');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -27,7 +28,7 @@ function RegisterForm() {
       return;
     }
 
-    await register({ username, email, password });
+    await register({ username, name, email, password });
   };
 
   return (
@@ -38,7 +39,7 @@ function RegisterForm() {
       
       <div className="form-group">
         <label htmlFor="username" className="form-label">
-          사용자명
+          사용자ID
         </label>
         <input
           type="text"
@@ -46,7 +47,23 @@ function RegisterForm() {
           className="form-input"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          placeholder="사용자명을 입력하세요"
+          placeholder="사용자ID를 입력하세요"
+          required
+          disabled={loading}
+        />
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="name" className="form-label">
+          사용자명
+        </label>
+        <input
+          type="text"
+          id="name"
+          className="form-input"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="이름을 입력하세요"
           required
           disabled={loading}
         />

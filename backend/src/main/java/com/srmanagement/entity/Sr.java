@@ -25,6 +25,10 @@ public class Sr {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** SR ID (SR-YYMM-XXXX) */
+    @Column(nullable = false, unique = true, length = 20)
+    private String srId;
+
     /** SR 제목 */
     @Column(nullable = false, length = 200)
     private String title;
@@ -32,6 +36,10 @@ public class Sr {
     /** SR 상세 설명 */
     @Column(columnDefinition = "TEXT")
     private String description;
+
+    /** 처리 내용 */
+    @Column(columnDefinition = "TEXT")
+    private String processingDetails;
 
     /** SR 상태 (OPEN, IN_PROGRESS, RESOLVED, CLOSED) */
     @Enumerated(EnumType.STRING)
@@ -62,6 +70,18 @@ public class Sr {
     /** 수정 일시 */
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    /** OPEN API 현황조사 ID */
+    @Column(name = "open_api_survey_id")
+    private Long openApiSurveyId;
+
+    /** 요청자 이름 (외부 요청자일 경우) */
+    @Column(length = 50)
+    private String applicantName;
+
+    /** 요청자 연락처 (외부 요청자일 경우) */
+    @Column(length = 20)
+    private String applicantPhone;
 
     @PrePersist
     protected void onCreate() {

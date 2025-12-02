@@ -13,6 +13,7 @@ function SrManagementPage() {
   const {
     srList,
     currentSr,
+    totalElements,
     totalPages,
     currentPage,
     loading,
@@ -31,6 +32,7 @@ function SrManagementPage() {
   const [priorityFilter, setPriorityFilter] = useState<Priority | ''>('');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // 초기 로딩 및 페이지 변경 시에만 실행
   useEffect(() => {
     fetchSrList({
       page: currentPage,
@@ -38,7 +40,8 @@ function SrManagementPage() {
       priority: priorityFilter || undefined,
       search: searchQuery || undefined,
     });
-  }, [fetchSrList, currentPage, statusFilter, priorityFilter, searchQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchSrList, currentPage]);
 
   const handleSelectSr = (sr: Sr) => {
     selectSr(sr);
@@ -75,12 +78,8 @@ function SrManagementPage() {
     if (success) {
       setShowForm(false);
       selectSr(null);
-      fetchSrList({
-        page: 0,
-        status: statusFilter || undefined,
-        priority: priorityFilter || undefined,
-        search: searchQuery || undefined,
-      });
+      // 목록 갱신
+      handleSearch();
     }
   };
 
@@ -88,6 +87,7 @@ function SrManagementPage() {
     if (window.confirm('정말로 이 SR을 삭제하시겠습니까?')) {
       const success = await deleteSr(id);
       if (success) {
+        // 목록 갱신
         fetchSrList({
           page: currentPage,
           status: statusFilter || undefined,
@@ -102,6 +102,7 @@ function SrManagementPage() {
     if (currentSr) {
       const success = await updateSrStatus(currentSr.id, { status });
       if (success) {
+        // 목록 갱신
         fetchSrList({
           page: currentPage,
           status: statusFilter || undefined,
@@ -121,7 +122,8 @@ function SrManagementPage() {
     });
   };
 
-  const handleSearch = () => {
+  const handleSearch = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     fetchSrList({
       page: 0,
       status: statusFilter || undefined,
@@ -130,67 +132,91 @@ function SrManagementPage() {
     });
   };
 
+  const handleReset = () => {
+    setStatusFilter('');
+    setPriorityFilter('');
+    setSearchQuery('');
+    fetchSrList({
+      page: 0,
+      status: undefined,
+      priority: undefined,
+      search: undefined,
+    });
+  };
+
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h2>SR 관리</h2>
-        <button className="btn btn-primary" onClick={handleCreate}>
-          + SR 등록
-        </button>
+      <div className="page-header">
+        <h2 className="page-title">SR 관리</h2>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button 
+            className="btn btn-danger" 
+            onClick={() => {
+              if (window.confirm('로컬 스토리지의 모든 데이터(SR 목록, 로그인 정보 등)를 초기화하시겠습니까?\n페이지가 새로고침됩니다.')) {
+                localStorage.clear();
+                window.location.reload();
+              }
+            }}
+          >
+            데이터 초기화
+          </button>
+          <button className="btn btn-primary" onClick={handleCreate}>
+            + SR 등록
+          </button>
+        </div>
       </div>
 
-      {/* 필터 */}
-      <div className="card" style={{ marginBottom: '24px' }}>
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div className="form-group" style={{ margin: 0 }}>
-            <label className="form-label">상태</label>
-            <select
-              className="form-select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as SrStatus | '')}
-              style={{ width: '150px' }}
-            >
-              <option value="">전체</option>
-              <option value="OPEN">신규</option>
-              <option value="IN_PROGRESS">처리중</option>
-              <option value="RESOLVED">해결됨</option>
-              <option value="CLOSED">종료</option>
-            </select>
+      {/* 검색 필터 */}
+      <div className="card mb-4" style={{ padding: '16px' }}>
+        <form onSubmit={handleSearch} className="grid-2" style={{ alignItems: 'end', gap: '16px' }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">검색어</label>
+            <input
+              type="text"
+              className="form-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="제목 또는 설명 검색"
+            />
           </div>
           
-          <div className="form-group" style={{ margin: 0 }}>
-            <label className="form-label">우선순위</label>
-            <select
-              className="form-select"
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value as Priority | '')}
-              style={{ width: '150px' }}
-            >
-              <option value="">전체</option>
-              <option value="LOW">낮음</option>
-              <option value="MEDIUM">보통</option>
-              <option value="HIGH">높음</option>
-              <option value="CRITICAL">긴급</option>
-            </select>
-          </div>
-          
-          <div className="form-group" style={{ margin: 0, flex: 1 }}>
-            <label className="form-label">검색</label>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <input
-                type="text"
-                className="form-input"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="제목 또는 설명 검색"
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              />
-              <button className="btn btn-primary" onClick={handleSearch}>
-                검색
-              </button>
+          <div className="grid-2" style={{ gap: '16px' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">상태</label>
+              <select
+                className="form-select"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as SrStatus | '')}
+              >
+                <option value="">전체</option>
+                <option value="OPEN">신규</option>
+                <option value="IN_PROGRESS">처리중</option>
+                <option value="RESOLVED">해결됨</option>
+                <option value="CLOSED">종료</option>
+              </select>
+            </div>
+            
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">우선순위</label>
+              <select
+                className="form-select"
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value as Priority | '')}
+              >
+                <option value="">전체</option>
+                <option value="LOW">낮음</option>
+                <option value="MEDIUM">보통</option>
+                <option value="HIGH">높음</option>
+                <option value="CRITICAL">긴급</option>
+              </select>
             </div>
           </div>
-        </div>
+
+          <div className="flex-end" style={{ gridColumn: '1 / -1', marginTop: '8px' }}>
+            <button type="button" onClick={handleReset} className="btn btn-secondary">초기화</button>
+            <button type="submit" className="btn btn-primary">검색</button>
+          </div>
+        </form>
       </div>
 
       {/* SR 목록 */}
@@ -202,6 +228,8 @@ function SrManagementPage() {
             srList={srList}
             onSelectSr={handleSelectSr}
             onDeleteSr={handleDelete}
+            totalElements={totalElements}
+            page={currentPage}
           />
         )}
 

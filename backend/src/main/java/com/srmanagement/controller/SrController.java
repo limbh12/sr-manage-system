@@ -1,8 +1,10 @@
 package com.srmanagement.controller;
 
 import com.srmanagement.dto.request.SrCreateRequest;
+import com.srmanagement.dto.request.SrHistoryCreateRequest;
 import com.srmanagement.dto.request.SrStatusUpdateRequest;
 import com.srmanagement.dto.request.SrUpdateRequest;
+import com.srmanagement.dto.response.SrHistoryResponse;
 import com.srmanagement.dto.response.SrResponse;
 import com.srmanagement.entity.Priority;
 import com.srmanagement.entity.SrStatus;
@@ -17,6 +19,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * SR 컨트롤러
@@ -77,13 +81,15 @@ public class SrController {
      * SR 수정
      * @param id SR ID
      * @param request SR 수정 요청
+     * @param authentication 현재 인증 정보
      * @return SrResponse
      */
     @PutMapping("/{id}")
     public ResponseEntity<SrResponse> updateSr(
             @PathVariable Long id,
-            @Valid @RequestBody SrUpdateRequest request) {
-        SrResponse response = srService.updateSr(id, request);
+            @Valid @RequestBody SrUpdateRequest request,
+            Authentication authentication) {
+        SrResponse response = srService.updateSr(id, request, authentication.getName());
         return ResponseEntity.ok(response);
     }
 
@@ -102,13 +108,42 @@ public class SrController {
      * SR 상태 변경
      * @param id SR ID
      * @param request 상태 변경 요청
+     * @param authentication 현재 인증 정보
      * @return SrResponse
      */
     @PatchMapping("/{id}/status")
     public ResponseEntity<SrResponse> updateSrStatus(
             @PathVariable Long id,
-            @Valid @RequestBody SrStatusUpdateRequest request) {
-        SrResponse response = srService.updateSrStatus(id, request);
+            @Valid @RequestBody SrStatusUpdateRequest request,
+            Authentication authentication) {
+        SrResponse response = srService.updateSrStatus(id, request, authentication.getName());
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * SR 이력 목록 조회
+     * @param id SR ID
+     * @return List<SrHistoryResponse>
+     */
+    @GetMapping("/{id}/histories")
+    public ResponseEntity<List<SrHistoryResponse>> getSrHistories(@PathVariable Long id) {
+        List<SrHistoryResponse> response = srService.getSrHistories(id);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * SR 이력(댓글) 생성
+     * @param id SR ID
+     * @param request 이력 생성 요청
+     * @param authentication 현재 인증 정보
+     * @return SrHistoryResponse
+     */
+    @PostMapping("/{id}/histories")
+    public ResponseEntity<SrHistoryResponse> createSrHistory(
+            @PathVariable Long id,
+            @Valid @RequestBody SrHistoryCreateRequest request,
+            Authentication authentication) {
+        SrHistoryResponse response = srService.createSrHistory(id, request, authentication.getName());
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 }

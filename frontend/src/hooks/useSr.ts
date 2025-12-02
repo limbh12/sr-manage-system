@@ -8,10 +8,12 @@ import {
   updateSrAsync,
   deleteSrAsync,
   updateSrStatusAsync,
+  fetchSrHistoriesAsync,
+  createSrHistoryAsync,
   clearError,
   setCurrentSr,
 } from '../store/srSlice';
-import { SrCreateRequest, SrUpdateRequest, SrStatusUpdateRequest, Sr, Priority, SrStatus } from '../types';
+import { SrCreateRequest, SrUpdateRequest, SrStatusUpdateRequest, Sr, Priority, SrStatus, SrHistoryCreateRequest } from '../types';
 
 interface FetchSrListParams {
   page?: number;
@@ -26,7 +28,7 @@ interface FetchSrListParams {
  */
 export const useSr = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { srList, currentSr, totalElements, totalPages, currentPage, loading, error } =
+  const { srList, currentSr, srHistories, totalElements, totalPages, currentPage, loading, error } =
     useSelector((state: RootState) => state.sr);
 
   /**
@@ -45,6 +47,27 @@ export const useSr = () => {
   const fetchSrById = useCallback(
     (id: number) => {
       dispatch(fetchSrByIdAsync(id));
+    },
+    [dispatch]
+  );
+
+  /**
+   * SR 이력 조회
+   */
+  const fetchSrHistories = useCallback(
+    (id: number) => {
+      dispatch(fetchSrHistoriesAsync(id));
+    },
+    [dispatch]
+  );
+
+  /**
+   * SR 이력(댓글) 생성
+   */
+  const createSrHistory = useCallback(
+    async (id: number, data: SrHistoryCreateRequest) => {
+      const result = await dispatch(createSrHistoryAsync({ id, data }));
+      return createSrHistoryAsync.fulfilled.match(result);
     },
     [dispatch]
   );
@@ -113,6 +136,7 @@ export const useSr = () => {
   return {
     srList,
     currentSr,
+    srHistories,
     totalElements,
     totalPages,
     currentPage,
@@ -120,6 +144,8 @@ export const useSr = () => {
     error,
     fetchSrList,
     fetchSrById,
+    fetchSrHistories,
+    createSrHistory,
     createSr,
     updateSr,
     deleteSr,

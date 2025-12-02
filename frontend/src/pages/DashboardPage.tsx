@@ -113,7 +113,7 @@ function DashboardPage() {
                   <th>제목</th>
                   <th>상태</th>
                   <th>우선순위</th>
-                  <th>생성일</th>
+                  <th>등록일(접수일)</th>
                 </tr>
               </thead>
               <tbody>

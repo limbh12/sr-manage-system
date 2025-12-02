@@ -28,4 +28,13 @@ public class SrCreateRequest {
 
     /** 담당자 ID */
     private Long assigneeId;
+
+    /** OPEN API 현황조사 ID */
+    private Long openApiSurveyId;
+
+    /** 요청자 이름 */
+    private String applicantName;
+
+    /** 요청자 연락처 */
+    private String applicantPhone;
 }

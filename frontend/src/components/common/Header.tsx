@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
 /**
@@ -13,8 +14,10 @@ function Header() {
         {user && (
           <>
             <div className="header-user">
-              <span>{user.username}</span>
-              <span className="badge badge-open">{user.role}</span>
+              <Link to="/profile" style={{ color: 'inherit', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>{user.username}</span>
+                <span className="badge badge-open">{user.role}</span>
+              </Link>
             </div>
             <button className="btn btn-secondary" onClick={logout}>
               로그아웃
