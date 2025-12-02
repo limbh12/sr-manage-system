@@ -67,6 +67,7 @@ public class AuthService {
         
         // 기존 Refresh Token 삭제
         refreshTokenRepository.deleteByUser(user);
+        refreshTokenRepository.flush();
         
         // 새 Refresh Token 생성
         RefreshToken refreshToken = createRefreshToken(user);
@@ -129,6 +130,7 @@ public class AuthService {
         
         // 새 Refresh Token 생성
         refreshTokenRepository.delete(refreshToken);
+        refreshTokenRepository.flush();
         RefreshToken newRefreshToken = createRefreshToken(user);
 
         return TokenResponse.builder()

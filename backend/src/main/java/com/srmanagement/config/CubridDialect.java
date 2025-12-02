@@ -38,13 +38,6 @@ public class CubridDialect extends MySQLDialect {
             public boolean supportsInsertSelectIdentity() {
                 return false;
             }
-
-            // Hibernate 6에서 getGeneratedKeys() 사용을 비활성화하기 위해 시도
-            // 만약 컴파일 에러가 발생하면 이 메서드는 제거해야 함
-            @Override
-            public boolean supportsGetGeneratedKeys() {
-               return false;
-            }
         };
     }
 
