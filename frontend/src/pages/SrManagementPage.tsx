@@ -5,6 +5,7 @@ import SrDetail from '../components/sr/SrDetail';
 import SrForm from '../components/sr/SrForm';
 import Loading from '../components/common/Loading';
 import { Sr, SrCreateRequest, SrUpdateRequest, SrStatus, Priority } from '../types';
+import { USE_MOCK } from '../config';
 
 /**
  * SR 관리 페이지
@@ -149,17 +150,19 @@ function SrManagementPage() {
       <div className="page-header">
         <h2 className="page-title">SR 관리</h2>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button 
-            className="btn btn-danger" 
-            onClick={() => {
-              if (window.confirm('로컬 스토리지의 모든 데이터(SR 목록, 로그인 정보 등)를 초기화하시겠습니까?\n페이지가 새로고침됩니다.')) {
-                localStorage.clear();
-                window.location.reload();
-              }
-            }}
-          >
-            데이터 초기화
-          </button>
+          {USE_MOCK && (
+            <button 
+              className="btn btn-danger" 
+              onClick={() => {
+                if (window.confirm('로컬 스토리지의 모든 데이터(SR 목록, 로그인 정보 등)를 초기화하시겠습니까?\n페이지가 새로고침됩니다.')) {
+                  localStorage.clear();
+                  window.location.reload();
+                }
+              }}
+            >
+              데이터 초기화
+            </button>
+          )}
           <button className="btn btn-primary" onClick={handleCreate}>
             + SR 등록
           </button>

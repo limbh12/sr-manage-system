@@ -31,7 +31,7 @@ CREATE TABLE organizations (
 
 CREATE TABLE open_api_survey (
     id BIGINT PRIMARY KEY,
-    organization_name VARCHAR(100) NOT NULL,
+    organization_code VARCHAR(20) NOT NULL,
     department VARCHAR(100) NOT NULL,
     contact_name VARCHAR(50) NOT NULL,
     contact_phone VARCHAR(20) NOT NULL,

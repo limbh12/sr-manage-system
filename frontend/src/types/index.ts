@@ -247,6 +247,7 @@ export type DevFramework = 'EGOV' | 'SPRING' | 'SPRING_BOOT' | 'OTHER';
 export interface OpenApiSurvey {
   id: number;
   // 기본 정보
+  organizationCode: string;
   organizationName: string;
   department: string;
   contactName: string;
@@ -317,7 +318,7 @@ export interface OpenApiSurvey {
 /**
  * OPEN API 현황조사 생성 요청
  */
-export type OpenApiSurveyCreateRequest = Omit<OpenApiSurvey, 'id' | 'createdAt' | 'updatedAt'>;
+export type OpenApiSurveyCreateRequest = Omit<OpenApiSurvey, 'id' | 'createdAt' | 'updatedAt' | 'organizationName'>;
 
 /**
  * OPEN API 현황조사 검색 조건

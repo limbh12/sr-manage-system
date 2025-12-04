@@ -12,8 +12,9 @@ function SurveyForm() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [isOrgModalOpen, setIsOrgModalOpen] = useState(false);
+  const [organizationNameDisplay, setOrganizationNameDisplay] = useState('');
   const [formData, setFormData] = useState<OpenApiSurveyCreateRequest>({
-    organizationName: '',
+    organizationCode: '',
     department: '',
     contactName: '',
     contactPhone: '',
@@ -74,8 +75,9 @@ function SurveyForm() {
     try {
       const data = await surveyService.getSurveyById(surveyId);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { id, createdAt, updatedAt, ...rest } = data;
+      const { id, createdAt, updatedAt, organizationName, ...rest } = data;
       setFormData(rest);
+      setOrganizationNameDisplay(organizationName);
     } catch (error) {
       console.error(error);
       alert('데이터를 불러오는데 실패했습니다.');
@@ -135,7 +137,8 @@ function SurveyForm() {
   };
 
   const handleOrgSelect = (org: { code: string; name: string }) => {
-    setFormData(prev => ({ ...prev, organizationName: org.name }));
+    setFormData(prev => ({ ...prev, organizationCode: org.code }));
+    setOrganizationNameDisplay(org.name);
     setIsOrgModalOpen(false);
   };
 
@@ -203,8 +206,9 @@ function SurveyForm() {
                   name="organizationName" 
                   required 
                   className="form-input" 
-                  value={formData.organizationName} 
-                  onChange={handleChange} 
+                  value={organizationNameDisplay} 
+                  readOnly
+                  onClick={() => setIsOrgModalOpen(true)}
                   placeholder="기관 검색을 이용하세요"
                 />
                 <button 

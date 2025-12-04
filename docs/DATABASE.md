@@ -19,7 +19,7 @@ SR Management System의 데이터베이스 스키마 설계 문서입니다.
 │   organizations  │          │  open_api_survey │
 ├──────────────────┤          ├──────────────────┤
 │ code (PK)        │          │ id (PK)          │
-│ name             │          │ organization_name│
+│ name             │          │ organization_code│
 └──────────────────┘          │ ...              │
                               └──────────────────┘
                                         ▲
@@ -241,7 +241,7 @@ Open API 기술지원 현황조사 정보를 저장하는 테이블
 | 컬럼명 | 데이터 타입 | 제약조건 | 설명 |
 |--------|-------------|----------|------|
 | id | BIGINT | PK, AUTO_INCREMENT | 조사 고유 ID |
-| organization_name | VARCHAR(100) | NOT NULL | 기관명 |
+| organization_code | VARCHAR(20) | NOT NULL | 기관 코드 |
 | department | VARCHAR(100) | NOT NULL | 부서명 |
 | contact_name | VARCHAR(50) | NOT NULL | 담당자명 |
 | contact_phone | VARCHAR(20) | NOT NULL | 담당자 연락처 |
@@ -289,7 +289,7 @@ Open API 기술지원 현황조사 정보를 저장하는 테이블
 
 **인덱스**
 - PRIMARY KEY (id)
-- INDEX idx_survey_org_name (organization_name)
+- INDEX idx_survey_org_code (organization_code)
 - INDEX idx_survey_created_at (created_at)
 
 **DDL (CUBRID)**
@@ -298,7 +298,7 @@ CREATE SERIAL open_api_survey_seq START WITH 1 INCREMENT BY 1;
 
 CREATE TABLE open_api_survey (
     id BIGINT PRIMARY KEY COMMENT '조사 고유 ID',
-    organization_name VARCHAR(100) NOT NULL COMMENT '기관명',
+    organization_code VARCHAR(20) NOT NULL COMMENT '기관 코드',
     department VARCHAR(100) NOT NULL COMMENT '부서명',
     contact_name VARCHAR(50) NOT NULL COMMENT '담당자명',
     contact_phone VARCHAR(20) NOT NULL COMMENT '담당자 연락처',
@@ -345,7 +345,7 @@ CREATE TABLE open_api_survey (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '수정 일시'
 ) COMMENT='Open API 기술지원 현황조사';
 
-CREATE INDEX idx_survey_org_name ON open_api_survey(organization_name);
+CREATE INDEX idx_survey_org_code ON open_api_survey(organization_code);
 CREATE INDEX idx_survey_created_at ON open_api_survey(created_at);
 ```
 
@@ -518,7 +518,7 @@ CREATE TABLE refresh_tokens (
 -- open_api_survey 테이블
 CREATE TABLE open_api_survey (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    organization_name VARCHAR(100) NOT NULL,
+    organization_code VARCHAR(20) NOT NULL,
     department VARCHAR(100) NOT NULL,
     contact_name VARCHAR(50) NOT NULL,
     contact_phone VARCHAR(20) NOT NULL,
@@ -564,7 +564,7 @@ CREATE TABLE open_api_survey (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
-    INDEX idx_survey_org_name (organization_name),
+    INDEX idx_survey_org_code (organization_code),
     INDEX idx_survey_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -630,7 +630,7 @@ CREATE TABLE refresh_tokens (
 -- open_api_survey 테이블
 CREATE TABLE open_api_survey (
     id BIGSERIAL PRIMARY KEY,
-    organization_name VARCHAR(100) NOT NULL,
+    organization_code VARCHAR(20) NOT NULL,
     department VARCHAR(100) NOT NULL,
     contact_name VARCHAR(50) NOT NULL,
     contact_phone VARCHAR(20) NOT NULL,

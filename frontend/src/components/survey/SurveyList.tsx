@@ -45,13 +45,27 @@ function SurveyList() {
     loadSurveys(resetSearch);
   };
 
+  const handleDownloadTemplate = () => {
+    const link = document.createElement('a');
+    link.href = '/templates/openapi_survey_template.csv';
+    link.download = 'openapi_survey_template.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div>
       <div className="page-header">
         <h2 className="page-title">OPEN API 현황조사 목록</h2>
-        <button onClick={() => navigate('/survey/new')} className="btn btn-primary">
-          신규 등록
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={handleDownloadTemplate} className="btn btn-secondary">
+            템플릿 다운로드
+          </button>
+          <button onClick={() => navigate('/survey/new')} className="btn btn-primary">
+            신규 등록
+          </button>
+        </div>
       </div>
 
       {/* 검색 필터 */}
