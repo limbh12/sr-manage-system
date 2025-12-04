@@ -22,8 +22,9 @@ public class OpenApiSurvey {
     @SequenceGenerator(name = "open_api_survey_seq_gen", sequenceName = "open_api_survey_seq", allocationSize = 1)
     private Long id;
 
-    @Column(nullable = false, length = 100)
-    private String organizationName;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organization_code", referencedColumnName = "code", nullable = false)
+    private Organization organization;
 
     @Column(nullable = false, length = 100)
     private String department;

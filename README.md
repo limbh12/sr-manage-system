@@ -149,7 +149,7 @@ spring:
     # driver-class-name: cubrid.jdbc.driver.CUBRIDDriver
   jpa:
     hibernate:
-      ddl-auto: update # H2 File Mode 사용 시 update 권장
+      ddl-auto: create # 서버 시작 시 DB 초기화 (create), 유지하려면 update 사용
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect # or com.srmanagement.config.CubridDialect

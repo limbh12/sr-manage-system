@@ -20,10 +20,22 @@ spring:
       settings:
         web-allow-others: true
   
+  # SQL 초기화 설정
+  sql:
+    init:
+      mode: always
+      continue-on-error: true
+
   # JPA 설정
   jpa:
     hibernate:
-      ddl-auto: update #create-drop # 개발용: 시작시 생성, 종료시 삭제 (파일 모드시 update로 변경 권장)
+      # ddl-auto 옵션 설명:
+      # - create: 시작 시 기존 테이블 삭제 후 재생성 (데이터 초기화)
+      # - create-drop: 시작 시 생성, 종료 시 삭제 (테스트용)
+      # - update: 변경된 스키마만 반영 (데이터 유지)
+      # - validate: 엔티티와 테이블 스키마가 일치하는지 검증만 수행
+      # - none: 아무 작업도 하지 않음
+      ddl-auto: create
     show-sql: true
     defer-datasource-initialization: true # data.sql 실행을 위해 필요
     properties:

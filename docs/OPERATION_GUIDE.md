@@ -55,15 +55,27 @@ spring:
 
 서버 시작 시 데이터베이스 테이블 및 초기 데이터 생성 동작을 제어합니다.
 
+**JPA DDL 설정 (`application.yml`)**
+```yaml
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create  # create: 시작 시 테이블 삭제 후 재생성 (데이터 초기화)
+                        # update: 변경된 스키마만 반영 (데이터 유지)
+                        # validate: 엔티티와 테이블 스키마 일치 여부만 확인
+                        # none: 아무 작업도 안 함
+```
+
+**SQL 초기화 설정**
 ```yaml
 spring:
   sql:
     init:
       mode: never  # always: 시작 시 항상 초기화 (데이터 삭제됨), never: 초기화 안 함 (데이터 유지)
 ```
-- **운영 환경 권장**: `never` (데이터 보존)
-- **초기 구축/테스트**: `always` (스키마 및 데이터 리셋)
-- **주의**: `always`로 설정 시 `schema.sql`의 `DROP TABLE` 명령이 실행되어 기존 데이터가 모두 삭제됩니다.
+- **운영 환경 권장**: `ddl-auto: validate` 또는 `none`, `init.mode: never`
+- **개발/테스트 (데이터 리셋)**: `ddl-auto: create`
+- **개발 (데이터 유지)**: `ddl-auto: update`
 
 ### 1.4 JWT 보안 설정
 
