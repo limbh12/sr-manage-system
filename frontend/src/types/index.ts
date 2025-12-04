@@ -242,13 +242,20 @@ export type DevLanguage = 'JAVA' | 'PHP' | 'PYTHON' | 'CSHARP' | 'OTHER';
 export type DevFramework = 'EGOV' | 'SPRING' | 'SPRING_BOOT' | 'OTHER';
 
 /**
+ * 기관 정보
+ */
+export interface Organization {
+  code: string;
+  name: string;
+}
+
+/**
  * OPEN API 현황조사 데이터
  */
 export interface OpenApiSurvey {
   id: number;
   // 기본 정보
-  organizationCode: string;
-  organizationName: string;
+  organization: Organization;
   department: string;
   contactName: string;
   contactPhone: string;

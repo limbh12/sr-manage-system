@@ -35,7 +35,7 @@ export const createSurvey = async (data: OpenApiSurveyCreateRequest): Promise<Op
  */
 export const updateSurvey = async (id: number, data: OpenApiSurveyCreateRequest): Promise<OpenApiSurvey> => {
   if (USE_MOCK) return mockSurveyService.updateSurvey(id, data);
-  const response = await api.put<OpenApiSurvey>(`/surveys/${id}`, data);
+  const response = await api.put<OpenApiSurveyResponse>(`/surveys/${id}`, data);
   return response.data;
 };
 
@@ -74,4 +74,62 @@ export const searchOrganizations = async (keyword: string): Promise<{ code: stri
   if (USE_MOCK) return mockSurveyService.searchOrganizations(keyword);
   const response = await api.get<{ code: string; name: string }[]>('/organizations', { params: { keyword } });
   return response.data;
+};
+
+export interface OpenApiSurveyResponse {
+  id: number;
+  organization: Organization;
+  department: string;
+  title: string;
+  description: string;
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BulkUploadResult {
+  totalCount: number;
+  successCount: number;
+  failureCount: number;
+  failures: {
+    rowNumber: number;
+    reason: string;
+    data: string;
+  }[];
+}
+
+export const surveyService = {
+  getSurveys: async (page: number = 0, size: number = 10, keyword?: string) => {
+    if (USE_MOCK) return mockSurveyService.getSurveyList(page, size, keyword);
+    const response = await api.get<PageResponse<OpenApiSurvey>>('/surveys', { params: { page, size, ...keyword } });
+    return response.data;
+  },
+
+  getSurveyById: async (id: number) => {
+    if (USE_MOCK) return mockSurveyService.getSurveyById(id);
+    const response = await api.get<OpenApiSurvey>(`/surveys/${id}`);
+    return response.data;
+  },
+
+  createSurvey: async (data: OpenApiSurveyCreateRequest) => {
+    if (USE_MOCK) return mockSurveyService.createSurvey(data);
+    const response = await api.post<OpenApiSurvey>('/surveys', data);
+    return response.data;
+  },
+
+  updateSurvey: async (id: number, data: OpenApiSurveyCreateRequest) => {
+    const response = await api.put<OpenApiSurveyResponse>(`/surveys/${id}`, data);
+    return response.data;
+  },
+
+  uploadSurveyCsv: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post<BulkUploadResult>('/surveys/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
 };

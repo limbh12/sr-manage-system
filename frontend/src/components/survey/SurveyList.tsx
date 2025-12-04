@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { OpenApiSurvey, OpenApiSurveySearch } from '../../types';
 import * as surveyService from '../../services/surveyService';
+import CsvUploadModal from './CsvUploadModal';
 
 function SurveyList() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ function SurveyList() {
     currentMethod: '',
     desiredMethod: '',
   });
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   useEffect(() => {
     loadSurveys();
@@ -54,6 +56,10 @@ function SurveyList() {
     document.body.removeChild(link);
   };
 
+  const handleUploadSuccess = () => {
+    loadSurveys();
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -61,6 +67,9 @@ function SurveyList() {
         <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={handleDownloadTemplate} className="btn btn-secondary">
             템플릿 다운로드
+          </button>
+          <button onClick={() => setIsUploadModalOpen(true)} className="btn btn-secondary">
+            일괄 등록
           </button>
           <button onClick={() => navigate('/survey/new')} className="btn btn-primary">
             신규 등록
@@ -145,7 +154,7 @@ function SurveyList() {
                 surveys.map((survey, index) => (
                   <tr key={survey.id}>
                     <td>{totalElements - (page * pageSize) - index}</td>
-                    <td>{survey.organizationName}</td>
+                    <td>{survey.organization.name}</td>
                     <td>{survey.department}</td>
                     <td>{survey.contactName}</td>
                     <td>{survey.systemName}</td>
@@ -171,6 +180,12 @@ function SurveyList() {
           </table>
         </div>
       )}
+
+      <CsvUploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onSuccess={handleUploadSuccess}
+      />
     </div>
   );
 }
