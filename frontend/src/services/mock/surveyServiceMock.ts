@@ -1,12 +1,17 @@
 import { OpenApiSurvey, OpenApiSurveyCreateRequest, PageResponse } from '../../types';
-import { delay } from './mockData';
+import { delay, INITIAL_SURVEY_LIST } from './mockData';
 
 // 로컬 스토리지 키 추가
 const SURVEY_STORAGE_KEY = 'mock_survey_list';
 
 const getStoredSurveyList = (): OpenApiSurvey[] => {
   const stored = localStorage.getItem(SURVEY_STORAGE_KEY);
-  return stored ? JSON.parse(stored) : [];
+  if (stored) {
+    return JSON.parse(stored);
+  }
+  // 초기 데이터가 없으면 초기값 저장 후 반환
+  saveSurveyList(INITIAL_SURVEY_LIST);
+  return INITIAL_SURVEY_LIST;
 };
 
 const saveSurveyList = (list: OpenApiSurvey[]) => {

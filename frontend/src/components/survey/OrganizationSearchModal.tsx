@@ -18,9 +18,8 @@ function OrganizationSearchModal({ isOpen, onClose, onSelect }: OrganizationSear
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
-  if (!isOpen) return null;
-
   useEffect(() => {
+    if (!isOpen) return;
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose();
@@ -30,7 +29,9 @@ function OrganizationSearchModal({ isOpen, onClose, onSelect }: OrganizationSear
     return () => {
       window.removeEventListener('keydown', handleEsc);
     };
-  }, [onClose]);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
 
   const handleSearch = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();

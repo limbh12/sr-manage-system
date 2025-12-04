@@ -1,4 +1,4 @@
-import { Sr, User } from '../../types';
+import { Sr, User, OpenApiSurvey } from '../../types';
 
 // Mock 사용자
 export const MOCK_USER: User = {
@@ -57,6 +57,61 @@ export const INITIAL_SR_LIST: Sr[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
+];
+
+// 초기 OPEN API 현황조사 데이터
+export const INITIAL_SURVEY_LIST: OpenApiSurvey[] = [
+  {
+    id: 1,
+    organizationName: '행정안전부',
+    department: '디지털정부국',
+    contactName: '홍길동',
+    contactPhone: '010-1234-5678',
+    contactEmail: 'hong@example.com',
+    receivedDate: new Date().toISOString(),
+    systemName: '행정정보공동이용시스템',
+    currentMethod: 'CENTRAL',
+    desiredMethod: 'CENTRAL_IMPROVED',
+    maintenanceOperation: 'INTERNAL',
+    maintenanceLocation: 'INTERNAL',
+    operationEnv: 'OPS',
+    createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+    updatedAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+  },
+  {
+    id: 2,
+    organizationName: '서울특별시',
+    department: '정보통신과',
+    contactName: '김철수',
+    contactPhone: '010-9876-5432',
+    contactEmail: 'kim@example.com',
+    receivedDate: new Date().toISOString(),
+    systemName: '서울시 열린데이터 광장',
+    currentMethod: 'DISTRIBUTED',
+    desiredMethod: 'DISTRIBUTED_IMPROVED',
+    maintenanceOperation: 'PROFESSIONAL_RESIDENT',
+    maintenanceLocation: 'EXTERNAL',
+    operationEnv: 'OPS',
+    createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+    updatedAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+  },
+  {
+    id: 3,
+    organizationName: '부산광역시',
+    department: '빅데이터통계과',
+    contactName: '이영희',
+    contactPhone: '010-1111-2222',
+    contactEmail: 'lee@example.com',
+    receivedDate: new Date().toISOString(),
+    systemName: '부산시 공공데이터 포털',
+    currentMethod: 'DISTRIBUTED',
+    desiredMethod: 'CENTRAL_IMPROVED',
+    maintenanceOperation: 'PROFESSIONAL_NON_RESIDENT',
+    maintenanceLocation: 'REMOTE',
+    operationEnv: 'OPS',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }
 ];
 
 // 로컬 스토리지 키
