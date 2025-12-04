@@ -191,7 +191,11 @@ const srSlice = createSlice({
       })
       .addCase(fetchSrListAsync.fulfilled, (state, action) => {
         state.loading = false;
-        state.srList = action.payload.srList;
+        if (action.payload.currentPage === 0) {
+          state.srList = action.payload.srList;
+        } else {
+          state.srList = [...state.srList, ...action.payload.srList];
+        }
         state.totalElements = action.payload.totalElements;
         state.totalPages = action.payload.totalPages;
         state.currentPage = action.payload.currentPage;

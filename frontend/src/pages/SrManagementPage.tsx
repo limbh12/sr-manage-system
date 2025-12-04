@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSr } from '../hooks/useSr';
 import SrList from '../components/sr/SrList';
 import SrDetail from '../components/sr/SrDetail';
@@ -32,17 +32,44 @@ function SrManagementPage() {
   const [statusFilter, setStatusFilter] = useState<SrStatus | ''>('');
   const [priorityFilter, setPriorityFilter] = useState<Priority | ''>('');
   const [searchQuery, setSearchQuery] = useState('');
+  const observerTarget = useRef<HTMLDivElement>(null);
 
-  // 초기 로딩 및 페이지 변경 시에만 실행
+  // 초기 로딩
   useEffect(() => {
     fetchSrList({
-      page: currentPage,
+      page: 0,
       status: statusFilter || undefined,
       priority: priorityFilter || undefined,
       search: searchQuery || undefined,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchSrList, currentPage]);
+  }, []);
+
+  const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
+    const target = entries[0];
+    if (target.isIntersecting && !loading && currentPage < totalPages - 1) {
+      fetchSrList({
+        page: currentPage + 1,
+        status: statusFilter || undefined,
+        priority: priorityFilter || undefined,
+        search: searchQuery || undefined,
+      });
+    }
+  }, [loading, currentPage, totalPages, fetchSrList, statusFilter, priorityFilter, searchQuery]);
+
+  useEffect(() => {
+    const option = {
+      root: null,
+      rootMargin: "20px",
+      threshold: 0
+    };
+    const observer = new IntersectionObserver(handleObserver, option);
+    if (observerTarget.current) observer.observe(observerTarget.current);
+    
+    return () => {
+      if (observerTarget.current) observer.unobserve(observerTarget.current);
+    }
+  }, [handleObserver]);
 
   const handleSelectSr = (sr: Sr) => {
     selectSr(sr);
@@ -79,7 +106,7 @@ function SrManagementPage() {
     if (success) {
       setShowForm(false);
       selectSr(null);
-      // 목록 갱신
+      // 목록 갱신 (첫 페이지부터 다시)
       handleSearch();
     }
   };
@@ -88,13 +115,9 @@ function SrManagementPage() {
     if (window.confirm('정말로 이 SR을 삭제하시겠습니까?')) {
       const success = await deleteSr(id);
       if (success) {
-        // 목록 갱신
-        fetchSrList({
-          page: currentPage,
-          status: statusFilter || undefined,
-          priority: priorityFilter || undefined,
-          search: searchQuery || undefined,
-        });
+        // 목록 갱신 (현재 상태 유지하되, 삭제된 항목이 빠지므로 리로드 필요할 수 있음)
+        // 간단하게 첫 페이지부터 다시 로드
+        handleSearch();
       }
     }
   };
@@ -104,23 +127,9 @@ function SrManagementPage() {
       const success = await updateSrStatus(currentSr.id, { status });
       if (success) {
         // 목록 갱신
-        fetchSrList({
-          page: currentPage,
-          status: statusFilter || undefined,
-          priority: priorityFilter || undefined,
-          search: searchQuery || undefined,
-        });
+        handleSearch();
       }
     }
-  };
-
-  const handlePageChange = (page: number) => {
-    fetchSrList({
-      page,
-      status: statusFilter || undefined,
-      priority: priorityFilter || undefined,
-      search: searchQuery || undefined,
-    });
   };
 
   const handleSearch = (e?: React.FormEvent) => {
@@ -224,46 +233,18 @@ function SrManagementPage() {
 
       {/* SR 목록 */}
       <div className="card">
-        {loading ? (
-          <Loading />
-        ) : (
-          <SrList
-            srList={srList}
-            onSelectSr={handleSelectSr}
-            onDeleteSr={handleDelete}
-            totalElements={totalElements}
-            page={currentPage}
-          />
-        )}
-
-        {/* 페이지네이션 */}
-        {totalPages > 1 && (
-          <div className="pagination">
-            <button
-              className="pagination-btn"
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 0}
-            >
-              이전
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button
-                key={i}
-                className={`pagination-btn ${currentPage === i ? 'active' : ''}`}
-                onClick={() => handlePageChange(i)}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button
-              className="pagination-btn"
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages - 1}
-            >
-              다음
-            </button>
-          </div>
-        )}
+        <SrList
+          srList={srList}
+          onSelectSr={handleSelectSr}
+          onDeleteSr={handleDelete}
+          totalElements={totalElements}
+          page={currentPage}
+        />
+        
+        {/* Infinite Scroll Sentinel */}
+        <div ref={observerTarget} style={{ height: '20px', margin: '10px 0', textAlign: 'center' }}>
+          {loading && <div className="loading-spinner" style={{ display: 'inline-block', width: '24px', height: '24px', border: '3px solid #f3f3f3', borderTop: '3px solid #3498db' }}></div>}
+        </div>
       </div>
 
       {/* SR 상세 모달 */}

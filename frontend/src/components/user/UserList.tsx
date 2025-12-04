@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { User, PageResponse, UserUpdateRequest, UserCreateRequest } from '../../types';
 import * as userService from '../../services/userService';
 import Loading from '../common/Loading';
@@ -15,6 +15,7 @@ function UserList() {
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const pageSize = 10;
+  const observerTarget = useRef<HTMLDivElement>(null);
 
   // 수정/생성 모달 상태
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -22,11 +23,18 @@ function UserList() {
   const [saving, setSaving] = useState(false);
 
   const fetchUsers = async (pageNumber: number) => {
+    if (loading) return;
     setLoading(true);
     setError(null);
     try {
       const response: PageResponse<User> = await userService.getUsers(pageNumber, pageSize);
-      setUsers(response.content);
+      
+      if (pageNumber === 0) {
+        setUsers(response.content);
+      } else {
+        setUsers(prev => [...prev, ...response.content]);
+      }
+      
       setTotalPages(response.totalPages);
       setTotalElements(response.totalElements);
       setPage(response.number);
@@ -42,11 +50,26 @@ function UserList() {
     fetchUsers(0);
   }, []);
 
-  const handlePageChange = (newPage: number) => {
-    if (newPage >= 0 && newPage < totalPages) {
-      fetchUsers(newPage);
+  const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
+    const target = entries[0];
+    if (target.isIntersecting && !loading && page < totalPages - 1) {
+      fetchUsers(page + 1);
     }
-  };
+  }, [loading, page, totalPages]);
+
+  useEffect(() => {
+    const option = {
+      root: null,
+      rootMargin: "20px",
+      threshold: 0
+    };
+    const observer = new IntersectionObserver(handleObserver, option);
+    if (observerTarget.current) observer.observe(observerTarget.current);
+    
+    return () => {
+      if (observerTarget.current) observer.unobserve(observerTarget.current);
+    }
+  }, [handleObserver]);
 
   const handleCreateClick = () => {
     setEditingUser(null);
@@ -62,7 +85,7 @@ function UserList() {
     if (window.confirm('정말로 이 사용자를 삭제(탈퇴) 처리하시겠습니까?')) {
       try {
         await userService.deleteUser(id);
-        await fetchUsers(page);
+        await fetchUsers(0); // 목록 새로고침 (처음부터)
         alert('사용자가 삭제되었습니다.');
       } catch (err) {
         console.error('Failed to delete user', err);
@@ -90,7 +113,7 @@ function UserList() {
       }
       
       // 목록 새로고침
-      await fetchUsers(page);
+      await fetchUsers(0);
       handleCloseModal();
     } catch (err) {
       console.error('Failed to save user', err);
@@ -99,10 +122,6 @@ function UserList() {
       setSaving(false);
     }
   };
-
-  if (loading && users.length === 0) {
-    return <Loading />;
-  }
 
   return (
     <div className="card">
@@ -132,7 +151,7 @@ function UserList() {
             {users.length > 0 ? (
               users.map((user, index) => (
                 <tr key={user.id}>
-                  <td>{totalElements - (page * pageSize) - index}</td>
+                  <td>{totalElements - index}</td>
                   <td>{user.username}</td>
                   <td>{user.name}</td>
                   <td>{user.email}</td>
@@ -161,37 +180,22 @@ function UserList() {
                 </tr>
               ))
             ) : (
-              <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-                  등록된 사용자가 없습니다.
-                </td>
-              </tr>
+              !loading && (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                    등록된 사용자가 없습니다.
+                  </td>
+                </tr>
+              )
             )}
           </tbody>
         </table>
-      </div>
-
-      {totalPages > 1 && (
-        <div className="pagination">
-          <button
-            className="pagination-btn"
-            onClick={() => handlePageChange(page - 1)}
-            disabled={page === 0 || loading}
-          >
-            이전
-          </button>
-          <span style={{ margin: '0 12px' }}>
-            {page + 1} / {totalPages}
-          </span>
-          <button
-            className="pagination-btn"
-            onClick={() => handlePageChange(page + 1)}
-            disabled={page === totalPages - 1 || loading}
-          >
-            다음
-          </button>
+        
+        {/* Infinite Scroll Sentinel */}
+        <div ref={observerTarget} style={{ height: '20px', margin: '10px 0', textAlign: 'center' }}>
+          {loading && <div className="loading-spinner" style={{ display: 'inline-block', width: '24px', height: '24px', border: '3px solid #f3f3f3', borderTop: '3px solid #3498db' }}></div>}
         </div>
-      )}
+      </div>
 
       {isModalOpen && (
         <UserEditModal

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { OpenApiSurvey, OpenApiSurveySearch } from '../../types';
 import * as surveyService from '../../services/surveyService';
@@ -7,27 +7,34 @@ import CsvUploadModal from './CsvUploadModal';
 function SurveyList() {
   const navigate = useNavigate();
   const [surveys, setSurveys] = useState<OpenApiSurvey[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
   const [pageSize] = useState(10);
   const [totalElements, setTotalElements] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [search, setSearch] = useState<OpenApiSurveySearch>({
     keyword: '',
     currentMethod: '',
     desiredMethod: '',
   });
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const observerTarget = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    loadSurveys();
-  }, []);
-
-  const loadSurveys = async (searchParams?: OpenApiSurveySearch) => {
+  const loadSurveys = async (pageToLoad: number, searchParams: OpenApiSurveySearch, isReset: boolean = false) => {
+    if (loading) return;
     setLoading(true);
     try {
-      const response = await surveyService.getSurveyList(page, pageSize, searchParams || search);
-      setSurveys(response.content);
+      const response = await surveyService.getSurveyList(pageToLoad, pageSize, searchParams);
+      
+      if (isReset || pageToLoad === 0) {
+        setSurveys(response.content);
+      } else {
+        setSurveys(prev => [...prev, ...response.content]);
+      }
+      
       setTotalElements(response.totalElements);
+      setHasMore(!response.last);
+      setPage(pageToLoad);
     } catch (error) {
       console.error(error);
       alert('목록을 불러오는데 실패했습니다.');
@@ -36,15 +43,42 @@ function SurveyList() {
     }
   };
 
+  useEffect(() => {
+    loadSurveys(0, search, true);
+  }, []);
+
+  const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
+    const target = entries[0];
+    if (target.isIntersecting && hasMore && !loading) {
+      loadSurveys(page + 1, search, false);
+    }
+  }, [hasMore, loading, page, search]);
+
+  useEffect(() => {
+    const option = {
+      root: null,
+      rootMargin: "20px",
+      threshold: 0
+    };
+    const observer = new IntersectionObserver(handleObserver, option);
+    if (observerTarget.current) observer.observe(observerTarget.current);
+    
+    return () => {
+      if (observerTarget.current) observer.unobserve(observerTarget.current);
+    }
+  }, [handleObserver]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    loadSurveys(search);
+    setPage(0);
+    loadSurveys(0, search, true);
   };
 
   const handleReset = () => {
     const resetSearch = { keyword: '', currentMethod: '', desiredMethod: '' };
     setSearch(resetSearch);
-    loadSurveys(resetSearch);
+    setPage(0);
+    loadSurveys(0, resetSearch, true);
   };
 
   const handleDownloadTemplate = () => {
@@ -57,7 +91,8 @@ function SurveyList() {
   };
 
   const handleUploadSuccess = () => {
-    loadSurveys();
+    setPage(0);
+    loadSurveys(0, search, true);
   };
 
   return (
@@ -125,67 +160,66 @@ function SurveyList() {
         </form>
       </div>
 
-      {loading ? (
-        <div className="loading-container">
-          <div className="loading-spinner"></div>
-        </div>
-      ) : (
-        <div className="card table-container">
-          <table className="table">
-            <thead>
+      <div className="card table-container">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>기관명</th>
+              <th>부서</th>
+              <th>담당자</th>
+              <th>시스템명</th>
+              <th>현재방식</th>
+              <th>희망방식</th>
+              <th>등록일</th>
+              <th>관리</th>
+            </tr>
+          </thead>
+          <tbody>
+            {surveys.length === 0 && !loading ? (
               <tr>
-                <th>No</th>
-                <th>기관명</th>
-                <th>부서</th>
-                <th>담당자</th>
-                <th>시스템명</th>
-                <th>현재방식</th>
-                <th>희망방식</th>
-                <th>등록일</th>
-                <th>관리</th>
+                <td colSpan={9} style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                  등록된 데이터가 없습니다.
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {surveys.length === 0 ? (
-                <tr>
-                  <td colSpan={9} style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-                    등록된 데이터가 없습니다.
+            ) : (
+              surveys.map((survey, index) => (
+                <tr key={survey.id}>
+                  <td>{totalElements - index}</td>
+                  <td>{survey.organization.name}</td>
+                  <td>{survey.department}</td>
+                  <td>{survey.contactName}</td>
+                  <td>{survey.systemName}</td>
+                  <td>
+                    {survey.currentMethod === 'CENTRAL' ? '중앙형' : 
+                      survey.currentMethod === 'DISTRIBUTED' ? '분산형' : 
+                      survey.currentMethod === 'NO_RESPONSE' ? '미회신' : survey.currentMethod}
+                  </td>
+                  <td>
+                    {survey.desiredMethod === 'CENTRAL_IMPROVED' ? '중앙개선형' : 
+                      survey.desiredMethod === 'DISTRIBUTED_IMPROVED' ? '분산개선형' : 
+                      survey.desiredMethod === 'NO_RESPONSE' ? '미회신' : survey.desiredMethod}
+                  </td>
+                  <td>{new Date(survey.createdAt).toLocaleDateString()}</td>
+                  <td>
+                    <button 
+                      className="btn btn-sm btn-secondary"
+                      onClick={() => navigate(`/survey/${survey.id}`)}
+                    >
+                      상세
+                    </button>
                   </td>
                 </tr>
-              ) : (
-                surveys.map((survey, index) => (
-                  <tr key={survey.id}>
-                    <td>{totalElements - (page * pageSize) - index}</td>
-                    <td>{survey.organization.name}</td>
-                    <td>{survey.department}</td>
-                    <td>{survey.contactName}</td>
-                    <td>{survey.systemName}</td>
-                    <td>
-                      {survey.currentMethod === 'CENTRAL' ? '중앙형' : 
-                       survey.currentMethod === 'DISTRIBUTED' ? '분산형' : 
-                       survey.currentMethod === 'NO_RESPONSE' ? '미회신' : survey.currentMethod}
-                    </td>
-                    <td>
-                      {survey.desiredMethod === 'CENTRAL_IMPROVED' ? '중앙개선형' : 
-                       survey.desiredMethod === 'DISTRIBUTED_IMPROVED' ? '분산개선형' : 
-                       survey.desiredMethod === 'NO_RESPONSE' ? '미회신' : survey.desiredMethod}
-                    </td>
-                    <td>{new Date(survey.createdAt).toLocaleDateString()}</td>
-                    <td>
-                      <button 
-                        className="btn btn-sm btn-secondary"
-                        onClick={() => navigate(`/survey/${survey.id}`)}
-                      >
-                        상세
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+              ))
+            )}
+          </tbody>
+        </table>
+        
+        {/* Infinite Scroll Sentinel */}
+        <div ref={observerTarget} style={{ height: '20px', margin: '10px 0', textAlign: 'center' }}>
+          {loading && <div className="loading-spinner" style={{ display: 'inline-block', width: '24px', height: '24px', border: '3px solid #f3f3f3', borderTop: '3px solid #3498db' }}></div>}
         </div>
-      )}
+      </div>
 
       <CsvUploadModal
         isOpen={isUploadModalOpen}

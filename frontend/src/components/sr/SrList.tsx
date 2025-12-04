@@ -111,7 +111,7 @@ function SrList({ srList, onSelectSr, onDeleteSr, totalElements, page, size = 10
           ) : (
             srList.map((sr, index) => (
               <tr key={sr.id}>
-                <td>{totalElements - (page * size) - index}</td>
+                <td>{totalElements - index}</td>
                 <td>{sr.srId || '-'}</td>
                 <td>
                   <a
