@@ -5,10 +5,18 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface OrganizationRepository extends JpaRepository<Organization, String> {
     
+    /**
+     * 기관명으로 기관 조회
+     * @param name 기관명
+     * @return 기관 정보
+     */
+    Optional<Organization> findByName(String name);
+
     /**
      * 기관명 또는 코드로 검색
      * @param name 기관명 검색어

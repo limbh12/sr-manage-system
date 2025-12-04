@@ -13,8 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class OpenApiSurveyResponse {
     private Long id;
-    private String organizationCode;
-    private String organizationName;
+    private OrganizationResponse organization;
     private String department;
     private String contactName;
     private String contactPhone;
