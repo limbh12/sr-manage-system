@@ -14,7 +14,7 @@ SR(Service Request) 관리 시스템은 서비스 요청을 효율적으로 관�
 - **Language**: Java 17+
 - **Build Tool**: Maven
 - **Authentication**: JWT (JSON Web Token)
-- **Database**: CUBRID 10.x+ / MySQL 8.x / PostgreSQL
+- **Database**: H2 (Dev) / CUBRID 10.x+ / MySQL 8.x / PostgreSQL
 
 ### Frontend
 - **Framework**: React 18.x
@@ -137,16 +137,22 @@ npm run dev
 ```yaml
 spring:
   datasource:
-    url: jdbc:cubrid:localhost:33000:sr_db:::
-    username: your_username
-    password: your_password
-    driver-class-name: cubrid.jdbc.driver.CUBRIDDriver
+    # H2 File Mode (Default)
+    url: jdbc:h2:file:/absolute/path/to/project/backend/data/srdb;AUTO_SERVER=TRUE
+    username: sa
+    password: sa1234!
+    
+    # CUBRID Example
+    # url: jdbc:cubrid:localhost:33000:sr_db:::
+    # username: your_username
+    # password: your_password
+    # driver-class-name: cubrid.jdbc.driver.CUBRIDDriver
   jpa:
     hibernate:
-      ddl-auto: none # CUBRID 사용 시 none 권장 (schema.sql 사용)
+      ddl-auto: update # H2 File Mode 사용 시 update 권장
     properties:
       hibernate:
-        dialect: com.srmanagement.config.CubridDialect
+        dialect: org.hibernate.dialect.H2Dialect # or com.srmanagement.config.CubridDialect
 
 jwt:
   secret: your_jwt_secret_key

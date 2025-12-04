@@ -10,7 +10,7 @@
 
 애플리케이션 실행 시 활성화할 프로필을 선택하여 데이터베이스를 변경할 수 있습니다.
 
-- **기본값 (H2)**: 별도 프로필 지정 없이 실행 시 인메모리 DB 사용 (개발용)
+- **기본값 (H2)**: 별도 프로필 지정 없이 실행 시 **파일 기반** H2 DB 사용 (데이터 유지됨, `backend/data/srdb`)
 - **CUBRID**: `-Dspring.profiles.active=cubrid`
 - **MySQL**: `-Dspring.profiles.active=mysql`
 - **PostgreSQL**: `-Dspring.profiles.active=postgresql`
@@ -24,6 +24,20 @@ java -jar -Dspring.profiles.active=cubrid target/sr-management-0.0.1-SNAPSHOT.ja
 ### 1.2 데이터베이스 연결 정보 수정
 
 각 프로필별 `datasource` 설정을 환경에 맞게 수정해야 합니다.
+
+```yaml
+# H2 (File Mode) 예시
+spring:
+  datasource:
+    # 주의: 절대 경로를 사용하는 것을 권장합니다.
+    url: jdbc:h2:file:/Users/username/project/backend/data/srdb;AUTO_SERVER=TRUE
+    username: sa
+    password: sa1234!
+  h2:
+    console:
+      enabled: true
+      path: /h2-console # 접속: http://localhost:8080/h2-console
+```
 
 ```yaml
 # CUBRID 예시

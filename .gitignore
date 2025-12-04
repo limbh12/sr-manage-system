@@ -88,3 +88,4 @@ test-output/
 
 # Script output
 script_output.txt
+backend/data/

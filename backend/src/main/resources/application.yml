@@ -2,29 +2,35 @@ spring:
   application:
     name: sr-management
   
-  # 데이터베이스 설정 (기본값: H2 인메모리 DB)
+  # 데이터베이스 설정 (H2 임베디드 DB)
   datasource:
-    url: jdbc:h2:mem:srdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    # 인메모리 모드 (재시작시 데이터 초기화됨)
+    # url: jdbc:h2:mem:srdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    # 파일 모드 (재시작시 데이터 유지하려면 아래 주석 해제하고 위 url 주석 처리)
+    url: jdbc:h2:file:/Users/byunglim/sr-manage-system/backend/data/srdb;AUTO_SERVER=TRUE
     username: sa
-    password:
+    password: sa1234!
     driver-class-name: org.h2.Driver
   
-  # H2 콘솔 설정 (개발용)
+  # H2 콘솔 설정 (http://localhost:8080/h2-console)
   h2:
     console:
       enabled: true
       path: /h2-console
+      settings:
+        web-allow-others: true
   
   # JPA 설정
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: update #create-drop # 개발용: 시작시 생성, 종료시 삭제 (파일 모드시 update로 변경 권장)
     show-sql: true
-    defer-datasource-initialization: true
+    defer-datasource-initialization: true # data.sql 실행을 위해 필요
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.H2Dialect
+    open-in-view: false
 
 # JWT 설정
 # NOTE: 프로덕션 환경에서는 환경 변수로 설정하세요: JWT_SECRET
@@ -42,6 +48,8 @@ logging:
   level:
     com.srmanagement: DEBUG
     org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
 
 ---
 # MySQL 프로필
