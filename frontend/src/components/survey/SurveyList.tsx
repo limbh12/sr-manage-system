@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useLayoutEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { OpenApiSurvey, OpenApiSurveySearch } from '../../types';
 import * as surveyService from '../../services/surveyService';
@@ -6,18 +6,27 @@ import CsvUploadModal from './CsvUploadModal';
 
 function SurveyList() {
   const navigate = useNavigate();
-  const [surveys, setSurveys] = useState<OpenApiSurvey[]>([]);
+  const STORAGE_KEY = 'SURVEY_LIST_STATE';
+
+  // Initialize state from sessionStorage
+  const [savedState] = useState(() => {
+    const saved = sessionStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const [surveys, setSurveys] = useState<OpenApiSurvey[]>(savedState?.surveys || []);
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(savedState?.page || 0);
   const [pageSize] = useState(10);
-  const [totalElements, setTotalElements] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  const [search, setSearch] = useState<OpenApiSurveySearch>({
+  const [totalElements, setTotalElements] = useState(savedState?.totalElements || 0);
+  const [hasMore, setHasMore] = useState(savedState?.hasMore || false);
+  const [search, setSearch] = useState<OpenApiSurveySearch>(savedState?.search || {
     keyword: '',
     currentMethod: '',
     desiredMethod: '',
   });
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<number | null>(savedState?.selectedId || null);
   const observerTarget = useRef<HTMLDivElement>(null);
 
   const loadSurveys = async (pageToLoad: number, searchParams: OpenApiSurveySearch, isReset: boolean = false) => {
@@ -43,8 +52,45 @@ function SurveyList() {
     }
   };
 
+  const saveScrollPosition = (selectedId?: number) => {
+    const scrollY = window.scrollY;
+    const stateToSave = {
+      surveys,
+      page,
+      totalElements,
+      hasMore,
+      search,
+      scrollY,
+      selectedId
+    };
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+  };
+
+  // Scroll restoration
+  useLayoutEffect(() => {
+    if (savedState?.scrollY) {
+      window.scrollTo(0, savedState.scrollY);
+      sessionStorage.removeItem(STORAGE_KEY);
+    }
+  }, [savedState]);
+
+  // Disable browser scroll restoration
   useEffect(() => {
-    loadSurveys(0, search, true);
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+    return () => {
+      if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'auto';
+      }
+    };
+  }, []);
+
+  // Initial load if not restored
+  useEffect(() => {
+    if (!savedState) {
+      loadSurveys(0, search, true);
+    }
   }, []);
 
   const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
@@ -184,7 +230,10 @@ function SurveyList() {
               </tr>
             ) : (
               surveys.map((survey, index) => (
-                <tr key={survey.id}>
+                <tr 
+                  key={survey.id}
+                  style={selectedId === survey.id ? { backgroundColor: '#e6f7ff' } : {}}
+                >
                   <td>{totalElements - index}</td>
                   <td>{survey.organization.name}</td>
                   <td>{survey.department}</td>
@@ -204,7 +253,10 @@ function SurveyList() {
                   <td>
                     <button 
                       className="btn btn-sm btn-secondary"
-                      onClick={() => navigate(`/survey/${survey.id}`)}
+                      onClick={() => {
+                        saveScrollPosition(survey.id);
+                        navigate(`/survey/${survey.id}`);
+                      }}
                     >
                       상세
                     </button>

@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -11,13 +12,42 @@ import Loading from './components/common/Loading';
 import './App.css';
 import OpenApiSurveyPage from './pages/OpenApiSurveyPage';
 import SurveyForm from './components/survey/SurveyForm';
-import SurveyDetail from './components/survey/SurveyDetail';
 
 /**
  * 메인 App 컴포넌트
  */
 function App() {
   const { isAuthenticated, loading, user } = useAuth();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const location = useLocation();
+
+  // 화면 크기에 따른 사이드바 초기 상태 설정 및 리사이즈 이벤트 핸들러
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
+      }
+    };
+
+    // 초기 실행
+    handleResize();
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // 모바일에서 라우트 변경 시 사이드바 닫기
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+      setIsSidebarOpen(false);
+    }
+  }, [location]);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
   if (loading) {
     return <Loading />;
@@ -25,10 +55,19 @@ function App() {
 
   return (
     <div className="app-layout">
-      {isAuthenticated && <Header />}
+      {isAuthenticated && <Header onToggleSidebar={toggleSidebar} />}
       <div className="app-content">
-        {isAuthenticated && <Sidebar />}
-        <main className="main-content">
+        {isAuthenticated && (
+          <>
+            <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+            {/* 모바일에서 사이드바가 열려있을 때 배경 오버레이 */}
+            <div 
+              className={`sidebar-overlay ${isSidebarOpen ? 'visible' : ''}`}
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          </>
+        )}
+        <main className={`main-content ${!isSidebarOpen ? 'expanded' : ''}`}>
           <Routes>
             <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/" />} />
             

@@ -68,6 +68,7 @@ function SurveyForm() {
     if (id) {
       loadSurvey(Number(id));
     }
+    window.scrollTo(0, 0);
   }, [id]);
 
   const loadSurvey = async (surveyId: number) => {
@@ -220,6 +221,7 @@ function SurveyForm() {
                   readOnly
                   onClick={() => setIsOrgModalOpen(true)}
                   placeholder="기관 검색을 이용하세요"
+                  style={{ flex: 1, minWidth: 0 }}
                 />
                 <button 
                   type="button" 
