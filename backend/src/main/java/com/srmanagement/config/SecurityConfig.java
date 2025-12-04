@@ -92,7 +92,7 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         // ADMIN 전용 API
                         .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/sr/**").hasRole("ADMIN")
+                        // .requestMatchers(HttpMethod.DELETE, "/api/sr/**").hasRole("ADMIN") // 서비스 계층에서 권한 체크
                         // 나머지는 인증 필요
                         .anyRequest().authenticated()
                 )

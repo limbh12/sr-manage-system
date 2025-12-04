@@ -79,19 +79,13 @@ export interface LoginRequest {
 }
 
 /**
- * 회원가입 요청
+ * 사용자 생성 요청 (관리자용)
  */
-export interface RegisterRequest {
+export interface UserCreateRequest {
   username: string;
   name: string;
   password: string;
   email: string;
-}
-
-/**
- * 사용자 생성 요청 (관리자용)
- */
-export interface UserCreateRequest extends RegisterRequest {
   role: Role;
 }
 

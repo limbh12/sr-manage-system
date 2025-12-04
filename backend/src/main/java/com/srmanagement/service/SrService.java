@@ -232,13 +232,22 @@ public class SrService {
     /**
      * SR 삭제
      * @param id SR ID
+     * @param username 요청자 사용자명
      */
     @Transactional
-    public void deleteSr(Long id) {
-        if (!srRepository.existsById(id)) {
-            throw new CustomException("SR not found with id: " + id, HttpStatus.NOT_FOUND);
+    public void deleteSr(Long id, String username) {
+        Sr sr = srRepository.findById(id)
+                .orElseThrow(() -> new CustomException("SR not found with id: " + id, HttpStatus.NOT_FOUND));
+        
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
+
+        // 권한 체크: 관리자이거나 본인이 작성한 SR인 경우에만 삭제 가능
+        if (user.getRole() != Role.ADMIN && !sr.getRequester().getId().equals(user.getId())) {
+            throw new CustomException("삭제 권한이 없습니다.", HttpStatus.FORBIDDEN);
         }
-        srRepository.deleteById(id);
+
+        srRepository.delete(sr);
     }
 
     /**

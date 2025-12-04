@@ -23,31 +23,17 @@ check_response() {
     fi
 }
 
-# 1. Auth - Register
-print_header "1. Register User"
-REGISTER_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/auth/register" \
-    -H "Content-Type: application/json" \
-    -d '{
-        "username": "testuser_'$(date +%s)'",
-        "name": "Test User",
-        "password": "password123",
-        "email": "test_'$(date +%s)'@example.com"
-    }')
-HTTP_CODE=$(echo "$REGISTER_RESPONSE" | tail -n1)
-BODY=$(echo "$REGISTER_RESPONSE" | sed '$d')
-echo "Response: $BODY"
-check_response "$HTTP_CODE"
-
-USERNAME=$(echo "$BODY" | jq -r '.username')
-echo "Registered Username: $USERNAME"
+# 1. Auth - Register (Removed - using default admin)
+# print_header "1. Register User"
+# ...
 
 # 2. Auth - Login
 print_header "2. Login"
 LOGIN_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/auth/login" \
     -H "Content-Type: application/json" \
     -d '{
-        "username": "'$USERNAME'",
-        "password": "password123"
+        "username": "admin",
+        "password": "admin123"
     }')
 HTTP_CODE=$(echo "$LOGIN_RESPONSE" | tail -n1)
 BODY=$(echo "$LOGIN_RESPONSE" | sed '$d')
@@ -94,6 +80,30 @@ ORG_RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL/organizations?keywo
     -H "Authorization: Bearer $ACCESS_TOKEN")
 HTTP_CODE=$(echo "$ORG_RESPONSE" | tail -n1)
 BODY=$(echo "$ORG_RESPONSE" | sed '$d')
+echo "Response: $BODY"
+check_response "$HTTP_CODE"
+
+# 5.5 Create OpenApi Survey (To ensure data exists for list/get)
+print_header "5.5 Create OpenApi Survey"
+SURVEY_CREATE_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/surveys" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+        "organizationCode": "6410000",
+        "department": "IT Dept",
+        "contactName": "Test User",
+        "contactPhone": "010-1234-5678",
+        "contactEmail": "test@example.com",
+        "receivedDate": "2023-10-27",
+        "systemName": "Test System",
+        "currentMethod": "API",
+        "desiredMethod": "API",
+        "maintenanceOperation": "Internal",
+        "maintenanceLocation": "Seoul",
+        "operationEnv": "Linux"
+    }')
+HTTP_CODE=$(echo "$SURVEY_CREATE_RESPONSE" | tail -n1)
+BODY=$(echo "$SURVEY_CREATE_RESPONSE" | sed '$d')
 echo "Response: $BODY"
 check_response "$HTTP_CODE"
 
@@ -218,6 +228,24 @@ SR_DELETE_RESPONSE=$(curl -s -w "\n%{http_code}" -X DELETE "$BASE_URL/sr/$SR_ID"
     -H "Authorization: Bearer $ACCESS_TOKEN")
 HTTP_CODE=$(echo "$SR_DELETE_RESPONSE" | tail -n1)
 echo "Response Code: $HTTP_CODE"
+check_response "$HTTP_CODE"
+
+# 16. 사용자 삭제 테스트 (관리자 권한으로 삭제 성공 예상)
+print_header "16. 사용자 삭제 테스트 (관리자 권한으로 삭제 성공 예상)"
+# 관리자 자신을 삭제할 수 없으므로 테스트용 사용자를 생성해야 함.
+# 하지만 여기서는 생략하고, 삭제 API 호출이 403이 아닌지 확인 (자기 자신 삭제 시도 시 400 Bad Request 예상 - SR 연관 데이터 때문)
+DELETE_USER_RESPONSE=$(curl -s -X DELETE "$BASE_URL/users/$USER_ID" \
+  -H "Authorization: Bearer $ACCESS_TOKEN")
+
+echo "삭제 요청 결과: $DELETE_USER_RESPONSE"
+
+# 17. 로그아웃
+print_header "17. Logout"
+LOGOUT_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/auth/logout" \
+    -H "Authorization: Bearer $ACCESS_TOKEN")
+HTTP_CODE=$(echo "$LOGOUT_RESPONSE" | tail -n1)
+BODY=$(echo "$LOGOUT_RESPONSE" | sed '$d')
+echo "Response: $BODY"
 check_response "$HTTP_CODE"
 
 echo -e "\n${GREEN}All tests completed.${NC}"

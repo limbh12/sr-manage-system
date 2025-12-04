@@ -1,7 +1,6 @@
 package com.srmanagement.service;
 
 import com.srmanagement.dto.request.LoginRequest;
-import com.srmanagement.dto.request.RegisterRequest;
 import com.srmanagement.dto.request.TokenRefreshRequest;
 import com.srmanagement.dto.response.TokenResponse;
 import com.srmanagement.dto.response.UserResponse;
@@ -78,36 +77,6 @@ public class AuthService {
                 .tokenType("Bearer")
                 .expiresIn(tokenProvider.getAccessTokenValidity())
                 .build();
-    }
-
-    /**
-     * 회원가입
-     * @param request 회원가입 요청 DTO
-     * @return 사용자 응답 DTO
-     */
-    @Transactional
-    public UserResponse register(RegisterRequest request) {
-        // 사용자명 중복 확인
-        if (userRepository.existsByUsername(request.getUsername())) {
-            throw new CustomException("Username already exists", HttpStatus.BAD_REQUEST);
-        }
-
-        // 이메일 중복 확인
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new CustomException("Email already exists", HttpStatus.BAD_REQUEST);
-        }
-
-        // 사용자 생성
-        User user = User.builder()
-                .username(request.getUsername())
-                .name(request.getName())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .email(request.getEmail())
-                .role(Role.USER)
-                .build();
-
-        User savedUser = userRepository.save(user);
-        return UserResponse.from(savedUser);
     }
 
     /**

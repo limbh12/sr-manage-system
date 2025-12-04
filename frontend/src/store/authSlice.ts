@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { AuthState, LoginRequest, RegisterRequest, User, TokenResponse } from '../types';
+import { AuthState, LoginRequest, User, TokenResponse } from '../types';
 import * as authService from '../services/authService';
 import { setAccessToken, setRefreshToken, clearTokens, getAccessToken } from '../utils/tokenUtils';
 
@@ -32,24 +32,6 @@ export const loginAsync = createAsyncThunk<
       return rejectWithValue(error.message);
     }
     return rejectWithValue('Login failed');
-  }
-});
-
-/**
- * 회원가입 액션
- */
-export const registerAsync = createAsyncThunk<
-  User,
-  RegisterRequest,
-  { rejectValue: string }
->('auth/register', async (data, { rejectWithValue }) => {
-  try {
-    return await authService.register(data);
-  } catch (error) {
-    if (error instanceof Error) {
-      return rejectWithValue(error.message);
-    }
-    return rejectWithValue('Registration failed');
   }
 });
 
@@ -120,18 +102,6 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload || 'Login failed';
         state.isAuthenticated = false;
-      })
-      // 회원가입
-      .addCase(registerAsync.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(registerAsync.fulfilled, (state) => {
-        state.loading = false;
-      })
-      .addCase(registerAsync.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload || 'Registration failed';
       })
       // 로그아웃
       .addCase(logoutAsync.fulfilled, (state) => {

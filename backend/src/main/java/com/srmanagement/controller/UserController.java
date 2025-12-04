@@ -70,6 +70,18 @@ public class UserController {
     }
 
     /**
+     * 사용자 생성 (관리자 전용)
+     * @param request 생성 요청 DTO
+     * @return UserResponse
+     */
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> createUser(@RequestBody com.srmanagement.dto.request.UserCreateRequest request) {
+        UserResponse response = userService.createUser(request);
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(response);
+    }
+
+    /**
      * 사용자 정보 수정 (관리자 전용)
      * @param id 사용자 ID
      * @param request 수정 요청 DTO
@@ -80,5 +92,17 @@ public class UserController {
     public ResponseEntity<UserResponse> updateUser(@PathVariable Long id, @RequestBody com.srmanagement.dto.request.UserUpdateRequest request) {
         UserResponse response = userService.updateUser(id, request);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 사용자 삭제 (관리자 전용)
+     * @param id 사용자 ID
+     * @return ResponseEntity
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -4,12 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { RootState, AppDispatch } from '../store';
 import {
   loginAsync,
-  registerAsync,
   logoutAsync,
   fetchCurrentUserAsync,
   clearError,
 } from '../store/authSlice';
-import { LoginRequest, RegisterRequest } from '../types';
+import { LoginRequest } from '../types';
 import { getAccessToken } from '../utils/tokenUtils';
 
 /**
@@ -44,19 +43,6 @@ export const useAuth = () => {
   );
 
   /**
-   * 회원가입
-   */
-  const register = useCallback(
-    async (data: RegisterRequest) => {
-      const result = await dispatch(registerAsync(data));
-      if (registerAsync.fulfilled.match(result)) {
-        navigate('/login');
-      }
-    },
-    [dispatch, navigate]
-  );
-
-  /**
    * 로그아웃
    */
   const logout = useCallback(async () => {
@@ -84,7 +70,6 @@ export const useAuth = () => {
     loading,
     error,
     login,
-    register,
     logout,
     resetError,
     checkAuth,

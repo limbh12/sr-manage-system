@@ -150,7 +150,7 @@ tail -f backend/logs/server.log
 
 - **위치**: `backend/scripts/backend_test_script.sh`
 - **기능**:
-  - 회원가입, 로그인, 토큰 갱신
+  - 로그인, 토큰 갱신
   - 사용자 조회, 조직 검색
   - 설문 조사(OpenApiSurvey) 조회
   - SR 생성, 조회, 수정, 상태 변경, 이력 관리, 삭제 등 주요 시나리오 테스트

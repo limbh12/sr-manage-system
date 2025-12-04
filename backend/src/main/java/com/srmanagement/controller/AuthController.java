@@ -1,11 +1,9 @@
 package com.srmanagement.controller;
 
 import com.srmanagement.dto.request.LoginRequest;
-import com.srmanagement.dto.request.RegisterRequest;
 import com.srmanagement.dto.request.TokenRefreshRequest;
 import com.srmanagement.dto.response.MessageResponse;
 import com.srmanagement.dto.response.TokenResponse;
-import com.srmanagement.dto.response.UserResponse;
 import com.srmanagement.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,17 +33,6 @@ public class AuthController {
     public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
         TokenResponse response = authService.login(request);
         return ResponseEntity.ok(response);
-    }
-
-    /**
-     * 회원가입
-     * @param request 회원가입 요청
-     * @return 사용자 응답
-     */
-    @PostMapping("/register")
-    public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
-        UserResponse response = authService.register(request);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     /**

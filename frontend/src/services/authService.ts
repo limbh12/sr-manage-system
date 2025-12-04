@@ -1,5 +1,5 @@
 import api from './api';
-import { LoginRequest, RegisterRequest, TokenResponse, User } from '../types';
+import { LoginRequest, TokenResponse, User } from '../types';
 import * as mockAuthService from './mock/authServiceMock';
 import { USE_MOCK } from '../config';
 
@@ -9,15 +9,6 @@ import { USE_MOCK } from '../config';
 export const login = async (data: LoginRequest): Promise<TokenResponse> => {
   if (USE_MOCK) return mockAuthService.login(data);
   const response = await api.post<TokenResponse>('/auth/login', data);
-  return response.data;
-};
-
-/**
- * 회원가입
- */
-export const register = async (data: RegisterRequest): Promise<User> => {
-  if (USE_MOCK) return mockAuthService.register(data);
-  const response = await api.post<User>('/auth/register', data);
   return response.data;
 };
 

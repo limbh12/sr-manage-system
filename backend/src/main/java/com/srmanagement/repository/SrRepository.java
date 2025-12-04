@@ -69,6 +69,20 @@ public interface SrRepository extends JpaRepository<Sr, Long> {
     Page<Sr> findByAssigneeId(Long assigneeId, Pageable pageable);
 
     /**
+     * 요청자가 등록한 SR 존재 여부 확인
+     * @param requesterId 요청자 ID
+     * @return 존재 여부
+     */
+    boolean existsByRequesterId(Long requesterId);
+
+    /**
+     * 담당자로 지정된 SR 존재 여부 확인
+     * @param assigneeId 담당자 ID
+     * @return 존재 여부
+     */
+    boolean existsByAssigneeId(Long assigneeId);
+
+    /**
      * 특정 패턴의 SR ID 중 가장 마지막 값을 조회
      * @param pattern SR ID 패턴 (예: SR-2412-%)
      * @return 가장 큰 SR ID

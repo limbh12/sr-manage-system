@@ -7,6 +7,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+import lombok.ToString;
 
 /**
  * SR(Service Request) 엔티티
@@ -91,6 +95,11 @@ public class Sr {
     /** 요청자 연락처 (외부 요청자일 경우) */
     @Column(length = 20)
     private String applicantPhone;
+
+    @OneToMany(mappedBy = "sr", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    @ToString.Exclude
+    @Builder.Default
+    private List<SrHistory> histories = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {

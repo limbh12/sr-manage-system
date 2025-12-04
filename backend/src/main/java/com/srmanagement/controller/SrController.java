@@ -96,11 +96,12 @@ public class SrController {
     /**
      * SR 삭제
      * @param id SR ID
+     * @param authentication 현재 인증 정보
      * @return ResponseEntity
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSr(@PathVariable Long id) {
-        srService.deleteSr(id);
+    public ResponseEntity<Void> deleteSr(@PathVariable Long id, Authentication authentication) {
+        srService.deleteSr(id, authentication.getName());
         return ResponseEntity.noContent().build();
     }
 
