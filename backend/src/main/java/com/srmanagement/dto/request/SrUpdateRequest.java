@@ -31,6 +31,12 @@ public class SrUpdateRequest {
     /** 우선순위 */
     private Priority priority;
 
+    /** 분류 */
+    private String category;
+
+    /** 요청구분 */
+    private String requestType;
+
     /** 담당자 ID */
     private Long assigneeId;
 

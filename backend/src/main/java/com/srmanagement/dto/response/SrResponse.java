@@ -40,6 +40,12 @@ public class SrResponse {
     /** 우선순위 */
     private Priority priority;
 
+    /** 분류 */
+    private String category;
+
+    /** 요청구분 */
+    private String requestType;
+
     /** 요청자 정보 */
     private UserResponse requester;
 
@@ -75,6 +81,8 @@ public class SrResponse {
                 .processingDetails(sr.getProcessingDetails())
                 .status(sr.getStatus())
                 .priority(sr.getPriority())
+                .category(sr.getCategory())
+                .requestType(sr.getRequestType())
                 .requester(UserResponse.from(sr.getRequester()))
                 .assignee(sr.getAssignee() != null ? UserResponse.from(sr.getAssignee()) : null)
                 .createdAt(sr.getCreatedAt())

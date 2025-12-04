@@ -45,13 +45,22 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
           📋 OPEN API 현황조사
         </NavLink>
         {user?.role === 'ADMIN' && (
-          <NavLink 
-            to="/users" 
-            className={({ isActive }) => `sidebar-nav-link ${isActive ? 'active' : ''}`}
-            onClick={handleLinkClick}
-          >
-            👥 사용자 관리
-          </NavLink>
+          <>
+            <NavLink 
+              to="/users" 
+              className={({ isActive }) => `sidebar-nav-link ${isActive ? 'active' : ''}`}
+              onClick={handleLinkClick}
+            >
+              👥 사용자 관리
+            </NavLink>
+            <NavLink 
+              to="/admin/codes" 
+              className={({ isActive }) => `sidebar-nav-link ${isActive ? 'active' : ''}`}
+              onClick={handleLinkClick}
+            >
+              ⚙️ 공통코드 관리
+            </NavLink>
+          </>
         )}
       </nav>
     </aside>

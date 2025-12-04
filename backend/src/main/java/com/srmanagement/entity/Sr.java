@@ -54,6 +54,14 @@ public class Sr {
     @Builder.Default
     private Priority priority = Priority.MEDIUM;
 
+    /** 분류 (CommonCode.codeValue) */
+    @Column(length = 50)
+    private String category;
+
+    /** 요청구분 (CommonCode.codeValue) */
+    @Column(length = 50)
+    private String requestType;
+
     /** 요청자 */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "requester_id", nullable = false)

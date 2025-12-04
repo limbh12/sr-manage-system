@@ -408,3 +408,17 @@ INSERT INTO organizations (code, name) VALUES ('B552657', '국립중앙의료원
 INSERT INTO organizations (code, name) VALUES ('1760000', '인사혁신처');
 INSERT INTO organizations (code, name) VALUES ('5670000', '경상남도 창원시');
 INSERT INTO organizations (code, name) VALUES ('1741050', '행정안전부 국가기록원');
+
+-- Initial data for common_code table
+-- SR Category
+INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_CATEGORY', 'OPEN_API', 'OPEN API', 1, true, 'OPEN API 관련', NOW(), NOW());
+INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_CATEGORY', 'INDIVIDUAL_PORTAL', '개별포털', 2, true, '개별포털 관련', NOW(), NOW());
+INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_CATEGORY', 'OTHER', '기타', 3, true, '기타', NOW(), NOW());
+
+-- SR Request Type
+INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_REQUEST_TYPE', 'DATA_REQ', '자료요청', 1, true, '자료 요청', NOW(), NOW());
+INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_REQUEST_TYPE', 'TECH_SUPPORT', '기술지원', 2, true, '기술 지원', NOW(), NOW());
+INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_REQUEST_TYPE', 'REMOTE_REQ', '원격요청', 3, true, '원격 지원 요청', NOW(), NOW());
+INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_REQUEST_TYPE', 'FIREWALL', '방화벽설정', 4, true, '방화벽 설정 요청', NOW(), NOW());
+INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_REQUEST_TYPE', 'FUNC_ERROR', '기능오류', 5, true, '기능 오류 신고', NOW(), NOW());
+INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_REQUEST_TYPE', 'OTHER', '기타', 6, true, '기타', NOW(), NOW());

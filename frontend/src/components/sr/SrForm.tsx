@@ -1,8 +1,9 @@
 import { useState, FormEvent, useEffect } from 'react';
-import { Sr, SrCreateRequest, SrUpdateRequest, Priority, OpenApiSurvey, User } from '../../types';
+import { Sr, SrCreateRequest, SrUpdateRequest, Priority, OpenApiSurvey, User, CommonCode } from '../../types';
 import SurveySearchModal from './SurveySearchModal';
 import * as surveyService from '../../services/surveyService';
 import * as userService from '../../services/userService';
+import { commonCodeService } from '../../services/commonCodeService';
 import OpenApiSurveyInfoCard from './OpenApiSurveyInfoCard';
 import { formatPhoneNumber } from '../../utils/formatUtils';
 
@@ -21,10 +22,14 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
   const [description, setDescription] = useState('');
   const [processingDetails, setProcessingDetails] = useState('');
   const [priority, setPriority] = useState<Priority>('MEDIUM');
+  const [category, setCategory] = useState('OPEN_API');
+  const [requestType, setRequestType] = useState('');
   const [applicantName, setApplicantName] = useState('');
   const [applicantPhone, setApplicantPhone] = useState('');
   const [assigneeId, setAssigneeId] = useState<number | undefined>(undefined);
   const [assigneeOptions, setAssigneeOptions] = useState<User[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<CommonCode[]>([]);
+  const [requestTypeOptions, setRequestTypeOptions] = useState<CommonCode[]>([]);
   const [showSurveyModal, setShowSurveyModal] = useState(false);
   const [modalInitialKeyword, setModalInitialKeyword] = useState('');
   const [selectedSurvey, setSelectedSurvey] = useState<OpenApiSurvey | null>(null);
@@ -34,6 +39,8 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
 
   useEffect(() => {
     userService.getUserOptions().then(setAssigneeOptions).catch(console.error);
+    commonCodeService.getActiveCodesByGroup('SR_CATEGORY').then(setCategoryOptions).catch(console.error);
+    commonCodeService.getActiveCodesByGroup('SR_REQUEST_TYPE').then(setRequestTypeOptions).catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -42,6 +49,8 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
       setDescription(sr.description || '');
       setProcessingDetails(sr.processingDetails || '');
       setPriority(sr.priority);
+      setCategory(sr.category || '');
+      setRequestType(sr.requestType || '');
       setAssigneeId(sr.assignee?.id);
       setApplicantName(sr.applicantName || '');
       setApplicantPhone(formatPhoneNumber(sr.applicantPhone || ''));
@@ -70,14 +79,41 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     
+    if (!applicantName) {
+      alert('요청자 이름을 입력해주세요.');
+      return;
+    }
+
+    if (!applicantPhone) {
+      alert('요청자 전화번호를 입력해주세요.');
+      return;
+    }
+
+    if (!category) {
+      alert('분류를 선택해주세요.');
+      return;
+    }
+
+    if (!requestType) {
+      alert('요청구분을 선택해주세요.');
+      return;
+    }
+
+    if (!description) {
+      alert('요청사항을 입력해주세요.');
+      return;
+    }
+    
     const commonData = {
       title,
       description,
       priority,
+      category,
+      requestType,
       openApiSurveyId,
       assigneeId,
       applicantName,
-      applicantPhone,
+      applicantPhone: applicantPhone.replace(/-/g, ''), // 하이픈 제거
     };
 
     if (isEditMode) {
@@ -160,7 +196,7 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label">요청자 정보</label>
+            <label className="form-label">요청자 정보 *</label>
             <div style={{ display: 'flex', gap: '16px' }}>
               <div style={{ flex: 1 }}>
                 <input
@@ -171,6 +207,7 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
                   onKeyDown={handleRequesterKeyDown}
                   placeholder="이름"
                   disabled={loading}
+                  required
                 />
               </div>
               <div style={{ flex: 1 }}>
@@ -182,6 +219,7 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
                   onKeyDown={handleRequesterKeyDown}
                   placeholder="전화번호"
                   disabled={loading}
+                  required
                 />
               </div>
               <button
@@ -195,6 +233,51 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
             </div>
             <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
               * 이름 또는 전화번호 입력 후 검색 시 OPEN API 현황정보가 자동 연동됩니다.
+            </div>
+          </div>
+
+          <div className="form-group">
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <div style={{ flex: 1 }}>
+                <label htmlFor="category" className="form-label">
+                  분류 *
+                </label>
+                <select
+                  id="category"
+                  className="form-select"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  disabled={loading}
+                  required
+                >
+                  <option value="">선택하세요</option>
+                  {categoryOptions.map((option) => (
+                    <option key={option.id} value={option.codeValue}>
+                      {option.codeName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label htmlFor="requestType" className="form-label">
+                  요청구분 *
+                </label>
+                <select
+                  id="requestType"
+                  className="form-select"
+                  value={requestType}
+                  onChange={(e) => setRequestType(e.target.value)}
+                  disabled={loading}
+                  required
+                >
+                  <option value="">선택하세요</option>
+                  {requestTypeOptions.map((option) => (
+                    <option key={option.id} value={option.codeValue}>
+                      {option.codeName}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -265,7 +348,7 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
 
           <div className="form-group">
             <label htmlFor="description" className="form-label">
-              요청사항
+              요청사항 *
             </label>
             <textarea
               id="description"
@@ -276,6 +359,7 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
               rows={10}
               disabled={loading}
               style={{ resize: 'vertical' }}
+              required
             />
           </div>
 
@@ -296,6 +380,8 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
               />
             </div>
           )}
+
+
 
           <div className="form-group">
             <label htmlFor="priority" className="form-label">
@@ -349,7 +435,10 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
       {showSurveyModal && (
         <SurveySearchModal
           onSelect={handleSurveySelect}
-          onClose={() => setShowSurveyModal(false)}
+          onClose={() => {
+            setShowSurveyModal(false);
+            setModalInitialKeyword('');
+          }}
           initialKeyword={modalInitialKeyword}
         />
       )}

@@ -75,4 +75,7 @@ public interface SrRepository extends JpaRepository<Sr, Long> {
      */
     @Query("SELECT s.srId FROM Sr s WHERE s.srId LIKE :pattern ORDER BY s.srId DESC LIMIT 1")
     String findLastSrId(@Param("pattern") String pattern);
+
+    long countByCategory(String category);
+    long countByRequestType(String requestType);
 }

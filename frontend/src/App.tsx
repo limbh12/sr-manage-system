@@ -12,6 +12,7 @@ import Loading from './components/common/Loading';
 import './App.css';
 import OpenApiSurveyPage from './pages/OpenApiSurveyPage';
 import SurveyForm from './components/survey/SurveyForm';
+import CommonCodePage from './pages/CommonCodePage';
 
 /**
  * 메인 App 컴포넌트
@@ -87,6 +88,14 @@ function App() {
               element={
                 isAuthenticated && user?.role === 'ADMIN' 
                   ? <UserManagementPage /> 
+                  : <Navigate to="/" />
+              } 
+            />
+            <Route 
+              path="/admin/codes" 
+              element={
+                isAuthenticated && user?.role === 'ADMIN' 
+                  ? <CommonCodePage /> 
                   : <Navigate to="/" />
               } 
             />

@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Sr, SrStatus, Priority, OpenApiSurvey } from '../../types';
 import * as surveyService from '../../services/surveyService';
+import { commonCodeService } from '../../services/commonCodeService';
 import OpenApiSurveyInfoCard from './OpenApiSurveyInfoCard';
 import SrHistoryList from './SrHistoryList';
 import { formatPhoneNumber } from '../../utils/formatUtils';
@@ -74,6 +75,8 @@ const getPriorityBadgeClass = (priority: Priority): string => {
 function SrDetail({ sr, onClose, onEdit, onStatusChange }: SrDetailProps) {
   const statusOptions: SrStatus[] = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
   const [linkedSurvey, setLinkedSurvey] = useState<OpenApiSurvey | null>(null);
+  const [categoryName, setCategoryName] = useState('');
+  const [requestTypeName, setRequestTypeName] = useState('');
 
   useEffect(() => {
     if (sr.openApiSurveyId) {
@@ -84,6 +87,26 @@ function SrDetail({ sr, onClose, onEdit, onStatusChange }: SrDetailProps) {
       setLinkedSurvey(null);
     }
   }, [sr.openApiSurveyId]);
+
+  useEffect(() => {
+    if (sr.category) {
+      commonCodeService.getActiveCodesByGroup('SR_CATEGORY').then(codes => {
+        const found = codes.find(c => c.codeValue === sr.category);
+        if (found) setCategoryName(found.codeName);
+      }).catch(console.error);
+    } else {
+      setCategoryName('');
+    }
+
+    if (sr.requestType) {
+      commonCodeService.getActiveCodesByGroup('SR_REQUEST_TYPE').then(codes => {
+        const found = codes.find(c => c.codeValue === sr.requestType);
+        if (found) setRequestTypeName(found.codeName);
+      }).catch(console.error);
+    } else {
+      setRequestTypeName('');
+    }
+  }, [sr.category, sr.requestType]);
 
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
@@ -136,6 +159,15 @@ function SrDetail({ sr, onClose, onEdit, onStatusChange }: SrDetailProps) {
                     {getStatusLabel(status)}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+              <div>
+                <strong>분류:</strong> {categoryName || sr.category || '-'}
+              </div>
+              <div>
+                <strong>요청구분:</strong> {requestTypeName || sr.requestType || '-'}
               </div>
             </div>
 

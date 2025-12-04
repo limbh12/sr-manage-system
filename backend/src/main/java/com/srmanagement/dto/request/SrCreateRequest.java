@@ -26,6 +26,12 @@ public class SrCreateRequest {
     /** 우선순위 (기본값: MEDIUM) */
     private Priority priority = Priority.MEDIUM;
 
+    /** 분류 */
+    private String category;
+
+    /** 요청구분 */
+    private String requestType;
+
     /** 담당자 ID */
     private Long assigneeId;
 

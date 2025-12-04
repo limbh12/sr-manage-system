@@ -125,6 +125,8 @@ public class SrService {
                 .description(request.getDescription())
                 .status(SrStatus.OPEN)
                 .priority(request.getPriority() != null ? request.getPriority() : Priority.MEDIUM)
+                .category(request.getCategory())
+                .requestType(request.getRequestType())
                 .requester(requester)
                 .assignee(assignee)
                 .openApiSurveyId(request.getOpenApiSurveyId())
@@ -192,6 +194,14 @@ public class SrService {
         if (request.getPriority() != null && request.getPriority() != sr.getPriority()) {
             createHistory(sr, "우선순위가 변경되었습니다: " + getPriorityLabel(sr.getPriority()) + " -> " + getPriorityLabel(request.getPriority()), SrHistoryType.PRIORITY_CHANGE, modifier);
             sr.setPriority(request.getPriority());
+        }
+        if (request.getCategory() != null && !request.getCategory().equals(sr.getCategory())) {
+            createHistory(sr, "분류가 변경되었습니다: " + (sr.getCategory() != null ? sr.getCategory() : "없음") + " -> " + request.getCategory(), SrHistoryType.INFO_CHANGE, modifier);
+            sr.setCategory(request.getCategory());
+        }
+        if (request.getRequestType() != null && !request.getRequestType().equals(sr.getRequestType())) {
+            createHistory(sr, "요청구분이 변경되었습니다: " + (sr.getRequestType() != null ? sr.getRequestType() : "없음") + " -> " + request.getRequestType(), SrHistoryType.INFO_CHANGE, modifier);
+            sr.setRequestType(request.getRequestType());
         }
         if (request.getAssigneeId() != null) {
             User assignee = userRepository.findById(request.getAssigneeId())

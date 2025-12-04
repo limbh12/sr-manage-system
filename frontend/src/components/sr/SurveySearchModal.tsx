@@ -28,6 +28,10 @@ function SurveySearchModal({ onSelect, onClose, initialKeyword = '' }: SurveySea
   };
 
   useEffect(() => {
+    setKeyword(initialKeyword);
+  }, [initialKeyword]);
+
+  useEffect(() => {
     searchSurveys();
   }, []);
 

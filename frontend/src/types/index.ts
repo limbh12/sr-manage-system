@@ -26,6 +26,19 @@ export interface User {
 }
 
 /**
+ * 공통 코드
+ */
+export interface CommonCode {
+  id: number;
+  codeGroup: string;
+  codeValue: string;
+  codeName: string;
+  sortOrder: number;
+  isActive: boolean;
+  description?: string;
+}
+
+/**
  * SR 정보
  */
 export interface Sr {
@@ -36,6 +49,8 @@ export interface Sr {
   processingDetails?: string;
   status: SrStatus;
   priority: Priority;
+  category?: string;
+  requestType?: string;
   requester: User;
   assignee: User | null;
   createdAt: string;
@@ -87,6 +102,8 @@ export interface SrCreateRequest {
   title: string;
   description?: string;
   priority?: Priority;
+  category?: string;
+  requestType?: string;
   assigneeId?: number;
   openApiSurveyId?: number;
   applicantName?: string;
@@ -102,6 +119,8 @@ export interface SrUpdateRequest {
   processingDetails?: string;
   status?: SrStatus;
   priority?: Priority;
+  category?: string;
+  requestType?: string;
   assigneeId?: number;
   openApiSurveyId?: number;
   applicantName?: string;
