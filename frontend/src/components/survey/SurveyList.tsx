@@ -101,6 +101,7 @@ function SurveyList() {
                 <option value="">전체</option>
                 <option value="CENTRAL">중앙형</option>
                 <option value="DISTRIBUTED">분산형</option>
+                <option value="NO_RESPONSE">미회신</option>
               </select>
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
@@ -113,6 +114,7 @@ function SurveyList() {
                 <option value="">전체</option>
                 <option value="CENTRAL_IMPROVED">중앙개선형</option>
                 <option value="DISTRIBUTED_IMPROVED">분산개선형</option>
+                <option value="NO_RESPONSE">미회신</option>
               </select>
             </div>
           </div>
@@ -159,10 +161,14 @@ function SurveyList() {
                     <td>{survey.contactName}</td>
                     <td>{survey.systemName}</td>
                     <td>
-                      {survey.currentMethod === 'CENTRAL' ? '중앙형' : '분산형'}
+                      {survey.currentMethod === 'CENTRAL' ? '중앙형' : 
+                       survey.currentMethod === 'DISTRIBUTED' ? '분산형' : 
+                       survey.currentMethod === 'NO_RESPONSE' ? '미회신' : survey.currentMethod}
                     </td>
                     <td>
-                      {survey.desiredMethod === 'CENTRAL_IMPROVED' ? '중앙개선형' : '분산개선형'}
+                      {survey.desiredMethod === 'CENTRAL_IMPROVED' ? '중앙개선형' : 
+                       survey.desiredMethod === 'DISTRIBUTED_IMPROVED' ? '분산개선형' : 
+                       survey.desiredMethod === 'NO_RESPONSE' ? '미회신' : survey.desiredMethod}
                     </td>
                     <td>{new Date(survey.createdAt).toLocaleDateString()}</td>
                     <td>

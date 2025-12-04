@@ -75,9 +75,12 @@ function SurveyForm() {
     try {
       const data = await surveyService.getSurveyById(surveyId);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { id, createdAt, updatedAt, organizationName, ...rest } = data;
-      setFormData(rest);
-      setOrganizationNameDisplay(organizationName);
+      const { id, createdAt, updatedAt, organization, ...rest } = data;
+      setFormData({
+        ...rest,
+        organizationCode: organization.code
+      });
+      setOrganizationNameDisplay(organization.name);
     } catch (error) {
       console.error(error);
       alert('데이터를 불러오는데 실패했습니다.');
@@ -184,8 +187,15 @@ function SurveyForm() {
     }
   };
 
-  const SERVER_LOCATION_PRESETS = ['NIRS_B', 'NIRS_S', 'INTERNAL'];
+  const SERVER_LOCATION_PRESETS = ['NIRS_B', 'NIRS_S', 'INTERNAL', 'NO_RESPONSE'];
   const serverLocationSelectValue = SERVER_LOCATION_PRESETS.includes(formData.serverLocation || '') ? formData.serverLocation : 'OTHER';
+
+  const getInputStyle = (value: string | undefined | null) => {
+    if (value === 'NO_RESPONSE' || value === '미입력') {
+      return { backgroundColor: '#fff0f0', color: '#d32f2f', borderColor: '#ffcdd2' };
+    }
+    return {};
+  };
 
   return (
     <div>
@@ -223,19 +233,19 @@ function SurveyForm() {
             </div>
             <div className="form-group">
               <label className="form-label">부서 *</label>
-              <input type="text" name="department" required className="form-input" value={formData.department} onChange={handleChange} />
+              <input type="text" name="department" required className="form-input" value={formData.department} onChange={handleChange} style={getInputStyle(formData.department)} />
             </div>
             <div className="form-group">
               <label className="form-label">담당자명 *</label>
-              <input type="text" name="contactName" required className="form-input" value={formData.contactName} onChange={handleChange} />
+              <input type="text" name="contactName" required className="form-input" value={formData.contactName} onChange={handleChange} style={getInputStyle(formData.contactName)} />
             </div>
             <div className="form-group">
               <label className="form-label">연락처 *</label>
-              <input type="text" name="contactPhone" required className="form-input" value={formData.contactPhone} onChange={handleChange} />
+              <input type="text" name="contactPhone" required className="form-input" value={formData.contactPhone} onChange={handleChange} style={getInputStyle(formData.contactPhone)} />
             </div>
             <div className="form-group">
               <label className="form-label">이메일 *</label>
-              <input type="email" name="contactEmail" required className="form-input" value={formData.contactEmail} onChange={handleChange} />
+              <input type="email" name="contactEmail" required className="form-input" value={formData.contactEmail} onChange={handleChange} style={getInputStyle(formData.contactEmail)} />
             </div>
           </div>
         </section>
@@ -317,22 +327,24 @@ function SurveyForm() {
           <div className="space-y-4">
             <div className="form-group">
               <label className="form-label">시스템명 *</label>
-              <input type="text" name="systemName" required className="form-input" value={formData.systemName} onChange={handleChange} />
+              <input type="text" name="systemName" required className="form-input" value={formData.systemName} onChange={handleChange} style={getInputStyle(formData.systemName)} />
             </div>
             
             <div className="grid-2">
               <div className="form-group">
                 <label className="form-label">현재방식 *</label>
-                <select name="currentMethod" className="form-select" value={formData.currentMethod} onChange={handleChange}>
+                <select name="currentMethod" className="form-select" value={formData.currentMethod} onChange={handleChange} style={getInputStyle(formData.currentMethod)}>
                   <option value="CENTRAL">중앙형</option>
                   <option value="DISTRIBUTED">분산형</option>
+                  <option value="NO_RESPONSE">미회신</option>
                 </select>
               </div>
               <div className="form-group">
                 <label className="form-label">희망전환방식 *</label>
-                <select name="desiredMethod" className="form-select" value={formData.desiredMethod} onChange={handleChange}>
+                <select name="desiredMethod" className="form-select" value={formData.desiredMethod} onChange={handleChange} style={getInputStyle(formData.desiredMethod)}>
                   <option value="CENTRAL_IMPROVED">중앙개선형</option>
                   <option value="DISTRIBUTED_IMPROVED">분산개선형</option>
+                  <option value="NO_RESPONSE">미회신</option>
                 </select>
               </div>
             </div>
@@ -340,7 +352,7 @@ function SurveyForm() {
             {formData.desiredMethod === 'DISTRIBUTED_IMPROVED' && (
               <div className="form-group">
                 <label className="form-label">분산개선형 선택 사유 *</label>
-                <textarea name="reasonForDistributed" required className="form-input" rows={3} value={formData.reasonForDistributed} onChange={handleChange} />
+                <textarea name="reasonForDistributed" required className="form-input" rows={3} value={formData.reasonForDistributed} onChange={handleChange} style={getInputStyle(formData.reasonForDistributed)} />
               </div>
             )}
           </div>
@@ -353,26 +365,28 @@ function SurveyForm() {
             <div className="grid-2">
               <div className="form-group">
                 <label className="form-label">운영인력보유 *</label>
-                <select name="maintenanceOperation" className="form-select" value={formData.maintenanceOperation} onChange={handleChange}>
+                <select name="maintenanceOperation" className="form-select" value={formData.maintenanceOperation} onChange={handleChange} style={getInputStyle(formData.maintenanceOperation)}>
                   <option value="INTERNAL">자체운영</option>
                   <option value="PROFESSIONAL_RESIDENT">전문인력 보유(상주)</option>
                   <option value="PROFESSIONAL_NON_RESIDENT">전문인력 보유(비상주)</option>
                   <option value="OTHER">기타</option>
+                  <option value="NO_RESPONSE">미회신</option>
                 </select>
               </div>
               <div className="form-group">
                 <label className="form-label">수행장소 *</label>
-                <select name="maintenanceLocation" className="form-select" value={formData.maintenanceLocation} onChange={handleChange}>
+                <select name="maintenanceLocation" className="form-select" value={formData.maintenanceLocation} onChange={handleChange} style={getInputStyle(formData.maintenanceLocation)}>
                   <option value="INTERNAL">기관내부</option>
                   <option value="EXTERNAL">기관외부</option>
                   <option value="REMOTE">원격지-온라인</option>
+                  <option value="NO_RESPONSE">미회신</option>
                 </select>
               </div>
             </div>
 
             <div className="form-group">
               <label className="form-label">소재지</label>
-              <input type="text" name="maintenanceAddress" className="form-input" value={formData.maintenanceAddress} onChange={handleChange} />
+              <input type="text" name="maintenanceAddress" className="form-input" value={formData.maintenanceAddress} onChange={handleChange} style={getInputStyle(formData.maintenanceAddress)} />
             </div>
             
             <div className="form-group">
@@ -384,6 +398,7 @@ function SurveyForm() {
                 value={formData.maintenanceNote} 
                 onChange={handleChange} 
                 placeholder="담당자명, 연락처, 이메일, 비상주의 경우 방문횟수 등"
+                style={getInputStyle(formData.maintenanceNote)}
               />
             </div>
           </div>
@@ -396,22 +411,24 @@ function SurveyForm() {
           <div className="grid-2 mb-4">
             <div className="form-group">
               <label className="form-label">운영환경 구분 *</label>
-              <select name="operationEnv" className="form-select" value={formData.operationEnv} onChange={handleChange}>
+              <select name="operationEnv" className="form-select" value={formData.operationEnv} onChange={handleChange} style={getInputStyle(formData.operationEnv)}>
                 <option value="OPS">운영</option>
                 <option value="DEV_OPS">개발/운영</option>
                 <option value="TEST_OPS">테스트/운영</option>
                 <option value="DEV_TEST_OPS">개발/테스트/운영</option>
                 <option value="OTHER">기타</option>
+                <option value="NO_RESPONSE">미회신</option>
               </select>
             </div>
             <div className="form-group">
               <label className="form-label">서버위치</label>
               <div className="grid-2" style={{ gap: '8px' }}>
-                <select className="form-select" value={serverLocationSelectValue} onChange={handleServerLocationSelect}>
+                <select className="form-select" value={serverLocationSelectValue} onChange={handleServerLocationSelect} style={getInputStyle(serverLocationSelectValue)}>
                   <option value="NIRS_B">국가정보자원관리원(B존)</option>
                   <option value="NIRS_S">국가정보자원관리원(S존)</option>
                   <option value="INTERNAL">기관내부</option>
                   <option value="OTHER">기타</option>
+                  <option value="NO_RESPONSE">미회신</option>
                 </select>
                 {serverLocationSelectValue === 'OTHER' && (
                   <input 
@@ -421,6 +438,7 @@ function SurveyForm() {
                     placeholder="직접 입력" 
                     value={formData.serverLocation} 
                     onChange={handleChange} 
+                    style={getInputStyle(formData.serverLocation)}
                   />
                 )}
               </div>
@@ -434,39 +452,41 @@ function SurveyForm() {
               <div className="form-group">
                 <label className="form-label">OS</label>
                 <div className="grid-2" style={{ gap: '8px' }}>
-                  <select name="webServerOs" className="form-select" value={formData.webServerOs} onChange={handleChange}>
+                  <select name="webServerOs" className="form-select" value={formData.webServerOs} onChange={handleChange} style={getInputStyle(formData.webServerOs)}>
                     <option value="LINUX">리눅스</option>
                     <option value="WINDOWS">윈도우</option>
                     <option value="UNIX">유닉스</option>
                     <option value="OTHER">기타</option>
+                    <option value="NO_RESPONSE">미회신</option>
                   </select>
-                  <input type="text" name="webServerOsType" className="form-input" placeholder="종류 (예: CentOS)" value={formData.webServerOsType} onChange={handleChange} />
+                  <input type="text" name="webServerOsType" className="form-input" placeholder="종류 (예: CentOS)" value={formData.webServerOsType} onChange={handleChange} style={getInputStyle(formData.webServerOsType)} />
                 </div>
               </div>
               <div className="form-group">
                 <label className="form-label">OS 버전</label>
-                <input type="text" name="webServerOsVersion" className="form-input" value={formData.webServerOsVersion} onChange={handleChange} />
+                <input type="text" name="webServerOsVersion" className="form-input" value={formData.webServerOsVersion} onChange={handleChange} style={getInputStyle(formData.webServerOsVersion)} />
               </div>
             </div>
             <div className="grid-2">
               <div className="form-group">
                 <label className="form-label">WEB</label>
                 <div className="grid-2" style={{ gap: '8px' }}>
-                  <select name="webServerType" className="form-select" value={formData.webServerType} onChange={handleChange}>
+                  <select name="webServerType" className="form-select" value={formData.webServerType} onChange={handleChange} style={getInputStyle(formData.webServerType)}>
                     <option value="APACHE">Apache</option>
                     <option value="NGINX">NginX</option>
                     <option value="WEBTOB">WebtoB</option>
                     <option value="IIS">IIS</option>
                     <option value="OTHER">기타</option>
+                    <option value="NO_RESPONSE">미회신</option>
                   </select>
                   {formData.webServerType === 'OTHER' && (
-                    <input type="text" name="webServerTypeOther" className="form-input" placeholder="기타 종류 입력" value={formData.webServerTypeOther} onChange={handleChange} />
+                    <input type="text" name="webServerTypeOther" className="form-input" placeholder="기타 종류 입력" value={formData.webServerTypeOther} onChange={handleChange} style={getInputStyle(formData.webServerTypeOther)} />
                   )}
                 </div>
               </div>
               <div className="form-group">
                 <label className="form-label">WEB 버전</label>
-                <input type="text" name="webServerVersion" className="form-input" value={formData.webServerVersion} onChange={handleChange} />
+                <input type="text" name="webServerVersion" className="form-input" value={formData.webServerVersion} onChange={handleChange} style={getInputStyle(formData.webServerVersion)} />
               </div>
             </div>
           </div>
@@ -478,25 +498,26 @@ function SurveyForm() {
               <div className="form-group">
                 <label className="form-label">OS</label>
                 <div className="grid-2" style={{ gap: '8px' }}>
-                  <select name="wasServerOs" className="form-select" value={formData.wasServerOs} onChange={handleChange}>
+                  <select name="wasServerOs" className="form-select" value={formData.wasServerOs} onChange={handleChange} style={getInputStyle(formData.wasServerOs)}>
                     <option value="LINUX">리눅스</option>
                     <option value="WINDOWS">윈도우</option>
                     <option value="UNIX">유닉스</option>
                     <option value="OTHER">기타</option>
+                    <option value="NO_RESPONSE">미회신</option>
                   </select>
-                  <input type="text" name="wasServerOsType" className="form-input" placeholder="종류 (예: CentOS)" value={formData.wasServerOsType} onChange={handleChange} />
+                  <input type="text" name="wasServerOsType" className="form-input" placeholder="종류 (예: CentOS)" value={formData.wasServerOsType} onChange={handleChange} style={getInputStyle(formData.wasServerOsType)} />
                 </div>
               </div>
               <div className="form-group">
                 <label className="form-label">OS 버전</label>
-                <input type="text" name="wasServerOsVersion" className="form-input" value={formData.wasServerOsVersion} onChange={handleChange} />
+                <input type="text" name="wasServerOsVersion" className="form-input" value={formData.wasServerOsVersion} onChange={handleChange} style={getInputStyle(formData.wasServerOsVersion)} />
               </div>
             </div>
             <div className="grid-2">
               <div className="form-group">
                 <label className="form-label">WAS</label>
                 <div className="grid-2" style={{ gap: '8px' }}>
-                  <select name="wasServerType" className="form-select" value={formData.wasServerType} onChange={handleChange}>
+                  <select name="wasServerType" className="form-select" value={formData.wasServerType} onChange={handleChange} style={getInputStyle(formData.wasServerType)}>
                     <option value="JBOSS_EAP">Jboss EAP</option>
                     <option value="TOMCAT">Apache Tomcat</option>
                     <option value="WILDFLY">WildFly</option>
@@ -504,15 +525,16 @@ function SurveyForm() {
                     <option value="JEUS">JEUS</option>
                     <option value="JETTY">Jetty</option>
                     <option value="OTHER">기타</option>
+                    <option value="NO_RESPONSE">미회신</option>
                   </select>
                   {formData.wasServerType === 'OTHER' && (
-                    <input type="text" name="wasServerTypeOther" className="form-input" placeholder="기타 종류 입력" value={formData.wasServerTypeOther} onChange={handleChange} />
+                    <input type="text" name="wasServerTypeOther" className="form-input" placeholder="기타 종류 입력" value={formData.wasServerTypeOther} onChange={handleChange} style={getInputStyle(formData.wasServerTypeOther)} />
                   )}
                 </div>
               </div>
               <div className="form-group">
                 <label className="form-label">WAS 버전</label>
-                <input type="text" name="wasServerVersion" className="form-input" value={formData.wasServerVersion} onChange={handleChange} />
+                <input type="text" name="wasServerVersion" className="form-input" value={formData.wasServerVersion} onChange={handleChange} style={getInputStyle(formData.wasServerVersion)} />
               </div>
             </div>
           </div>
@@ -524,25 +546,26 @@ function SurveyForm() {
               <div className="form-group">
                 <label className="form-label">OS</label>
                 <div className="grid-2" style={{ gap: '8px' }}>
-                  <select name="dbServerOs" className="form-select" value={formData.dbServerOs} onChange={handleChange}>
+                  <select name="dbServerOs" className="form-select" value={formData.dbServerOs} onChange={handleChange} style={getInputStyle(formData.dbServerOs)}>
                     <option value="LINUX">리눅스</option>
                     <option value="WINDOWS">윈도우</option>
                     <option value="UNIX">유닉스</option>
                     <option value="OTHER">기타</option>
+                    <option value="NO_RESPONSE">미회신</option>
                   </select>
-                  <input type="text" name="dbServerOsType" className="form-input" placeholder="종류 (예: CentOS)" value={formData.dbServerOsType} onChange={handleChange} />
+                  <input type="text" name="dbServerOsType" className="form-input" placeholder="종류 (예: CentOS)" value={formData.dbServerOsType} onChange={handleChange} style={getInputStyle(formData.dbServerOsType)} />
                 </div>
               </div>
               <div className="form-group">
                 <label className="form-label">OS 버전</label>
-                <input type="text" name="dbServerOsVersion" className="form-input" value={formData.dbServerOsVersion} onChange={handleChange} />
+                <input type="text" name="dbServerOsVersion" className="form-input" value={formData.dbServerOsVersion} onChange={handleChange} style={getInputStyle(formData.dbServerOsVersion)} />
               </div>
             </div>
             <div className="grid-2">
               <div className="form-group">
                 <label className="form-label">DB</label>
                 <div className="grid-2" style={{ gap: '8px' }}>
-                  <select name="dbServerType" className="form-select" value={formData.dbServerType} onChange={handleChange}>
+                  <select name="dbServerType" className="form-select" value={formData.dbServerType} onChange={handleChange} style={getInputStyle(formData.dbServerType)}>
                     <option value="TIBERO">Tibero</option>
                     <option value="POSTGRESQL">PostgreSQL</option>
                     <option value="CUBRID">Cubrid</option>
@@ -550,15 +573,16 @@ function SurveyForm() {
                     <option value="ORACLE">오라클</option>
                     <option value="MSSQL">MS-Sql</option>
                     <option value="OTHER">기타</option>
+                    <option value="NO_RESPONSE">미회신</option>
                   </select>
                   {formData.dbServerType === 'OTHER' && (
-                    <input type="text" name="dbServerTypeOther" className="form-input" placeholder="기타 종류 입력" value={formData.dbServerTypeOther} onChange={handleChange} />
+                    <input type="text" name="dbServerTypeOther" className="form-input" placeholder="기타 종류 입력" value={formData.dbServerTypeOther} onChange={handleChange} style={getInputStyle(formData.dbServerTypeOther)} />
                   )}
                 </div>
               </div>
               <div className="form-group">
                 <label className="form-label">DB 버전</label>
-                <input type="text" name="dbServerVersion" className="form-input" value={formData.dbServerVersion} onChange={handleChange} />
+                <input type="text" name="dbServerVersion" className="form-input" value={formData.dbServerVersion} onChange={handleChange} style={getInputStyle(formData.dbServerVersion)} />
               </div>
             </div>
           </div>
@@ -570,41 +594,43 @@ function SurveyForm() {
               <div className="form-group">
                 <label className="form-label">언어</label>
                 <div className="grid-2" style={{ gap: '8px' }}>
-                  <select name="devLanguage" className="form-select" value={formData.devLanguage} onChange={handleChange}>
+                  <select name="devLanguage" className="form-select" value={formData.devLanguage} onChange={handleChange} style={getInputStyle(formData.devLanguage)}>
                     <option value="JAVA">JAVA</option>
                     <option value="PHP">PHP</option>
                     <option value="PYTHON">파이썬</option>
                     <option value="CSHARP">C#</option>
                     <option value="OTHER">기타</option>
+                    <option value="NO_RESPONSE">미회신</option>
                   </select>
                   {formData.devLanguage === 'OTHER' && (
-                    <input type="text" name="devLanguageOther" className="form-input" placeholder="기타 언어 입력" value={formData.devLanguageOther} onChange={handleChange} />
+                    <input type="text" name="devLanguageOther" className="form-input" placeholder="기타 언어 입력" value={formData.devLanguageOther} onChange={handleChange} style={getInputStyle(formData.devLanguageOther)} />
                   )}
                 </div>
               </div>
               <div className="form-group">
                 <label className="form-label">언어 버전</label>
-                <input type="text" name="devLanguageVersion" className="form-input" value={formData.devLanguageVersion} onChange={handleChange} />
+                <input type="text" name="devLanguageVersion" className="form-input" value={formData.devLanguageVersion} onChange={handleChange} style={getInputStyle(formData.devLanguageVersion)} />
               </div>
             </div>
             <div className="grid-2">
               <div className="form-group">
                 <label className="form-label">프레임워크</label>
                 <div className="grid-2" style={{ gap: '8px' }}>
-                  <select name="devFramework" className="form-select" value={formData.devFramework} onChange={handleChange}>
+                  <select name="devFramework" className="form-select" value={formData.devFramework} onChange={handleChange} style={getInputStyle(formData.devFramework)}>
                     <option value="EGOV">전자정부프레임워크</option>
                     <option value="SPRING">Spring</option>
                     <option value="SPRING_BOOT">Spring Boot</option>
                     <option value="OTHER">기타</option>
+                    <option value="NO_RESPONSE">미회신</option>
                   </select>
                   {formData.devFramework === 'OTHER' && (
-                    <input type="text" name="devFrameworkOther" className="form-input" placeholder="기타 프레임워크 입력" value={formData.devFrameworkOther} onChange={handleChange} />
+                    <input type="text" name="devFrameworkOther" className="form-input" placeholder="기타 프레임워크 입력" value={formData.devFrameworkOther} onChange={handleChange} style={getInputStyle(formData.devFrameworkOther)} />
                   )}
                 </div>
               </div>
               <div className="form-group">
                 <label className="form-label">프레임워크 버전</label>
-                <input type="text" name="devFrameworkVersion" className="form-input" value={formData.devFrameworkVersion} onChange={handleChange} />
+                <input type="text" name="devFrameworkVersion" className="form-input" value={formData.devFrameworkVersion} onChange={handleChange} style={getInputStyle(formData.devFrameworkVersion)} />
               </div>
             </div>
           </div>
@@ -616,11 +642,11 @@ function SurveyForm() {
           <div className="space-y-4">
             <div className="form-group">
               <label className="form-label">기타 요청사항</label>
-              <textarea name="otherRequests" className="form-input" rows={3} value={formData.otherRequests} onChange={handleChange} />
+              <textarea name="otherRequests" className="form-input" rows={3} value={formData.otherRequests} onChange={handleChange} style={getInputStyle(formData.otherRequests)} />
             </div>
             <div className="form-group">
               <label className="form-label">비고</label>
-              <textarea name="note" className="form-input" rows={3} value={formData.note} onChange={handleChange} />
+              <textarea name="note" className="form-input" rows={3} value={formData.note} onChange={handleChange} style={getInputStyle(formData.note)} />
             </div>
           </div>
         </section>

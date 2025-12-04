@@ -161,6 +161,25 @@ tail -f backend/logs/server.log
 ./backend/scripts/backend_test_script.sh
 ```
 
+### 1.9 CSV 일괄 등록 운영 가이드
+
+OPEN API 현황조사 CSV 업로드 기능 운영 시 다음 사항을 참고하십시오.
+
+- **지원 날짜 형식**: `yyyy-MM-dd` (기본), `yyyy.MM.dd` (자동 변환 지원)
+- **필수 값 처리**: CSV 내 필수 항목이 비어있는 경우, 시스템이 자동으로 다음 기본값을 할당합니다.
+  - 텍스트 필드: "미입력"
+  - 선택 필드: "NO_RESPONSE" (미회신)
+- **데이터 검증**: 각 컬럼의 데이터 길이는 DB 스키마에 정의된 크기를 초과할 수 없으며, 초과 시 업로드가 실패합니다.
+
+### 1.10 데이터베이스 스키마 변경 사항 (2025-12-04)
+
+운영 중인 데이터베이스에 수동으로 반영해야 할 스키마 변경 사항입니다. (`ddl-auto: update` 사용 시 자동 반영됨)
+
+```sql
+-- OpenApiSurvey 테이블 연락처 컬럼 길이 확장 (20 -> 30)
+ALTER TABLE open_api_survey MODIFY COLUMN contact_phone VARCHAR(30);
+```
+
 ---
 
 ## 2. 프론트엔드 설정 (Frontend)

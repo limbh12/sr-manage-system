@@ -32,7 +32,7 @@ public class OpenApiSurvey {
     @Column(nullable = false, length = 50)
     private String contactName;
 
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 30)
     private String contactPhone;
 
     @Column(nullable = false, length = 100)

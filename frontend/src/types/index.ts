@@ -193,53 +193,53 @@ export interface SrState {
 /**
  * 전환 방식
  */
-export type TransitionMethod = 'CENTRAL' | 'DISTRIBUTED';
-export type DesiredTransitionMethod = 'CENTRAL_IMPROVED' | 'DISTRIBUTED_IMPROVED';
+export type TransitionMethod = 'CENTRAL' | 'DISTRIBUTED' | 'NO_RESPONSE';
+export type DesiredTransitionMethod = 'CENTRAL_IMPROVED' | 'DISTRIBUTED_IMPROVED' | 'NO_RESPONSE';
 
 /**
  * 유지보수 운영인력
  */
-export type MaintenanceOperation = 'INTERNAL' | 'PROFESSIONAL_RESIDENT' | 'PROFESSIONAL_NON_RESIDENT' | 'OTHER';
+export type MaintenanceOperation = 'INTERNAL' | 'PROFESSIONAL_RESIDENT' | 'PROFESSIONAL_NON_RESIDENT' | 'OTHER' | 'NO_RESPONSE';
 
 /**
  * 유지보수 수행장소
  */
-export type MaintenanceLocation = 'INTERNAL' | 'EXTERNAL' | 'REMOTE';
+export type MaintenanceLocation = 'INTERNAL' | 'EXTERNAL' | 'REMOTE' | 'NO_RESPONSE';
 
 /**
  * 운영환경 구분
  */
-export type OperationEnv = 'OPS' | 'DEV_OPS' | 'TEST_OPS' | 'DEV_TEST_OPS' | 'OTHER';
+export type OperationEnv = 'OPS' | 'DEV_OPS' | 'TEST_OPS' | 'DEV_TEST_OPS' | 'OTHER' | 'NO_RESPONSE';
 
 /**
  * 서버 OS 종류
  */
-export type ServerOs = 'LINUX' | 'WINDOWS' | 'UNIX' | 'OTHER';
+export type ServerOs = 'LINUX' | 'WINDOWS' | 'UNIX' | 'OTHER' | 'NO_RESPONSE';
 
 /**
  * WEB 서버 종류
  */
-export type WebServerType = 'APACHE' | 'NGINX' | 'WEBTOB' | 'IIS' | 'OTHER';
+export type WebServerType = 'APACHE' | 'NGINX' | 'WEBTOB' | 'IIS' | 'OTHER' | 'NO_RESPONSE';
 
 /**
  * WAS 서버 종류
  */
-export type WasServerType = 'JBOSS_EAP' | 'TOMCAT' | 'WILDFLY' | 'WEBLOGIC' | 'JEUS' | 'JETTY' | 'OTHER';
+export type WasServerType = 'JBOSS_EAP' | 'TOMCAT' | 'WILDFLY' | 'WEBLOGIC' | 'JEUS' | 'JETTY' | 'OTHER' | 'NO_RESPONSE';
 
 /**
  * DB 서버 종류
  */
-export type DbServerType = 'TIBERO' | 'POSTGRESQL' | 'CUBRID' | 'MYSQL' | 'ORACLE' | 'MSSQL' | 'OTHER';
+export type DbServerType = 'TIBERO' | 'POSTGRESQL' | 'CUBRID' | 'MYSQL' | 'ORACLE' | 'MSSQL' | 'OTHER' | 'NO_RESPONSE';
 
 /**
  * 개발 언어
  */
-export type DevLanguage = 'JAVA' | 'PHP' | 'PYTHON' | 'CSHARP' | 'OTHER';
+export type DevLanguage = 'JAVA' | 'PHP' | 'PYTHON' | 'CSHARP' | 'OTHER' | 'NO_RESPONSE';
 
 /**
  * 개발 프레임워크
  */
-export type DevFramework = 'EGOV' | 'SPRING' | 'SPRING_BOOT' | 'OTHER';
+export type DevFramework = 'EGOV' | 'SPRING' | 'SPRING_BOOT' | 'OTHER' | 'NO_RESPONSE';
 
 /**
  * 기관 정보
@@ -325,7 +325,9 @@ export interface OpenApiSurvey {
 /**
  * OPEN API 현황조사 생성 요청
  */
-export type OpenApiSurveyCreateRequest = Omit<OpenApiSurvey, 'id' | 'createdAt' | 'updatedAt' | 'organizationName'>;
+export type OpenApiSurveyCreateRequest = Omit<OpenApiSurvey, 'id' | 'createdAt' | 'updatedAt' | 'organization'> & {
+  organizationCode: string;
+};
 
 /**
  * OPEN API 현황조사 검색 조건

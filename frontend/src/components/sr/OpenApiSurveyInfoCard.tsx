@@ -58,6 +58,15 @@ function OpenApiSurveyInfoCard({ survey }: Props) {
     return parts.length > 0 ? parts.join(' / ') : '-';
   };
 
+  const getMethodLabel = (method: string) => {
+    if (method === 'CENTRAL') return '중앙형';
+    if (method === 'DISTRIBUTED') return '분산형';
+    if (method === 'CENTRAL_IMPROVED') return '중앙개선형';
+    if (method === 'DISTRIBUTED_IMPROVED') return '분산개선형';
+    if (method === 'NO_RESPONSE') return '미회신';
+    return method;
+  };
+
   return (
     <div style={{ 
       padding: '16px', 
@@ -68,12 +77,12 @@ function OpenApiSurveyInfoCard({ survey }: Props) {
     }}>
       <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: '#333' }}>기본 정보</h4>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-        {renderField('기관명', survey.organizationName)}
+        {renderField('기관명', survey.organization.name)}
         {renderField('부서', survey.department)}
         {renderField('담당자', survey.contactName)}
         {renderField('연락처', `${formatPhoneNumber(survey.contactPhone)} / ${survey.contactEmail}`)}
         {renderField('시스템명', survey.systemName)}
-        {renderField('전환방식', `${survey.currentMethod === 'CENTRAL' ? '중앙형' : '분산형'} → ${survey.desiredMethod === 'CENTRAL_IMPROVED' ? '중앙개선형' : '분산개선형'}`)}
+        {renderField('전환방식', `${getMethodLabel(survey.currentMethod)} → ${getMethodLabel(survey.desiredMethod)}`)}
       </div>
 
       <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: '#333', borderTop: '1px solid #eee', paddingTop: '12px' }}>개발 및 운영환경</h4>

@@ -199,48 +199,48 @@ public class OpenApiSurveyService {
 
                     OpenApiSurveyCreateRequest request = OpenApiSurveyCreateRequest.builder()
                             .organizationCode(organization.getCode())
-                            .department(getValue(record, 1))
-                            .contactName(getValue(record, 2))
-                            .contactPhone(getValue(record, 3))
-                            .contactEmail(getValue(record, 4))
+                            .department(getValueOrDefault(record, 1, "미입력"))
+                            .contactName(getValueOrDefault(record, 2, "미입력"))
+                            .contactPhone(getValueOrDefault(record, 3, "미입력"))
+                            .contactEmail(getValueOrDefault(record, 4, "미입력"))
                             .receivedFileName(getValue(record, 5))
                             .receivedDate(parseDate(getValue(record, 6)))
-                            .systemName(getValue(record, 7))
-                            .currentMethod(getValue(record, 8))
-                            .desiredMethod(getValue(record, 9))
+                            .systemName(getValueOrDefault(record, 7, "미입력"))
+                            .currentMethod(getValueOrDefault(record, 8, "NO_RESPONSE"))
+                            .desiredMethod(getValueOrDefault(record, 9, "NO_RESPONSE"))
                             .reasonForDistributed(getValue(record, 10))
-                            .maintenanceOperation(getValue(record, 11))
-                            .maintenanceLocation(getValue(record, 12))
+                            .maintenanceOperation(getValueOrDefault(record, 11, "NO_RESPONSE"))
+                            .maintenanceLocation(getValueOrDefault(record, 12, "NO_RESPONSE"))
                             .maintenanceAddress(getValue(record, 13))
                             .maintenanceNote(getValue(record, 14))
-                            .operationEnv(getValue(record, 15))
-                            .serverLocation(getValue(record, 16))
+                            .operationEnv(getValueOrDefault(record, 15, "NO_RESPONSE"))
+                            .serverLocation(getValueOrDefault(record, 16, "NO_RESPONSE"))
                             // WEB
-                            .webServerOs(getValue(record, 17))
+                            .webServerOs(getValueOrDefault(record, 17, "NO_RESPONSE"))
                             .webServerOsType(getValue(record, 18))
                             .webServerOsVersion(getValue(record, 19))
-                            .webServerType(getValue(record, 20))
+                            .webServerType(getValueOrDefault(record, 20, "NO_RESPONSE"))
                             .webServerTypeOther(getValue(record, 21))
                             .webServerVersion(getValue(record, 22))
                             // WAS
-                            .wasServerOs(getValue(record, 23))
+                            .wasServerOs(getValueOrDefault(record, 23, "NO_RESPONSE"))
                             .wasServerOsType(getValue(record, 24))
                             .wasServerOsVersion(getValue(record, 25))
-                            .wasServerType(getValue(record, 26))
+                            .wasServerType(getValueOrDefault(record, 26, "NO_RESPONSE"))
                             .wasServerTypeOther(getValue(record, 27))
                             .wasServerVersion(getValue(record, 28))
                             // DB
-                            .dbServerOs(getValue(record, 29))
+                            .dbServerOs(getValueOrDefault(record, 29, "NO_RESPONSE"))
                             .dbServerOsType(getValue(record, 30))
                             .dbServerOsVersion(getValue(record, 31))
-                            .dbServerType(getValue(record, 32))
+                            .dbServerType(getValueOrDefault(record, 32, "NO_RESPONSE"))
                             .dbServerTypeOther(getValue(record, 33))
                             .dbServerVersion(getValue(record, 34))
                             // Dev
-                            .devLanguage(getValue(record, 35))
+                            .devLanguage(getValueOrDefault(record, 35, "NO_RESPONSE"))
                             .devLanguageOther(getValue(record, 36))
                             .devLanguageVersion(getValue(record, 37))
-                            .devFramework(getValue(record, 38))
+                            .devFramework(getValueOrDefault(record, 38, "NO_RESPONSE"))
                             .devFrameworkOther(getValue(record, 39))
                             .devFrameworkVersion(getValue(record, 40))
                             // Others
@@ -248,6 +248,7 @@ public class OpenApiSurveyService {
                             .note(getValue(record, 42))
                             .build();
 
+                    validateRequest(request);
                     createSurvey(request);
                     successCount++;
 
@@ -278,14 +279,20 @@ public class OpenApiSurveyService {
         return (val == null || val.trim().isEmpty()) ? null : val.trim();
     }
 
+    private String getValueOrDefault(String[] record, int index, String defaultValue) {
+        String val = getValue(record, index);
+        return val == null ? defaultValue : val;
+    }
+
     private LocalDate parseDate(String dateStr) {
         if (dateStr == null) return LocalDate.now();
+        String formattedDate = dateStr.replace(".", "-");
         try {
-            return LocalDate.parse(dateStr, DateTimeFormatter.ISO_DATE); // yyyy-MM-dd
+            return LocalDate.parse(formattedDate, DateTimeFormatter.ISO_DATE); // yyyy-MM-dd
         } catch (DateTimeParseException e) {
             // Try other formats or default to now?
             // For now, let's assume yyyy-MM-dd or fail
-            throw new IllegalArgumentException("날짜 형식이 올바르지 않습니다 (yyyy-MM-dd): " + dateStr);
+            throw new IllegalArgumentException("날짜 형식이 올바르지 않습니다 (yyyy-MM-dd 또는 yyyy.MM.dd): " + dateStr);
         }
     }
 
@@ -341,5 +348,55 @@ public class OpenApiSurveyService {
                 .createdAt(survey.getCreatedAt())
                 .updatedAt(survey.getUpdatedAt())
                 .build();
+    }
+
+    private void validateRequest(OpenApiSurveyCreateRequest request) {
+        validateLength("부서", request.getDepartment(), 100);
+        validateLength("담당자명", request.getContactName(), 50);
+        validateLength("연락처", request.getContactPhone(), 30);
+        validateLength("이메일", request.getContactEmail(), 100);
+        validateLength("수신파일명", request.getReceivedFileName(), 255);
+        validateLength("시스템명", request.getSystemName(), 100);
+        validateLength("현행방식", request.getCurrentMethod(), 20);
+        validateLength("희망방식", request.getDesiredMethod(), 20);
+        validateLength("유지관리운영", request.getMaintenanceOperation(), 30);
+        validateLength("유지관리장소", request.getMaintenanceLocation(), 20);
+        validateLength("유지관리주소", request.getMaintenanceAddress(), 255);
+        validateLength("운영환경", request.getOperationEnv(), 20);
+        validateLength("서버위치", request.getServerLocation(), 255);
+
+        validateLength("WEB서버OS", request.getWebServerOs(), 20);
+        validateLength("WEB서버OS종류", request.getWebServerOsType(), 50);
+        validateLength("WEB서버OS버전", request.getWebServerOsVersion(), 50);
+        validateLength("WEB서버종류", request.getWebServerType(), 20);
+        validateLength("WEB서버종류기타", request.getWebServerTypeOther(), 50);
+        validateLength("WEB서버버전", request.getWebServerVersion(), 50);
+
+        validateLength("WAS서버OS", request.getWasServerOs(), 20);
+        validateLength("WAS서버OS종류", request.getWasServerOsType(), 50);
+        validateLength("WAS서버OS버전", request.getWasServerOsVersion(), 50);
+        validateLength("WAS서버종류", request.getWasServerType(), 20);
+        validateLength("WAS서버종류기타", request.getWasServerTypeOther(), 50);
+        validateLength("WAS서버버전", request.getWasServerVersion(), 50);
+
+        validateLength("DB서버OS", request.getDbServerOs(), 20);
+        validateLength("DB서버OS종류", request.getDbServerOsType(), 50);
+        validateLength("DB서버OS버전", request.getDbServerOsVersion(), 50);
+        validateLength("DB서버종류", request.getDbServerType(), 20);
+        validateLength("DB서버종류기타", request.getDbServerTypeOther(), 50);
+        validateLength("DB서버버전", request.getDbServerVersion(), 50);
+
+        validateLength("개발언어", request.getDevLanguage(), 20);
+        validateLength("개발언어기타", request.getDevLanguageOther(), 50);
+        validateLength("개발언어버전", request.getDevLanguageVersion(), 50);
+        validateLength("개발프레임워크", request.getDevFramework(), 20);
+        validateLength("개발프레임워크기타", request.getDevFrameworkOther(), 50);
+        validateLength("개발프레임워크버전", request.getDevFrameworkVersion(), 50);
+    }
+
+    private void validateLength(String fieldName, String value, int maxLength) {
+        if (value != null && value.length() > maxLength) {
+            throw new IllegalArgumentException(String.format("%s 항목의 길이가 %d자를 초과했습니다. (현재: %d자)", fieldName, maxLength, value.length()));
+        }
     }
 }
