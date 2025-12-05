@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.srmanagement.converter.EncryptConverter;
 
 import java.time.LocalDateTime;
 
@@ -31,7 +32,8 @@ public class User {
     private String username;
 
     /** 사용자 이름 (실명) */
-    @Column(nullable = false, length = 50)
+    @Column(nullable = false, length = 100)
+    @Convert(converter = EncryptConverter.class)
     private String name;
 
     /** 암호화된 비밀번호 */
@@ -39,7 +41,8 @@ public class User {
     private String password;
 
     /** 이메일 주소 */
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(nullable = false, unique = true, length = 255)
+    @Convert(converter = EncryptConverter.class)
     private String email;
 
     /** 사용자 역할 (ADMIN, USER) */

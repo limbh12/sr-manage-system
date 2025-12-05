@@ -96,22 +96,27 @@ function SurveySearchModal({ onSelect, onClose, initialKeyword = '' }: SurveySea
                   </tr>
                 ) : (
                   surveys.map((survey) => (
-                    <tr key={survey.id}>
-                      <td>{survey.organizationName}</td>
-                      <td>{survey.department}</td>
-                      <td>{survey.systemName}</td>
-                      <td>{survey.contactName}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="btn btn-secondary"
-                          style={{ padding: '4px 8px', fontSize: '12px' }}
-                          onClick={() => onSelect(survey)}
-                        >
-                          선택
-                        </button>
-                      </td>
-                    </tr>
+                                      <tr 
+                    key={survey.id} 
+                    onClick={() => onSelect(survey)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <td>{survey.organization?.name || '-'}</td>
+                    <td>{survey.department || '-'}</td>
+                    <td>{survey.systemName || '-'}</td>
+                    <td>{survey.contactName}</td>
+                    <td>
+                      <button
+                        className="btn btn-sm btn-primary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelect(survey);
+                        }}
+                      >
+                        선택
+                      </button>
+                    </td>
+                  </tr>
                   ))
                 )}
               </tbody>

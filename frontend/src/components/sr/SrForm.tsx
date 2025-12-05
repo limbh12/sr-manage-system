@@ -130,12 +130,16 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
     setSelectedSurvey(survey);
     setOpenApiSurveyId(survey.id);
     
-    // 자동 입력
-    setApplicantName(survey.contactName);
-    setApplicantPhone(formatPhoneNumber(survey.contactPhone));
+    // 자동 입력 (값이 없을 때만)
+    if (!applicantName) {
+      setApplicantName(survey.contactName);
+    }
+    if (!applicantPhone) {
+      setApplicantPhone(formatPhoneNumber(survey.contactPhone));
+    }
     
     if (!title) {
-      setTitle(`[${survey.organizationName}] ${survey.systemName} 관련 요청`);
+      setTitle(`[${survey.organization.name}] ${survey.systemName} 관련 요청`);
     }
     
     setShowSurveyModal(false);

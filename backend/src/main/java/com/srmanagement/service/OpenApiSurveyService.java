@@ -11,6 +11,7 @@ import com.srmanagement.repository.OpenApiSurveyRepository;
 import com.srmanagement.repository.OrganizationRepository;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
+import com.srmanagement.util.CryptoUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -39,7 +40,10 @@ public class OpenApiSurveyService {
 
     @Transactional(readOnly = true)
     public Page<OpenApiSurveyResponse> getSurveys(String keyword, Pageable pageable) {
-        Page<OpenApiSurvey> page = openApiSurveyRepository.search(keyword, pageable);
+        // keyword: LIKE 검색용 (평문 유지)
+        // exactKeyword: 일치 검색용 (JPA Converter에 의해 암호화됨)
+        // 동일한 파라미터 이름을 사용하면 JPA가 컨텍스트에 따라 암호화 여부를 혼동할 수 있어 분리함
+        Page<OpenApiSurvey> page = openApiSurveyRepository.search(keyword, keyword, pageable);
         return page.map(this::convertToResponse);
     }
 

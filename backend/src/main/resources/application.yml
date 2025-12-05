@@ -51,6 +51,10 @@ jwt:
   access-token-validity: 1800000   # 30분 (밀리초)
   refresh-token-validity: 604800000 # 7일 (밀리초)
 
+# 암호화 설정
+encryption:
+  secret: ${ENCRYPTION_SECRET:sr-management-system-secret-key-32bytes!!}
+
 # 서버 설정
 server:
   port: 8080

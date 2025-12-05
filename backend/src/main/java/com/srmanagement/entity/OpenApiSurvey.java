@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.srmanagement.converter.EncryptConverter;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,13 +30,16 @@ public class OpenApiSurvey {
     @Column(nullable = false, length = 100)
     private String department;
 
-    @Column(nullable = false, length = 50)
+    @Column(nullable = false, length = 100)
+    @Convert(converter = EncryptConverter.class)
     private String contactName;
 
-    @Column(nullable = false, length = 30)
+    @Column(nullable = false, length = 100)
+    @Convert(converter = EncryptConverter.class)
     private String contactPhone;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 255)
+    @Convert(converter = EncryptConverter.class)
     private String contactEmail;
 
     @Column(length = 255)

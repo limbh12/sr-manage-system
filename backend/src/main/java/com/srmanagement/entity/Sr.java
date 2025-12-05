@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.srmanagement.converter.EncryptConverter;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -89,11 +90,13 @@ public class Sr {
     private Long openApiSurveyId;
 
     /** 요청자 이름 (외부 요청자일 경우) */
-    @Column(length = 50)
+    @Column(length = 100)
+    @Convert(converter = EncryptConverter.class)
     private String applicantName;
 
     /** 요청자 연락처 (외부 요청자일 경우) */
-    @Column(length = 20)
+    @Column(length = 100)
+    @Convert(converter = EncryptConverter.class)
     private String applicantPhone;
 
     @OneToMany(mappedBy = "sr", cascade = CascadeType.REMOVE, orphanRemoval = true)
