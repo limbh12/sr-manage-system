@@ -416,9 +416,10 @@ INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_activ
 INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_CATEGORY', 'OTHER', '기타', 3, true, '기타', NOW(), NOW());
 
 -- SR Request Type
-INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_REQUEST_TYPE', 'DATA_REQ', '자료요청', 1, true, '자료 요청', NOW(), NOW());
-INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_REQUEST_TYPE', 'TECH_SUPPORT', '기술지원', 2, true, '기술 지원', NOW(), NOW());
-INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_REQUEST_TYPE', 'REMOTE_REQ', '원격요청', 3, true, '원격 지원 요청', NOW(), NOW());
-INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_REQUEST_TYPE', 'FIREWALL', '방화벽설정', 4, true, '방화벽 설정 요청', NOW(), NOW());
-INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_REQUEST_TYPE', 'FUNC_ERROR', '기능오류', 5, true, '기능 오류 신고', NOW(), NOW());
-INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_REQUEST_TYPE', 'OTHER', '기타', 6, true, '기타', NOW(), NOW());
+INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_REQUEST_TYPE', 'SURVEY', '현황조사', 1, true, '자료 요청', NOW(), NOW());
+INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_REQUEST_TYPE', 'DATA_REQ', '자료요청', 2, true, '자료 요청', NOW(), NOW());
+INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_REQUEST_TYPE', 'TECH_SUPPORT', '기술지원', 3, true, '기술 지원', NOW(), NOW());
+INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_REQUEST_TYPE', 'REMOTE_REQ', '원격요청', 4, true, '원격 지원 요청', NOW(), NOW());
+INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_REQUEST_TYPE', 'FIREWALL', '방화벽설정', 5, true, '방화벽 설정 요청', NOW(), NOW());
+INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_REQUEST_TYPE', 'FUNC_ERROR', '기능오류', 6, true, '기능 오류 신고', NOW(), NOW());
+INSERT INTO common_code (code_group, code_value, code_name, sort_order, is_active, description, created_at, updated_at) VALUES ('SR_REQUEST_TYPE', 'OTHER', '기타', 7, true, '기타', NOW(), NOW());

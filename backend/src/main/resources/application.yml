@@ -124,3 +124,66 @@ spring:
     properties:
       hibernate:
         dialect: com.srmanagement.config.CubridDialect
+
+---
+# 운영 환경 (Production) 프로필 - H2 Embedded Mode
+spring:
+  config:
+    activate:
+      on-profile: prod
+  
+  # 데이터베이스 설정 (H2 파일 모드)
+  datasource:
+    # 실행 경로의 data/srdb_prod 파일에 저장 (상대 경로)
+    url: jdbc:h2:file:./data/srdb_prod;AUTO_SERVER=TRUE
+    username: sa
+    password: ${DB_PASSWORD:sa1234!} # 환경변수로 변경 가능
+    driver-class-name: org.h2.Driver
+    
+    # HikariCP 커넥션 풀 최적화
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  
+  # JPA 설정
+  jpa:
+    hibernate:
+      ddl-auto: update # 스키마 변경사항 자동 반영 (데이터 유지)
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+        dialect: org.hibernate.dialect.H2Dialect
+  
+  # 데이터 초기화 방지
+  sql:
+    init:
+      mode: never
+  
+  # H2 콘솔 비활성화 (보안)
+  h2:
+    console:
+      enabled: false
+
+# 로깅 설정
+logging:
+  file:
+    name: logs/server.log
+  level:
+    root: INFO
+    com.srmanagement: INFO
+    org.springframework.security: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+
+# 서버 에러 응답 보안 설정
+server:
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false

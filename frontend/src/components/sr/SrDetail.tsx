@@ -122,7 +122,7 @@ function SrDetail({ sr, onClose, onEdit, onStatusChange }: SrDetailProps) {
 
   return (
     <div className="modal-overlay">
-      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '1000px', width: '90%' }}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '1400px', width: '95%' }}>
         <div className="modal-header">
           <h2 className="modal-title">SR 상세 정보</h2>
           <button className="modal-close" onClick={onClose}>
@@ -236,7 +236,7 @@ function SrDetail({ sr, onClose, onEdit, onStatusChange }: SrDetailProps) {
           </div>
 
           {/* 우측: 변경 이력 */}
-          <div style={{ width: '350px', borderLeft: '1px solid #eee', paddingLeft: '32px', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ width: '350px', minWidth: '350px', flexShrink: 0, borderLeft: '1px solid #eee', paddingLeft: '32px', display: 'flex', flexDirection: 'column' }}>
             <SrHistoryList srId={sr.id} />
           </div>
         </div>

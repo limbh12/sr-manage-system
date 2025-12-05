@@ -11,14 +11,15 @@
 애플리케이션 실행 시 활성화할 프로필을 선택하여 데이터베이스를 변경할 수 있습니다.
 
 - **기본값 (H2)**: 별도 프로필 지정 없이 실행 시 **파일 기반** H2 DB 사용 (데이터 유지됨, `backend/data/srdb`)
+- **운영 환경 (H2)**: `-Dspring.profiles.active=prod` (운영 최적화 설정, `./data/srdb_prod`에 저장)
 - **CUBRID**: `-Dspring.profiles.active=cubrid`
 - **MySQL**: `-Dspring.profiles.active=mysql`
 - **PostgreSQL**: `-Dspring.profiles.active=postgresql`
 
 **실행 예시:**
 ```bash
-# CUBRID 프로필로 실행
-java -jar -Dspring.profiles.active=cubrid target/sr-management-0.0.1-SNAPSHOT.jar
+# 운영 환경 프로필로 실행 (H2 임베디드 모드)
+java -jar -Dspring.profiles.active=prod target/sr-management-0.0.1-SNAPSHOT.jar
 ```
 
 ### 1.2 데이터베이스 연결 정보 수정
@@ -26,7 +27,17 @@ java -jar -Dspring.profiles.active=cubrid target/sr-management-0.0.1-SNAPSHOT.ja
 각 프로필별 `datasource` 설정을 환경에 맞게 수정해야 합니다.
 
 ```yaml
-# H2 (File Mode) 예시
+# 운영 환경 (prod) 설정 (application.yml)
+spring:
+  datasource:
+    # 실행 위치의 data/srdb_prod 파일에 데이터 저장
+    url: jdbc:h2:file:./data/srdb_prod;AUTO_SERVER=TRUE
+    username: sa
+    password: ${DB_PASSWORD:sa1234!} # 환경변수 DB_PASSWORD로 변경 가능
+```
+
+```yaml
+# H2 (File Mode) 기본 개발 환경 예시
 spring:
   datasource:
     # 주의: 절대 경로를 사용하는 것을 권장합니다.

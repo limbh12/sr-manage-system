@@ -1,72 +1,119 @@
-# SR 관리 시스템 - AI 코딩 에이전트 지침
+# SR Management System - AI Coding Agent Instructions
 
-## 프로젝트 개요
-서비스 요청(SR) 관리를 위한 풀스택 애플리케이션입니다.
-- **백엔드**: Spring Boot 3.x (Java 17+), Maven, MySQL/PostgreSQL.
-- **프론트엔드**: React 18.x (TypeScript), Vite, Redux Toolkit, Axios.
-- **인증**: JWT 기반 무상태(Stateless) 인증.
+## 1. Project Context & Architecture
+- **Goal**: Service Request (SR) management system for PUBC Open API transition support.
+- **Stack**:
+  - **Backend**: Spring Boot 3.2+ (Java 17), Maven.
+  - **Frontend**: React 18 (TypeScript), Vite, Redux Toolkit.
+  - **Database**: H2 (Dev/Default), CUBRID 10.x+, MySQL 8.x, PostgreSQL.
+- **Key Documentation**:
+  - `docs/API.md`: REST API specification.
+  - `docs/DATABASE.md`: Schema & ERD.
+  - `docs/JPA_CONVERTER.md`: Sensitive data encryption guide.
 
-## 아키텍처 및 패턴
+## 2. Critical Developer Workflows
+- **Backend**:
+  - Run: `mvn spring-boot:run` (in `backend/`).
+  - Build: `mvn clean package`.
+  - Profiles: Default is H2. Use `-Dspring.profiles.active=cubrid` for CUBRID.
+- **Frontend**:
+  - Run: `npm run dev` (in `frontend/`).
+  - Build: `npm run build`.
+  - API Proxy: Configured in `vite.config.ts` or via CORS in backend.
+
+## 3. Codebase Conventions & Patterns
+
+### Backend (Spring Boot)
+- **Controller**:
+  - **NEVER** return Entities directly. Always map to DTOs (`com.srmanagement.dto`).
+  - Use `ResponseEntity<T>` for all endpoints.
+  - Validate inputs with `@Valid`.
+- **Service/Repository**:
+  - Use Constructor Injection (Lombok `@RequiredArgsConstructor`).
+  - **Encryption**: Sensitive fields (name, phone, email) are encrypted automatically via JPA Converters (`@Convert`). **DO NOT** manually encrypt/decrypt in service logic unless necessary.
+- **Security**:
+  - Stateless JWT authentication.
+  - `JwtAuthenticationFilter` handles token validation.
+
+### Frontend (React + TypeScript)
+- **API Interaction**:
+  - **ALWAYS** use the exported instance from `src/services/api.ts`.
+  - **NEVER** create a new `axios.create()` instance. The default one handles JWT injection and 401 refresh logic automatically.
+- **State Management**:
+  - Use Redux Toolkit (`src/store`) for global state (auth, SR data).
+  - Use `createAsyncThunk` for async API calls.
+- **Components**:
+  - Functional components with Hooks.
+  - Place reusable UI in `src/components/common`.
+
+## 4. Common Pitfalls & "Do Nots"
+- **Token Refresh**: Do not implement token refresh logic in components. It is handled centrally in `api.ts` interceptors.
+- **Database Dialect**: When working with CUBRID, ensure `CubridDialect` is used.
+- **H2 Configuration**: Default H2 is in **FILE** mode (`backend/data/srdb`), not memory. Data persists across restarts.
+
+## 5. Key File Paths
+- **Auth Logic**: `backend/src/main/java/com/srmanagement/security/`, `frontend/src/hooks/useAuth.ts`
+- **API Client**: `frontend/src/services/api.ts`
+- **DB Config**: `backend/src/main/resources/application.yml`
+- **Encryption**: `backend/src/main/java/com/srmanagement/converter/`
+
+---
+
+# SR 관리 시스템 - AI 코딩 에이전트 지침 (Korean)
+
+## 1. 프로젝트 컨텍스트 및 아키텍처
+- **목표**: PUBC 오픈API 전환 지원을 위한 SR(서비스 요청) 관리 시스템.
+- **기술 스택**:
+  - **백엔드**: Spring Boot 3.2+ (Java 17), Maven.
+  - **프론트엔드**: React 18 (TypeScript), Vite, Redux Toolkit.
+  - **데이터베이스**: H2 (개발/기본), CUBRID 10.x+, MySQL 8.x, PostgreSQL.
+- **주요 문서**:
+  - `docs/API.md`: REST API 명세서.
+  - `docs/DATABASE.md`: 스키마 및 ERD.
+  - `docs/JPA_CONVERTER.md`: 민감 데이터 암호화 가이드.
+
+## 2. 핵심 개발자 워크플로우
+- **백엔드**:
+  - 실행: `mvn spring-boot:run` (`backend/` 폴더에서).
+  - 빌드: `mvn clean package`.
+  - 프로필: 기본값은 H2. CUBRID 사용 시 `-Dspring.profiles.active=cubrid` 사용.
+- **프론트엔드**:
+  - 실행: `npm run dev` (`frontend/` 폴더에서).
+  - 빌드: `npm run build`.
+  - API 프록시: `vite.config.ts`에 설정되거나 백엔드 CORS 설정 사용.
+
+## 3. 코드베이스 컨벤션 및 패턴
 
 ### 백엔드 (Spring Boot)
-- **빌드 도구**: Maven (`pom.xml`). *참고: README에는 Gradle로 잘못 기재되어 있음.*
-- **API 설계**:
-  - `com.srmanagement.controller` 패키지의 RESTful 컨트롤러.
-  - DTO를 감싸는 `ResponseEntity<T>` 반환 (예: `SrResponse`).
-  - **절대** 컨트롤러에서 Entity를 직접 반환하지 말 것. 항상 Response DTO로 매핑하여 반환.
-- **보안**:
-  - `SecurityConfig.java`에 설정됨.
-  - 무상태(Stateless) 세션 관리.
-  - `JwtAuthenticationFilter`가 토큰 유효성 검증 처리.
-  - CSRF 비활성화됨.
-- **예외 처리**:
-  - `GlobalExceptionHandler.java`에서 중앙 집중식 처리.
-  - 표준 `ErrorResponse` 구조 반환: `{ error, message, timestamp, path }`.
-  - 비즈니스 로직 오류에는 `CustomException` 사용.
-- **데이터 접근**:
-  - `com.srmanagement.repository`의 JPA 리포지토리.
-  - `com.srmanagement.entity`의 엔티티.
+- **Controller**:
+  - **절대** Entity를 직접 반환하지 말 것. 항상 DTO(`com.srmanagement.dto`)로 매핑할 것.
+  - 모든 엔드포인트에 `ResponseEntity<T>` 사용.
+  - `@Valid`로 입력값 검증.
+- **Service/Repository**:
+  - 생성자 주입 사용 (Lombok `@RequiredArgsConstructor`).
+  - **암호화**: 민감 필드(이름, 전화번호, 이메일)는 JPA Converter(`@Convert`)를 통해 자동 암호화됨. 서비스 로직에서 수동으로 암호화/복호화 **하지 말 것**.
+- **Security**:
+  - 무상태(Stateless) JWT 인증.
+  - `JwtAuthenticationFilter`가 토큰 검증 처리.
 
-### 프론트엔드 (React + Vite)
-- **API 클라이언트**:
-  - 모든 HTTP 요청에 `src/services/api.ts` 사용.
-  - **새로운 Axios 인스턴스를 생성하지 말 것.** 기본 export된 인스턴스가 JWT 주입 및 자동 토큰 갱신(401 재시도 로직)을 처리함.
+### 프론트엔드 (React + TypeScript)
+- **API 상호작용**:
+  - **항상** `src/services/api.ts`에서 export된 인스턴스를 사용할 것.
+  - **절대** 새로운 `axios.create()` 인스턴스를 생성하지 말 것. 기본 인스턴스가 JWT 주입 및 401 갱신 로직을 자동 처리함.
 - **상태 관리**:
-  - Redux Toolkit (`src/store`).
-  - API 상호작용에 `createAsyncThunk` 사용 (`src/store/srSlice.ts` 참조).
-  - Slice에서 `loading`, `error`, 데이터 상태 관리.
+  - 전역 상태(인증, SR 데이터)는 Redux Toolkit(`src/store`) 사용.
+  - 비동기 API 호출에는 `createAsyncThunk` 사용.
 - **컴포넌트**:
   - Hook을 사용하는 함수형 컴포넌트.
-  - 재사용 가능한 UI 컴포넌트는 `src/components/common`에 위치.
-  - 기능별 컴포넌트는 `src/components/{feature}`에 위치 (예: `src/components/sr`).
-- **폼(Forms)**:
-  - Redux 액션을 디스패치하기 전에 로컬 상태(useState)로 폼 상태 관리.
-  - 패턴 참조: `SrForm.tsx`의 `onSubmit` prop이 액션 디스패치 처리.
+  - 재사용 가능한 UI는 `src/components/common`에 위치.
 
-## 주요 워크플로우 및 명령어
+## 4. 흔한 실수 및 "하지 말아야 할 것"
+- **토큰 갱신**: 컴포넌트 내에 토큰 갱신 로직을 구현하지 말 것. `api.ts` 인터셉터에서 중앙 처리됨.
+- **데이터베이스 방언**: CUBRID 사용 시 반드시 `CubridDialect`가 사용되는지 확인할 것.
+- **H2 설정**: 기본 H2는 메모리가 아닌 **파일** 모드(`backend/data/srdb`)임. 재시작 후에도 데이터가 유지됨.
 
-### 백엔드
-- **실행**: `mvn spring-boot:run` (`backend/` 디렉토리에서)
-- **테스트**: `mvn test`
-- **패키징**: `mvn clean package`
-
-### 프론트엔드
-- **설치**: `npm install` (`frontend/` 디렉토리에서)
-- **개발 서버**: `npm run dev`
-- **빌드**: `npm run build`
-
-## 코딩 컨벤션
-- **Java**:
-  - Lombok(`@Data`, `@Builder` 등)을 사용하여 보일러플레이트 감소.
-  - 필드 주입(Field Injection) 지양; 생성자 주입(Constructor Injection) 사용 권장.
-  - 컨트롤러 메서드는 `@Valid`를 사용하여 입력값 검증.
-- **TypeScript/React**:
-  - Strict 모드 활성화됨.
-  - 모든 Props와 State에 대한 인터페이스 정의.
-  - 공유 타입 정의(모델, DTO)는 `src/types/index.ts` 사용.
-  - `.then()` 대신 `async/await` 선호.
-
-## 주의사항 및 흔한 실수
-- **토큰 갱신**: 프론트엔드 `api.ts` 인터셉터가 갱신을 자동으로 처리함. 컴포넌트 내에 수동 갱신 로직을 구현하지 말 것.
-- **CORS**: `CorsConfig.java`에 설정됨. 새로운 Origin 추가 시 이곳을 수정.
-- **Entity/DTO 매핑**: 양방향 매핑이 처리되는지 확인 (주로 Service 계층이나 Mapper/Builder 패턴을 통해).
+## 5. 주요 파일 경로
+- **인증 로직**: `backend/src/main/java/com/srmanagement/security/`, `frontend/src/hooks/useAuth.ts`
+- **API 클라이언트**: `frontend/src/services/api.ts`
+- **DB 설정**: `backend/src/main/resources/application.yml`
+- **암호화**: `backend/src/main/java/com/srmanagement/converter/`
