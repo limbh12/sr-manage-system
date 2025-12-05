@@ -228,6 +228,84 @@ npm run build
 ```
 빌드 결과물은 `frontend/dist` 디렉토리에 생성되며, 이를 웹 서버(Nginx, Apache 등)에 배포합니다.
 
+#### Spring Boot 내장 서버에 프론트엔드 포함 배포
+
+별도의 웹 서버(Nginx/Apache) 없이 Spring Boot JAR 하나로 프론트엔드까지 함께 배포할 수 있습니다. 소규모/내부 시스템에 적합합니다.
+
+1. 프론트엔드 빌드 결과물(`frontend/dist/*`)을 백엔드의 정적 리소스 폴더로 복사합니다.
+  - 복사 경로: `backend/src/main/resources/static/` (폴더가 없으면 생성)
+  - 예시:
+    ```bash
+    mkdir -p backend/src/main/resources/static
+    cp -r frontend/dist/* backend/src/main/resources/static/
+    ```
+2. 백엔드를 빌드합니다.
+  ```bash
+  cd backend
+  mvn clean package
+  ```
+3. 생성된 JAR 파일을 실행하면 `http://localhost:8080` 접속 시 프론트엔드 화면이 바로 표시됩니다.
+  - API 경로(`/api`)는 기존과 동일하게 백엔드 컨트롤러로 라우팅됩니다.
+
+**장점**: 운영이 단순하며, 별도 웹 서버가 필요 없습니다.
+**단점**: 대용량 트래픽, 정적 파일 캐싱/압축 등 고급 기능은 외부 웹 서버가 더 유리합니다.
+
+#### 웹 서버 설정 예시
+
+**1. Nginx 설정 예시 (`nginx.conf`)**
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    # 정적 파일 서빙
+    location / {
+        root /path/to/sr-manage-system/frontend/dist;
+        index index.html;
+        try_files $uri $uri/ /index.html; # SPA 라우팅 처리
+    }
+
+    # 백엔드 API 프록시
+    location /api {
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+**2. Apache 설정 예시 (`httpd.conf`)**
+
+Apache 웹 서버 사용 시 `mod_rewrite`와 `mod_proxy` 모듈이 활성화되어 있어야 합니다.
+
+```apache
+<VirtualHost *:80>
+    ServerName your-domain.com
+    DocumentRoot "/path/to/sr-manage-system/frontend/dist"
+
+    <Directory "/path/to/sr-manage-system/frontend/dist">
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+        
+        # SPA 라우팅 처리 (React Router)
+        RewriteEngine On
+        RewriteBase /
+        RewriteRule ^index\.html$ - [L]
+        RewriteCond %{REQUEST_FILENAME} !-f
+        RewriteCond %{REQUEST_FILENAME} !-d
+        RewriteRule . /index.html [L]
+    </Directory>
+
+    # 백엔드 API 프록시 설정
+    ProxyRequests Off
+    ProxyPreserveHost On
+    ProxyPass /api http://localhost:8080/api
+    ProxyPassReverse /api http://localhost:8080/api
+</VirtualHost>
+```
+
 ### 2.3 Mock 데이터 모드 설정
 
 백엔드 서버 없이 프론트엔드만 단독으로 개발하거나 테스트할 때 Mock(가짜) 데이터를 사용할 수 있습니다.
