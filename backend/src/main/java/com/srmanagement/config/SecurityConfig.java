@@ -86,10 +86,33 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 인증 API는 허용
                         .requestMatchers("/api/auth/**").permitAll()
-                        // H2 콘솔 허용 (개발용)
                         .requestMatchers("/h2-console/**").permitAll()
-                        // Swagger/OpenAPI 허용
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                            "/",
+                            "/index.html",
+                            "/static/**",
+                            "/assets/**",
+                            "/favicon.ico",
+                            "/**/*.js",
+                            "/**/*.css",
+                            "/**/*.png",
+                            "/**/*.svg",
+                            "/**/*.ico"
+                        ).permitAll()
+                        // HEAD 요청도 허용 (curl -I 등에서 사용)
+                        .requestMatchers(HttpMethod.HEAD,
+                            "/",
+                            "/index.html",
+                            "/static/**",
+                            "/assets/**",
+                            "/favicon.ico",
+                            "/**/*.js",
+                            "/**/*.css",
+                            "/**/*.png",
+                            "/**/*.svg",
+                            "/**/*.ico"
+                        ).permitAll()
                         // ADMIN 전용 API
                         .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
                         // .requestMatchers(HttpMethod.DELETE, "/api/sr/**").hasRole("ADMIN") // 서비스 계층에서 권한 체크

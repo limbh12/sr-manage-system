@@ -10,6 +10,34 @@
   --background-color: #f5f5f5;
   --sidebar-width: 240px;
   --header-height: 64px;
+
+  /* 라이트 모드 색상 */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --border-color: #e0e0e0;
+  --hover-bg: #fafafa;
+  --card-shadow: rgba(0, 0, 0, 0.1);
+}
+
+/* 다크 모드 색상 */
+[data-theme='dark'] {
+  --primary-color: #42a5f5;
+  --primary-dark: #1976d2;
+  --success-color: #66bb6a;
+  --warning-color: #ffa726;
+  --error-color: #ef5350;
+  --info-color: #42a5f5;
+  --background-color: #121212;
+
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #121212;
+  --text-primary: #e0e0e0;
+  --text-secondary: #b0b0b0;
+  --border-color: #333333;
+  --hover-bg: #2a2a2a;
+  --card-shadow: rgba(0, 0, 0, 0.3);
 }
 
 * {
@@ -24,6 +52,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--background-color);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* 레이아웃 */
@@ -91,10 +121,10 @@ body {
   left: 0;
   width: var(--sidebar-width);
   bottom: 0;
-  background-color: white;
-  border-right: 1px solid #e0e0e0;
+  background-color: var(--bg-primary);
+  border-right: 1px solid var(--border-color);
   overflow-y: auto;
-  transition: transform 0.3s ease-in-out;
+  transition: transform 0.3s ease-in-out, background-color 0.3s ease;
   z-index: 1000;
 }
 
@@ -172,13 +202,13 @@ body {
   display: flex;
   align-items: center;
   padding: 12px 24px;
-  color: #333;
+  color: var(--text-primary);
   text-decoration: none;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 .sidebar-nav-link:hover {
-  background-color: #f5f5f5;
+  background-color: var(--hover-bg);
 }
 
 .sidebar-nav-link.active {
@@ -211,12 +241,12 @@ body {
 }
 
 .btn-secondary {
-  background-color: #e0e0e0;
-  color: #333;
+  background-color: var(--border-color);
+  color: var(--text-primary);
 }
 
 .btn-secondary:hover {
-  background-color: #d0d0d0;
+  background-color: var(--hover-bg);
 }
 
 .btn-danger {
@@ -237,16 +267,18 @@ body {
   display: block;
   margin-bottom: 8px;
   font-weight: 500;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .form-input {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 14px;
-  transition: border-color 0.2s;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: border-color 0.2s, background-color 0.3s;
 }
 
 .form-input:focus {
@@ -257,21 +289,24 @@ body {
 .form-select {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 14px;
-  background-color: white;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s;
 }
 
 /* 카드 */
 .card {
-  background-color: white;
+  background-color: var(--bg-primary);
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px var(--card-shadow);
   padding: 24px;
   margin-bottom: 24px;
   max-width: 100%;
   overflow-x: hidden;
+  transition: background-color 0.3s, box-shadow 0.3s;
 }
 
 @media (max-width: 768px) {
@@ -284,7 +319,7 @@ body {
   font-size: 1.25rem;
   font-weight: 500;
   margin-bottom: 16px;
-  color: #333;
+  color: var(--text-primary);
 }
 
 /* 테이블 */
@@ -301,8 +336,9 @@ body {
 .table td {
   padding: 12px 16px;
   text-align: left;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--border-color);
   white-space: nowrap;
+  color: var(--text-primary);
 }
 
 @media (max-width: 768px) {
@@ -314,13 +350,13 @@ body {
 }
 
 .table th {
-  background-color: #f5f5f5;
+  background-color: var(--bg-secondary);
   font-weight: 500;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .table tr:hover {
-  background-color: #fafafa;
+  background-color: var(--hover-bg);
 }
 
 /* 상태 뱃지 */
@@ -416,9 +452,10 @@ body {
   width: 100%;
   max-width: 400px;
   padding: 40px;
-  background-color: white;
+  background-color: var(--bg-primary);
   border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px var(--card-shadow);
+  transition: background-color 0.3s, box-shadow 0.3s;
 }
 
 .login-title {
@@ -449,10 +486,12 @@ body {
 
 .pagination-btn {
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-color);
   border-radius: 4px;
-  background-color: white;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   cursor: pointer;
+  transition: background-color 0.3s;
 }
 
 .pagination-btn:disabled {
@@ -481,13 +520,14 @@ body {
 }
 
 .modal {
-  background-color: white;
+  background-color: var(--bg-primary);
   border-radius: 8px;
   padding: 24px;
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
+  transition: background-color 0.3s;
 }
 
 .modal-header {
@@ -500,6 +540,7 @@ body {
 .modal-title {
   font-size: 1.25rem;
   font-weight: 500;
+  color: var(--text-primary);
 }
 
 .modal-close {
@@ -507,7 +548,8 @@ body {
   border: none;
   font-size: 24px;
   cursor: pointer;
-  color: #666;
+  color: var(--text-secondary);
+  transition: color 0.2s;
 }
 
 .modal-footer {
@@ -607,7 +649,7 @@ body {
 .page-title {
   font-size: 1.5rem;
   font-weight: 500;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .grid-2 {
@@ -627,8 +669,8 @@ body {
   font-weight: 600;
   margin-bottom: 16px;
   padding-bottom: 8px;
-  border-bottom: 1px solid #eee;
-  color: #444;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
 }
 
 .mb-4 {

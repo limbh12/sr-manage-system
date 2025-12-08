@@ -26,7 +26,7 @@ function SurveyList() {
     desiredMethod: '',
   });
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<number | null>(savedState?.selectedId || null);
+  const [selectedId, _setSelectedId] = useState<number | null>(savedState?.selectedId || null);
   const observerTarget = useRef<HTMLDivElement>(null);
 
   const loadSurveys = async (pageToLoad: number, searchParams: OpenApiSurveySearch, isReset: boolean = false) => {
@@ -121,7 +121,7 @@ function SurveyList() {
   };
 
   const handleReset = () => {
-    const resetSearch = { keyword: '', currentMethod: '', desiredMethod: '' };
+    const resetSearch: OpenApiSurveySearch = { keyword: '', currentMethod: '', desiredMethod: '' };
     setSearch(resetSearch);
     setPage(0);
     loadSurveys(0, resetSearch, true);

@@ -1,4 +1,4 @@
-import { LoginRequest, RegisterRequest, TokenResponse, User } from '../../types';
+import { LoginRequest, TokenResponse, User } from '../../types';
 import { MOCK_USER, MOCK_ADMIN, delay } from './mockData';
 
 export const login = async (data: LoginRequest): Promise<TokenResponse> => {
@@ -34,16 +34,6 @@ export const login = async (data: LoginRequest): Promise<TokenResponse> => {
     refreshToken: 'mock-refresh-token',
     tokenType: 'Bearer',
     expiresIn: 3600,
-  };
-};
-
-export const register = async (data: RegisterRequest): Promise<User> => {
-  await delay(500);
-  return {
-    ...MOCK_USER,
-    username: data.username,
-    name: data.name,
-    email: data.email,
   };
 };
 

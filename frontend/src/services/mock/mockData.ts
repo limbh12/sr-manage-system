@@ -63,7 +63,7 @@ export const INITIAL_SR_LIST: Sr[] = [
 export const INITIAL_SURVEY_LIST: OpenApiSurvey[] = [
   {
     id: 1,
-    organizationName: '행정안전부',
+    organization: { code: 'MOIS', name: '행정안전부' },
     department: '디지털정부국',
     contactName: '홍길동',
     contactPhone: '010-1234-5678',
@@ -80,7 +80,7 @@ export const INITIAL_SURVEY_LIST: OpenApiSurvey[] = [
   },
   {
     id: 2,
-    organizationName: '서울특별시',
+    organization: { code: 'SEOUL', name: '서울특별시' },
     department: '정보통신과',
     contactName: '김철수',
     contactPhone: '010-9876-5432',
@@ -97,7 +97,7 @@ export const INITIAL_SURVEY_LIST: OpenApiSurvey[] = [
   },
   {
     id: 3,
-    organizationName: '부산광역시',
+    organization: { code: 'BUSAN', name: '부산광역시' },
     department: '빅데이터통계과',
     contactName: '이영희',
     contactPhone: '010-1111-2222',

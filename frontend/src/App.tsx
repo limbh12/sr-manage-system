@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { RootState } from './store';
 import { useAuth } from './hooks/useAuth';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -21,6 +23,12 @@ function App() {
   const { isAuthenticated, loading, user } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const location = useLocation();
+  const theme = useSelector((state: RootState) => state.theme.mode);
+
+  // 테마 적용
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   // 화면 크기에 따른 사이드바 초기 상태 설정 및 리사이즈 이벤트 핸들러
   useEffect(() => {

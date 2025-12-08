@@ -76,16 +76,7 @@ export const searchOrganizations = async (keyword: string): Promise<{ code: stri
   return response.data;
 };
 
-export interface OpenApiSurveyResponse {
-  id: number;
-  organization: Organization;
-  department: string;
-  title: string;
-  description: string;
-  note?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+export interface OpenApiSurveyResponse extends OpenApiSurvey {}
 
 export interface BulkUploadResult {
   totalCount: number;
@@ -99,9 +90,9 @@ export interface BulkUploadResult {
 }
 
 export const surveyService = {
-  getSurveys: async (page: number = 0, size: number = 10, keyword?: string) => {
-    if (USE_MOCK) return mockSurveyService.getSurveyList(page, size, keyword);
-    const response = await api.get<PageResponse<OpenApiSurvey>>('/surveys', { params: { page, size, ...keyword } });
+  getSurveys: async (page: number = 0, size: number = 10, search?: OpenApiSurveySearch) => {
+    if (USE_MOCK) return mockSurveyService.getSurveyList(page, size, search);
+    const response = await api.get<PageResponse<OpenApiSurvey>>('/surveys', { params: { page, size, ...search } });
     return response.data;
   },
 

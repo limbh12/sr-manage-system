@@ -84,7 +84,7 @@ const getPriorityLabel = (priority: Priority): string => {
 /**
  * SR 목록 컴포넌트
  */
-function SrList({ srList, onSelectSr, onDeleteSr, totalElements, page, size = 10 }: SrListProps) {
+function SrList({ srList, onSelectSr, onDeleteSr, totalElements, page: _page, size: _size = 10 }: SrListProps) {
   return (
     <div className="table-container">
       <table className="table">

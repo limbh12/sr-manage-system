@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import ThemeToggle from './ThemeToggle';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -14,8 +15,8 @@ function Header({ onToggleSidebar }: HeaderProps) {
   return (
     <header className="header">
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <button 
-          className="btn-icon" 
+        <button
+          className="btn-icon"
           onClick={onToggleSidebar}
           aria-label="메뉴 토글"
           style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.2rem', padding: '4px' }}
@@ -25,6 +26,7 @@ function Header({ onToggleSidebar }: HeaderProps) {
         <h1 className="header-title">SR Management System</h1>
       </div>
       <div className="header-actions">
+        <ThemeToggle />
         {user && (
           <>
             <div className="header-user">

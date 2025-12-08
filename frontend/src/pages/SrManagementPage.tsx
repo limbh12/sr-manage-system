@@ -3,7 +3,6 @@ import { useSr } from '../hooks/useSr';
 import SrList from '../components/sr/SrList';
 import SrDetail from '../components/sr/SrDetail';
 import SrForm from '../components/sr/SrForm';
-import Loading from '../components/common/Loading';
 import { Sr, SrCreateRequest, SrUpdateRequest, SrStatus, Priority } from '../types';
 import { USE_MOCK } from '../config';
 

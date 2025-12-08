@@ -218,14 +218,14 @@ const srSlice = createSlice({
         state.error = action.payload || 'Failed to fetch SR';
       })
       // SR 이력 조회
-      .addCase(fetchSrHistoriesAsync.pending, (state) => {
+      .addCase(fetchSrHistoriesAsync.pending, (_state) => {
         // 이력 로딩은 전체 로딩을 유발하지 않도록 처리할 수도 있지만, 여기서는 간단히
         // state.loading = true; 
       })
       .addCase(fetchSrHistoriesAsync.fulfilled, (state, action) => {
         state.srHistories = action.payload;
       })
-      .addCase(fetchSrHistoriesAsync.rejected, (state, action) => {
+      .addCase(fetchSrHistoriesAsync.rejected, (_state, _action) => {
         // state.error = action.payload || 'Failed to fetch SR histories';
       })
       // SR 이력 생성

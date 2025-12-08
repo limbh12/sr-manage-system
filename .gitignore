@@ -55,6 +55,7 @@ yarn-error.log*
 # Frontend build
 frontend/dist/
 frontend/.cache/
+backend/src/main/resources/static/
 
 # Environment variables
 # .env
@@ -89,3 +90,4 @@ test-output/
 # Script output
 script_output.txt
 backend/data/
+

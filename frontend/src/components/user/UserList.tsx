@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { User, PageResponse, UserUpdateRequest, UserCreateRequest } from '../../types';
 import * as userService from '../../services/userService';
-import Loading from '../common/Loading';
 import UserEditModal from './UserEditModal';
 
 /**

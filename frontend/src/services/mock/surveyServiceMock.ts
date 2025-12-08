@@ -27,7 +27,7 @@ export const getSurveyList = async (page = 0, size = 10, search?: { keyword?: st
     if (search.keyword) {
       const keyword = search.keyword.toLowerCase();
       list = list.filter(item => 
-        item.organizationName.toLowerCase().includes(keyword) ||
+        item.organization.name.toLowerCase().includes(keyword) ||
         item.department.toLowerCase().includes(keyword) ||
         item.systemName.toLowerCase().includes(keyword) ||
         item.contactName.toLowerCase().includes(keyword) ||
@@ -77,7 +77,48 @@ export const createSurvey = async (data: OpenApiSurveyCreateRequest): Promise<Op
 
   const newSurvey: OpenApiSurvey = {
     id: newId,
-    ...data,
+    organization: { code: data.organizationCode, name: 'Mock Organization' }, // Mock organization
+    department: data.department,
+    contactName: data.contactName,
+    contactPhone: data.contactPhone,
+    contactEmail: data.contactEmail,
+    receivedDate: data.receivedDate,
+    systemName: data.systemName,
+    currentMethod: data.currentMethod,
+    desiredMethod: data.desiredMethod,
+    reasonForDistributed: data.reasonForDistributed,
+    maintenanceOperation: data.maintenanceOperation,
+    maintenanceLocation: data.maintenanceLocation,
+    maintenanceAddress: data.maintenanceAddress,
+    maintenanceNote: data.maintenanceNote,
+    operationEnv: data.operationEnv,
+    serverLocation: data.serverLocation,
+    webServerOs: data.webServerOs,
+    webServerOsType: data.webServerOsType,
+    webServerOsVersion: data.webServerOsVersion,
+    webServerType: data.webServerType,
+    webServerTypeOther: data.webServerTypeOther,
+    webServerVersion: data.webServerVersion,
+    wasServerOs: data.wasServerOs,
+    wasServerOsType: data.wasServerOsType,
+    wasServerOsVersion: data.wasServerOsVersion,
+    wasServerType: data.wasServerType,
+    wasServerTypeOther: data.wasServerTypeOther,
+    wasServerVersion: data.wasServerVersion,
+    dbServerOs: data.dbServerOs,
+    dbServerOsType: data.dbServerOsType,
+    dbServerOsVersion: data.dbServerOsVersion,
+    dbServerType: data.dbServerType,
+    dbServerTypeOther: data.dbServerTypeOther,
+    dbServerVersion: data.dbServerVersion,
+    devLanguage: data.devLanguage,
+    devLanguageOther: data.devLanguageOther,
+    devLanguageVersion: data.devLanguageVersion,
+    devFramework: data.devFramework,
+    devFrameworkOther: data.devFrameworkOther,
+    devFrameworkVersion: data.devFrameworkVersion,
+    otherRequests: data.otherRequests,
+    note: data.note,
     createdAt: now,
     updatedAt: now,
   };
@@ -113,7 +154,7 @@ export const downloadSurveyFile = async (id: number): Promise<void> => {
   if (!survey) throw new Error('Survey not found');
   
   // 가짜 파일 다운로드
-  const content = `Mock file content for survey ${id}\nOrganization: ${survey.organizationName}`;
+  const content = `Mock file content for survey ${id}\nOrganization: ${survey.organization.name}`;
   const blob = new Blob([content], { type: 'text/plain' });
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
