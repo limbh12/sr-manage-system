@@ -178,12 +178,14 @@ function SurveyForm() {
     e.preventDefault();
     setLoading(true);
     try {
+      let createdId: number | undefined = undefined;
       if (id) {
         await surveyService.updateSurvey(Number(id), formData);
         // 수정 시 파일이 선택되어 있으면 별도 엔드포인트로 업로드
         if (file) {
           await surveyService.uploadReceivedFile(Number(id), file);
         }
+        createdId = Number(id);
         alert('수정되었습니다.');
       } else {
         const created = await surveyService.createSurvey(formData);
@@ -191,11 +193,13 @@ function SurveyForm() {
         if (file && created && (created as any).id) {
           await surveyService.uploadReceivedFile((created as any).id, file);
         }
+        createdId = (created as any)?.id;
         alert('저장되었습니다.');
       }
       // 수정/등록 완료 플래그를 설정하여 목록에서 최신 데이터를 가져오도록 함
       sessionStorage.setItem('SURVEY_FORM_SUBMITTED', 'true');
-      navigate('/survey'); // 목록 페이지로 이동
+      // 목록으로 이동하면서 라우트 상태로도 플래그 전달 (더 안정적인 리프레시)
+      navigate('/survey', { state: { formSubmitted: true, selectedId: createdId } });
     } catch (error) {
       console.error(error);
       alert(id ? '수정에 실패했습니다.' : '저장에 실패했습니다.');

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback, useLayoutEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { OpenApiSurvey, OpenApiSurveySearch } from '../../types';
 import * as surveyService from '../../services/surveyService';
 import CsvUploadModal from './CsvUploadModal';
@@ -17,7 +17,6 @@ function SurveyList() {
       if (parsed.savedAt && typeof parsed.savedAt === 'number') {
         const age = Date.now() - parsed.savedAt;
         if (age > CACHE_TTL_MS) {
-          console.log('Saved survey state is too old (age ms):', age);
           sessionStorage.removeItem(STORAGE_KEY);
           return null;
         }
@@ -33,13 +32,10 @@ function SurveyList() {
   // 수정/등록 완료 플래그 확인
   const [formSubmitted] = useState(() => {
     const flag = sessionStorage.getItem('SURVEY_FORM_SUBMITTED');
-    console.log('🔍 SurveyList 초기화 - formSubmitted 플래그:', flag);
     if (flag) {
       sessionStorage.removeItem('SURVEY_FORM_SUBMITTED');
-      console.log('✅ formSubmitted = true, 최신 데이터를 로드합니다.');
       return true;
     }
-    console.log('❌ formSubmitted = false, 캐시를 사용합니다.');
     return false;
   });
 
@@ -108,6 +104,8 @@ function SurveyList() {
     }
   }, [savedState, formSubmitted]);
 
+  const location = useLocation();
+
   // Disable browser scroll restoration
   useEffect(() => {
     if ('scrollRestoration' in history) {
@@ -128,12 +126,9 @@ function SurveyList() {
         const targetPage = savedState?.page || 0;
         const targetId = savedState?.selectedId;
 
-        console.log('수정 완료 후 데이터 로드 시작:', { targetPage, targetId });
-
         // 페이지 0부터 targetPage까지 순차적으로 로드
         let allContent: any[] = [];
         for (let i = 0; i <= targetPage; i++) {
-          console.log(`페이지 ${i} 로드 중...`);
           const response = await surveyService.getSurveyList(i, pageSize, search);
           if (i === 0) {
             allContent = response.content;
@@ -147,18 +142,16 @@ function SurveyList() {
           setHasMore(!response.last);
           setPage(i);
 
-          console.log(`페이지 ${i} 로드 완료, 총 ${allContent.length}개 항목`);
+          
         }
 
         // selectedId 복원
         if (targetId) {
           setSelectedId(targetId);
-          console.log('selectedId 복원:', targetId);
 
           // DOM이 완전히 렌더링될 때까지 대기 후 스크롤
           setTimeout(() => {
             const selectedRow = document.querySelector(`tr[data-survey-id="${targetId}"]`);
-            console.log('스크롤 대상 찾기:', selectedRow ? '성공' : '실패');
             if (selectedRow) {
               selectedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
@@ -185,7 +178,6 @@ function SurveyList() {
           const cachedFirstId = (savedState.surveys && savedState.surveys[0] && savedState.surveys[0].id) || null;
           const freshFirstId = (fresh.content && fresh.content[0] && fresh.content[0].id) || null;
           if (fresh.totalElements !== (savedState.totalElements || 0) || cachedFirstId !== freshFirstId) {
-            console.log('캐시 불일치 감지: 최신 데이터로 업데이트합니다.', { cachedFirstId, freshFirstId });
             setSurveys(fresh.content);
             setTotalElements(fresh.totalElements);
             setHasMore(!fresh.last);
@@ -193,7 +185,7 @@ function SurveyList() {
             // clear saved cache to avoid stale restores
             sessionStorage.removeItem(STORAGE_KEY);
           } else {
-            console.log('캐시가 최신입니다. 변경 없음.');
+            // cache is up-to-date
           }
         } catch (err) {
           console.error('캐시 검증 중 오류', err);
@@ -203,6 +195,57 @@ function SurveyList() {
       validateCache();
     }
   }, []);
+
+  // Support navigation with state: navigate('/survey', { state: { formSubmitted: true, selectedId } })
+  useEffect(() => {
+    try {
+      // 이미 sessionStorage 기반으로 formSubmitted가 감지되어 로드가 진행중이면
+      // 라우트 상태에 의한 추가 로드를 방지합니다 (중복 로드 차단).
+      if (formSubmitted) return;
+
+      const state = (location && (location as any).state) || null;
+      if (state && state.formSubmitted) {
+        const targetPage = savedState?.page || 0;
+        const targetId = state.selectedId || savedState?.selectedId;
+
+        const loadDataForScrollFromLocation = async () => {
+          
+          let allContent: any[] = [];
+          for (let i = 0; i <= targetPage; i++) {
+            const response = await surveyService.getSurveyList(i, pageSize, search);
+            if (i === 0) {
+              allContent = response.content;
+            } else {
+              allContent = [...allContent, ...response.content];
+            }
+
+            setSurveys(allContent);
+            setTotalElements(response.totalElements);
+            setHasMore(!response.last);
+            setPage(i);
+          }
+
+          if (targetId) {
+            setSelectedId(targetId);
+            setTimeout(() => {
+              const selectedRow = document.querySelector(`tr[data-survey-id="${targetId}"]`);
+              if (selectedRow) selectedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+          }
+
+          // clear saved cache and clear navigation state so subsequent mounts are clean
+          sessionStorage.removeItem(STORAGE_KEY);
+          // replace history state to avoid re-triggering
+          navigate(location.pathname, { replace: true, state: {} });
+        };
+
+        loadDataForScrollFromLocation();
+      }
+    } catch (err) {
+      console.error('라우트 상태 기반 로드 중 오류', err);
+    }
+  // location.key changes on navigation; run when location changes
+  }, [location.key, formSubmitted]);
 
   const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
     const target = entries[0];
