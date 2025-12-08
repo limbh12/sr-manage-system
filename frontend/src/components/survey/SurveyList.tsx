@@ -156,6 +156,34 @@ function SurveyList() {
       // 캐시가 없는 경우: 초기 로드
       loadSurveys(0, search, true);
     }
+
+    // If we have a savedState but formSubmitted is false, validate cache in background
+    // (This ensures external changes are detected and UI updated even when cached state exists)
+    if (savedState && !formSubmitted) {
+      const validateCache = async () => {
+        try {
+          const fresh = await surveyService.getSurveyList(0, pageSize, search);
+          // If totalElements or first item differs, refresh displayed list
+          const cachedFirstId = (savedState.surveys && savedState.surveys[0] && savedState.surveys[0].id) || null;
+          const freshFirstId = (fresh.content && fresh.content[0] && fresh.content[0].id) || null;
+          if (fresh.totalElements !== (savedState.totalElements || 0) || cachedFirstId !== freshFirstId) {
+            console.log('캐시 불일치 감지: 최신 데이터로 업데이트합니다.', { cachedFirstId, freshFirstId });
+            setSurveys(fresh.content);
+            setTotalElements(fresh.totalElements);
+            setHasMore(!fresh.last);
+            setPage(0);
+            // clear saved cache to avoid stale restores
+            sessionStorage.removeItem(STORAGE_KEY);
+          } else {
+            console.log('캐시가 최신입니다. 변경 없음.');
+          }
+        } catch (err) {
+          console.error('캐시 검증 중 오류', err);
+        }
+      };
+
+      validateCache();
+    }
   }, []);
 
   const handleObserver = useCallback((entries: IntersectionObserverEntry[]) => {
