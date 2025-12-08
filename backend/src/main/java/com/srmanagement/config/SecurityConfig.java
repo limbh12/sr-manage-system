@@ -88,31 +88,14 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .requestMatchers(HttpMethod.GET,
+                        // 정적 리소스 허용 (프론트엔드 배포용)
+                        .requestMatchers(
                             "/",
                             "/index.html",
-                            "/static/**",
-                            "/assets/**",
-                            "/favicon.ico",
-                            "/**/*.js",
-                            "/**/*.css",
-                            "/**/*.png",
-                            "/**/*.svg",
-                            "/**/*.ico"
+                            "/favicon.ico"
                         ).permitAll()
-                        // HEAD 요청도 허용 (curl -I 등에서 사용)
-                        .requestMatchers(HttpMethod.HEAD,
-                            "/",
-                            "/index.html",
-                            "/static/**",
-                            "/assets/**",
-                            "/favicon.ico",
-                            "/**/*.js",
-                            "/**/*.css",
-                            "/**/*.png",
-                            "/**/*.svg",
-                            "/**/*.ico"
-                        ).permitAll()
+                        .requestMatchers("/static/**", "/assets/**").permitAll()
+                        .requestMatchers("/*.js", "/*.css", "/*.png", "/*.svg", "/*.ico").permitAll()
                         // ADMIN 전용 API
                         .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
                         // .requestMatchers(HttpMethod.DELETE, "/api/sr/**").hasRole("ADMIN") // 서비스 계층에서 권한 체크
