@@ -7,11 +7,27 @@ import CsvUploadModal from './CsvUploadModal';
 function SurveyList() {
   const navigate = useNavigate();
   const STORAGE_KEY = 'SURVEY_LIST_STATE';
-
-  // Initialize state from sessionStorage
+  // Initialize state from sessionStorage (ignore if too old)
+  const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
   const [savedState] = useState(() => {
     const saved = sessionStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : null;
+    if (!saved) return null;
+    try {
+      const parsed = JSON.parse(saved);
+      if (parsed.savedAt && typeof parsed.savedAt === 'number') {
+        const age = Date.now() - parsed.savedAt;
+        if (age > CACHE_TTL_MS) {
+          console.log('Saved survey state is too old (age ms):', age);
+          sessionStorage.removeItem(STORAGE_KEY);
+          return null;
+        }
+      }
+      return parsed;
+    } catch (e) {
+      console.error('Failed to parse saved survey state', e);
+      sessionStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
   });
 
   // 수정/등록 완료 플래그 확인
@@ -77,6 +93,8 @@ function SurveyList() {
       hasMore,
       search,
       scrollY,
+      // timestamp for TTL-based invalidation
+      savedAt: Date.now(),
       selectedId
     };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
