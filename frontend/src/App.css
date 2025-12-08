@@ -767,8 +767,8 @@ textarea.form-input:disabled {
 }
 
 [data-theme='dark'] .bg-info-light {
-  background-color: #1a2942;
-  border: 1px solid #2a4a6a;
+  background-color: #2a3a4a;
+  border: 1px solid #3a5a7a;
 }
 
 .bg-section {
@@ -830,7 +830,7 @@ textarea.form-input:disabled {
 }
 
 [data-theme='dark'] .bg-history-detail {
-  background-color: #2a2a2a;
+  background-color: #353535;
 }
 
 .bg-diff-removed {
@@ -847,4 +847,18 @@ textarea.form-input:disabled {
 
 [data-theme='dark'] .bg-diff-added {
   background-color: #1a3a1a;
+}
+
+/* Markdown body 다크모드 텍스트 가독성 개선 */
+[data-theme='dark'] .markdown-body {
+  color: var(--text-primary) !important;
+}
+
+[data-theme='dark'] .markdown-body p,
+[data-theme='dark'] .markdown-body li,
+[data-theme='dark'] .markdown-body div,
+[data-theme='dark'] .markdown-body span,
+[data-theme='dark'] .markdown-body code,
+[data-theme='dark'] .markdown-body pre {
+  color: var(--text-primary) !important;
 }
