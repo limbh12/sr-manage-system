@@ -51,7 +51,7 @@ const SrHistoryList: React.FC<SrHistoryListProps> = ({ srId }) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px', color: '#333' }}>이력 및 댓글</h3>
+      <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px' }}>이력 및 댓글</h3>
       
       {/* 댓글 입력 폼 */}
       <form onSubmit={handleSubmit} style={{ marginBottom: '20px' }}>
@@ -95,25 +95,25 @@ const SrHistoryList: React.FC<SrHistoryListProps> = ({ srId }) => {
           const isExpanded = expandedHistoryId === history.id;
 
           return (
-            <div key={history.id} style={{ position: 'relative', paddingLeft: '16px', borderLeft: '2px solid #e0e0e0', paddingBottom: '24px' }}>
-              <div style={{ 
-                position: 'absolute', 
-                left: '-5px', 
-                top: '0', 
-                width: '8px', 
-                height: '8px', 
-                borderRadius: '50%', 
-                backgroundColor: history.historyType === 'COMMENT' ? '#666' : '#1976d2' 
-              }}></div>
-              
+            <div key={history.id} className="timeline-border" style={{ position: 'relative', paddingLeft: '16px', paddingBottom: '24px' }}>
+              <div
+                className={history.historyType === 'COMMENT' ? 'timeline-dot-comment' : 'timeline-dot-change'}
+                style={{
+                  position: 'absolute',
+                  left: '-5px',
+                  top: '0',
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%'
+                }}
+              ></div>
+
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <div style={{ fontSize: '12px', color: '#666' }}>{formatDate(history.createdAt)}</div>
-                <span style={{ 
-                  fontSize: '11px', 
-                  padding: '2px 6px', 
-                  borderRadius: '10px', 
-                  backgroundColor: '#f0f0f0', 
-                  color: '#555' 
+                <div className="text-secondary" style={{ fontSize: '12px' }}>{formatDate(history.createdAt)}</div>
+                <span className="badge-history" style={{
+                  fontSize: '11px',
+                  padding: '2px 6px',
+                  borderRadius: '10px'
                 }}>
                   {getHistoryTypeLabel(history.historyType)}
                 </span>
@@ -122,14 +122,14 @@ const SrHistoryList: React.FC<SrHistoryListProps> = ({ srId }) => {
               <div style={{ fontWeight: 500, fontSize: '14px', marginBottom: '4px' }}>
                 {history.createdBy.name}
               </div>
-              
-              <div style={{ fontSize: '13px', color: '#444', whiteSpace: 'pre-wrap' }}>
+
+              <div className="text-content" style={{ fontSize: '13px', whiteSpace: 'pre-wrap' }}>
                 {history.content}
               </div>
-              
+
               {/* 일반 변경 이력 (한 줄 표시) - 긴 텍스트 변경이 아닌 경우 */}
               {!isLargeTextChange && hasDetails && (
-                <div style={{ fontSize: '12px', color: '#888', marginTop: '4px', backgroundColor: '#f9f9f9', padding: '4px', borderRadius: '4px' }}>
+                <div className="text-muted bg-history-detail" style={{ fontSize: '12px', marginTop: '4px', padding: '4px', borderRadius: '4px' }}>
                   {history.previousValue} → {history.newValue}
                 </div>
               )}
@@ -137,11 +137,11 @@ const SrHistoryList: React.FC<SrHistoryListProps> = ({ srId }) => {
               {/* 상세 정보 변경 이력 (아코디언) - 긴 텍스트 변경인 경우 */}
               {isLargeTextChange && hasDetails && (
                 <div style={{ marginTop: '8px' }}>
-                  <button 
+                  <button
                     onClick={() => toggleExpand(history.id)}
+                    className="link-primary"
                     style={{
                       fontSize: '12px',
-                      color: '#1976d2',
                       background: 'none',
                       border: 'none',
                       padding: 0,
@@ -154,18 +154,18 @@ const SrHistoryList: React.FC<SrHistoryListProps> = ({ srId }) => {
                     {isExpanded ? '접기' : '변경 내역 보기'}
                     <span style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▼</span>
                   </button>
-                  
+
                   {isExpanded && (
                     <div style={{ marginTop: '8px', border: '1px solid #eee', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{ padding: '8px', backgroundColor: '#fff0f0', borderBottom: '1px solid #eee' }}>
-                        <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#d32f2f', marginBottom: '4px' }}>변경 전</div>
-                        <div style={{ fontSize: '12px', color: '#333', whiteSpace: 'pre-wrap', maxHeight: '150px', overflowY: 'auto' }}>
+                      <div className="bg-diff-removed" style={{ padding: '8px' }}>
+                        <div className="text-diff-removed" style={{ fontSize: '11px', fontWeight: 'bold', marginBottom: '4px' }}>변경 전</div>
+                        <div className="text-diff-content" style={{ fontSize: '12px', whiteSpace: 'pre-wrap', maxHeight: '150px', overflowY: 'auto' }}>
                           {history.previousValue || '(내용 없음)'}
                         </div>
                       </div>
-                      <div style={{ padding: '8px', backgroundColor: '#f0fff4' }}>
-                        <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#2e7d32', marginBottom: '4px' }}>변경 후</div>
-                        <div style={{ fontSize: '12px', color: '#333', whiteSpace: 'pre-wrap', maxHeight: '150px', overflowY: 'auto' }}>
+                      <div className="bg-diff-added" style={{ padding: '8px' }}>
+                        <div className="text-diff-added" style={{ fontSize: '11px', fontWeight: 'bold', marginBottom: '4px' }}>변경 후</div>
+                        <div className="text-diff-content" style={{ fontSize: '12px', whiteSpace: 'pre-wrap', maxHeight: '150px', overflowY: 'auto' }}>
                           {history.newValue || '(내용 없음)'}
                         </div>
                       </div>
@@ -176,9 +176,9 @@ const SrHistoryList: React.FC<SrHistoryListProps> = ({ srId }) => {
             </div>
           );
         })}
-        
+
         {srHistories.length === 0 && (
-          <div style={{ textAlign: 'center', color: '#999', padding: '20px 0' }}>
+          <div className="text-empty" style={{ textAlign: 'center', padding: '20px 0' }}>
             이력이 없습니다.
           </div>
         )}

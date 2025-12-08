@@ -738,6 +738,123 @@ textarea.form-input:disabled {
   color: #b0b0b0;
 }
 
+/* Text muted */
+.text-muted {
+  color: #888888;
+}
+
+[data-theme='dark'] .text-muted {
+  color: #999999;
+}
+
+/* Text content */
+.text-content {
+  color: #444444;
+}
+
+[data-theme='dark'] .text-content {
+  color: #d0d0d0;
+}
+
+/* History timeline badge */
+.badge-history {
+  background-color: #f0f0f0;
+  color: #555555;
+}
+
+[data-theme='dark'] .badge-history {
+  background-color: #3a3a3a;
+  color: #c0c0c0;
+}
+
+/* Timeline dot colors */
+.timeline-dot-comment {
+  background-color: #666666;
+}
+
+[data-theme='dark'] .timeline-dot-comment {
+  background-color: #999999;
+}
+
+.timeline-dot-change {
+  background-color: #1976d2;
+}
+
+[data-theme='dark'] .timeline-dot-change {
+  background-color: #42a5f5;
+}
+
+/* Timeline border */
+.timeline-border {
+  border-left: 2px solid #e0e0e0;
+}
+
+[data-theme='dark'] .timeline-border {
+  border-left: 2px solid #4a4a4a;
+}
+
+/* Diff backgrounds */
+.bg-diff-removed {
+  background-color: #fff0f0;
+  border-bottom: 1px solid #eee;
+}
+
+[data-theme='dark'] .bg-diff-removed {
+  background-color: #3d2020;
+  border-bottom: 1px solid #5a3030;
+}
+
+.bg-diff-added {
+  background-color: #f0fff4;
+}
+
+[data-theme='dark'] .bg-diff-added {
+  background-color: #1a3d20;
+}
+
+/* Diff text colors */
+.text-diff-removed {
+  color: #d32f2f;
+}
+
+[data-theme='dark'] .text-diff-removed {
+  color: #ff6b6b;
+}
+
+.text-diff-added {
+  color: #2e7d32;
+}
+
+[data-theme='dark'] .text-diff-added {
+  color: #69db7c;
+}
+
+.text-diff-content {
+  color: #333333;
+}
+
+[data-theme='dark'] .text-diff-content {
+  color: #e0e0e0;
+}
+
+/* Empty state */
+.text-empty {
+  color: #999999;
+}
+
+[data-theme='dark'] .text-empty {
+  color: #707070;
+}
+
+/* Link primary */
+.link-primary {
+  color: #1976d2;
+}
+
+[data-theme='dark'] .link-primary {
+  color: #42a5f5;
+}
+
 .w-full {
   width: 100%;
 }
