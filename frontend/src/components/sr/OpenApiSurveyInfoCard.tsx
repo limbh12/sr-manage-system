@@ -10,7 +10,7 @@ function OpenApiSurveyInfoCard({ survey }: Props) {
     if (!value) return null;
     return (
       <div>
-        <span style={{ color: '#666', display: 'block', fontSize: '12px' }}>{label}</span>
+        <span className="text-secondary" style={{ display: 'block', fontSize: '12px' }}>{label}</span>
         <span style={{ fontWeight: 500 }}>{value}</span>
       </div>
     );
@@ -68,14 +68,13 @@ function OpenApiSurveyInfoCard({ survey }: Props) {
   };
 
   return (
-    <div style={{ 
-      padding: '16px', 
-      backgroundColor: '#f8f9fa', 
-      borderRadius: '4px', 
-      border: '1px solid #e9ecef',
+    <div className="bg-gray-light" style={{
+      padding: '16px',
+      borderRadius: '4px',
+      border: '1px solid var(--border-color)',
       fontSize: '14px'
     }}>
-      <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: '#333' }}>기본 정보</h4>
+      <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px' }}>기본 정보</h4>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
         {renderField('기관명', survey.organization.name)}
         {renderField('부서', survey.department)}
@@ -85,7 +84,7 @@ function OpenApiSurveyInfoCard({ survey }: Props) {
         {renderField('전환방식', `${getMethodLabel(survey.currentMethod)} → ${getMethodLabel(survey.desiredMethod)}`)}
       </div>
 
-      <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: '#333', borderTop: '1px solid #eee', paddingTop: '12px' }}>개발 및 운영환경</h4>
+      <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>개발 및 운영환경</h4>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
         {renderField('WEB Server', formatServerInfo(
           survey.webServerOs, survey.webServerOsType, survey.webServerOsVersion,

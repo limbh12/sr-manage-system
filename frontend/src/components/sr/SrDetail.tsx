@@ -203,7 +203,7 @@ function SrDetail({ sr, onClose, onEdit, onStatusChange }: SrDetailProps) {
 
             <div style={{ marginBottom: '16px' }}>
               <strong>요청사항:</strong>
-              <div className="markdown-body" style={{ marginTop: '8px', backgroundColor: '#f9f9f9', padding: '12px', borderRadius: '4px', overflowX: 'auto' }}>
+              <div className="markdown-body bg-history-detail" style={{ marginTop: '8px', padding: '12px', borderRadius: '4px', overflowX: 'auto' }}>
                 {sr.description ? (
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {sr.description}
@@ -217,7 +217,7 @@ function SrDetail({ sr, onClose, onEdit, onStatusChange }: SrDetailProps) {
             {sr.processingDetails && (
               <div style={{ marginBottom: '16px' }}>
                 <strong>처리내용:</strong>
-                <div className="markdown-body" style={{ marginTop: '8px', backgroundColor: '#f0f7ff', padding: '12px', borderRadius: '4px', border: '1px solid #d0e3ff', overflowX: 'auto' }}>
+                <div className="markdown-body bg-info-light" style={{ marginTop: '8px', padding: '12px', borderRadius: '4px', overflowX: 'auto' }}>
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {sr.processingDetails}
                   </ReactMarkdown>
@@ -225,7 +225,7 @@ function SrDetail({ sr, onClose, onEdit, onStatusChange }: SrDetailProps) {
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px', fontSize: '0.9em', color: '#666' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px', fontSize: '0.9em' }}>
               <div>
                 <strong>등록일(접수일):</strong> {new Date(sr.createdAt).toLocaleString()}
               </div>

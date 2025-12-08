@@ -730,6 +730,14 @@ textarea.form-input:disabled {
   color: #757575;
 }
 
+.text-secondary {
+  color: #666666;
+}
+
+[data-theme='dark'] .text-secondary {
+  color: #b0b0b0;
+}
+
 .w-full {
   width: 100%;
 }
