@@ -286,6 +286,20 @@ body {
   border-color: var(--primary-color);
 }
 
+.form-input:read-only,
+.form-input:disabled {
+  background-color: var(--bg-secondary);
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+/* 다크모드에서 readonly 필드 가독성 개선 */
+[data-theme='dark'] .form-input:read-only,
+[data-theme='dark'] .form-input:disabled {
+  color: var(--text-primary);
+  opacity: 0.9;
+}
+
 .form-select {
   width: 100%;
   padding: 10px 12px;
@@ -295,6 +309,37 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   transition: background-color 0.3s;
+}
+
+.form-select:disabled {
+  background-color: var(--bg-secondary);
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+[data-theme='dark'] .form-select:disabled {
+  color: var(--text-primary);
+  opacity: 0.9;
+}
+
+/* textarea 스타일 */
+textarea.form-input {
+  min-height: 100px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+textarea.form-input:read-only,
+textarea.form-input:disabled {
+  background-color: var(--bg-secondary);
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+[data-theme='dark'] textarea.form-input:read-only,
+[data-theme='dark'] textarea.form-input:disabled {
+  color: var(--text-primary);
+  opacity: 0.9;
 }
 
 /* 카드 */
