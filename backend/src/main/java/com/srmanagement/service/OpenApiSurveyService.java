@@ -21,7 +21,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -45,6 +51,81 @@ public class OpenApiSurveyService {
         // 동일한 파라미터 이름을 사용하면 JPA가 컨텍스트에 따라 암호화 여부를 혼동할 수 있어 분리함
         Page<OpenApiSurvey> page = openApiSurveyRepository.search(keyword, keyword, pageable);
         return page.map(this::convertToResponse);
+    }
+
+    // 단일 설문에 첨부된 수신파일 저장
+    @Transactional
+    public void storeReceivedFile(Long id, org.springframework.web.multipart.MultipartFile file) {
+        try {
+            OpenApiSurvey survey = openApiSurveyRepository.findById(id)
+                    .orElseThrow(() -> new CustomException("Survey not found with id: " + id, org.springframework.http.HttpStatus.NOT_FOUND));
+
+            // Use project backend directory under repo to ensure predictable location
+            Path projectRoot = Paths.get(System.getProperty("user.dir"));
+            Path uploadDir = projectRoot.resolve("data").resolve("uploads");
+            if (!Files.exists(uploadDir)) {
+                Files.createDirectories(uploadDir);
+            }
+
+            String origName = file.getOriginalFilename();
+            if (origName == null || origName.trim().isEmpty()) {
+                origName = "file";
+            }
+            // sanitize original name: remove path separators and control chars
+            String sanitized = origName.trim().replaceAll("[\\\\/:*?\"<>|]", "_").replaceAll("[\\u0000-\\u001F\\r\\n\\t]", "");
+
+            // store as survey_{id}__{sanitizedOriginal}
+            String storedName = "survey_" + id + "__" + sanitized;
+            Path target = uploadDir.resolve(storedName);
+            try (InputStream in = file.getInputStream()) {
+                Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            // keep original (sanitized) name in DB for Content-Disposition
+            survey.setReceivedFileName(sanitized);
+            openApiSurveyRepository.save(survey);
+        } catch (IOException e) {
+            throw new RuntimeException("파일 저장 중 오류가 발생했습니다: " + e.getMessage(), e);
+        }
+    }
+
+    // 단일 설문 첨부파일을 Resource로 반환
+    @Transactional(readOnly = true)
+    public org.springframework.core.io.Resource loadReceivedFileAsResource(Long id) {
+        OpenApiSurvey survey = openApiSurveyRepository.findById(id)
+                .orElseThrow(() -> new CustomException("Survey not found with id: " + id, org.springframework.http.HttpStatus.NOT_FOUND));
+
+        Path projectRoot = Paths.get(System.getProperty("user.dir"));
+        Path uploadDir = projectRoot.resolve("data").resolve("uploads");
+        if (!Files.exists(uploadDir) || !Files.isDirectory(uploadDir)) {
+            throw new CustomException("첨부된 파일이 존재하지 않습니다.", org.springframework.http.HttpStatus.NOT_FOUND);
+        }
+
+        String prefix = "survey_" + id + "__";
+        try {
+            try (java.util.stream.Stream<Path> stream = Files.list(uploadDir)) {
+                Path found = stream.filter(p -> p.getFileName().toString().startsWith(prefix)).findFirst().orElse(null);
+                if (found == null) {
+                    throw new CustomException("첨부된 파일이 존재하지 않습니다.", org.springframework.http.HttpStatus.NOT_FOUND);
+                }
+                org.springframework.core.io.UrlResource resource = new org.springframework.core.io.UrlResource(found.toUri());
+                if (!resource.exists() || !resource.isReadable()) {
+                    throw new CustomException("파일을 읽을 수 없습니다.", org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR);
+                }
+                return resource;
+            }
+        } catch (MalformedURLException e) {
+            throw new RuntimeException("파일을 로드하는 동안 오류가 발생했습니다: " + e.getMessage(), e);
+        } catch (IOException e) {
+            throw new RuntimeException("업로드 디렉터리를 읽는 중 오류가 발생했습니다: " + e.getMessage(), e);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public String getReceivedFileName(Long id) {
+        OpenApiSurvey survey = openApiSurveyRepository.findById(id)
+                .orElseThrow(() -> new CustomException("Survey not found with id: " + id, org.springframework.http.HttpStatus.NOT_FOUND));
+        return survey.getReceivedFileName() == null ? "file" : survey.getReceivedFileName();
     }
 
     @Transactional(readOnly = true)

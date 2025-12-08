@@ -14,6 +14,19 @@ function SurveyList() {
     return saved ? JSON.parse(saved) : null;
   });
 
+  // 수정/등록 완료 플래그 확인
+  const [formSubmitted] = useState(() => {
+    const flag = sessionStorage.getItem('SURVEY_FORM_SUBMITTED');
+    console.log('🔍 SurveyList 초기화 - formSubmitted 플래그:', flag);
+    if (flag) {
+      sessionStorage.removeItem('SURVEY_FORM_SUBMITTED');
+      console.log('✅ formSubmitted = true, 최신 데이터를 로드합니다.');
+      return true;
+    }
+    console.log('❌ formSubmitted = false, 캐시를 사용합니다.');
+    return false;
+  });
+
   const [surveys, setSurveys] = useState<OpenApiSurvey[]>(savedState?.surveys || []);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(savedState?.page || 0);
@@ -26,27 +39,30 @@ function SurveyList() {
     desiredMethod: '',
   });
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [selectedId, _setSelectedId] = useState<number | null>(savedState?.selectedId || null);
+  const [selectedId, setSelectedId] = useState<number | null>(savedState?.selectedId || null);
   const observerTarget = useRef<HTMLDivElement>(null);
 
-  const loadSurveys = async (pageToLoad: number, searchParams: OpenApiSurveySearch, isReset: boolean = false) => {
-    if (loading) return;
+  const loadSurveys = async (pageToLoad: number, searchParams: OpenApiSurveySearch, isReset: boolean = false, skipLoadingCheck: boolean = false) => {
+    if (!skipLoadingCheck && loading) return;
     setLoading(true);
     try {
       const response = await surveyService.getSurveyList(pageToLoad, pageSize, searchParams);
-      
-      if (isReset || pageToLoad === 0) {
+
+      if (isReset) {
         setSurveys(response.content);
       } else {
         setSurveys(prev => [...prev, ...response.content]);
       }
-      
+
       setTotalElements(response.totalElements);
       setHasMore(!response.last);
       setPage(pageToLoad);
+
+      return response;
     } catch (error) {
       console.error(error);
       alert('목록을 불러오는데 실패했습니다.');
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -68,11 +84,11 @@ function SurveyList() {
 
   // Scroll restoration
   useLayoutEffect(() => {
-    if (savedState?.scrollY) {
+    if (!formSubmitted && savedState?.scrollY) {
       window.scrollTo(0, savedState.scrollY);
       sessionStorage.removeItem(STORAGE_KEY);
     }
-  }, [savedState]);
+  }, [savedState, formSubmitted]);
 
   // Disable browser scroll restoration
   useEffect(() => {
@@ -86,9 +102,58 @@ function SurveyList() {
     };
   }, []);
 
-  // Initial load if not restored
+  // Initial load
   useEffect(() => {
-    if (!savedState) {
+    if (formSubmitted) {
+      // 수정/등록 후 돌아온 경우: 필요한 만큼 데이터를 로드
+      const loadDataForScroll = async () => {
+        const targetPage = savedState?.page || 0;
+        const targetId = savedState?.selectedId;
+
+        console.log('수정 완료 후 데이터 로드 시작:', { targetPage, targetId });
+
+        // 페이지 0부터 targetPage까지 순차적으로 로드
+        let allContent: any[] = [];
+        for (let i = 0; i <= targetPage; i++) {
+          console.log(`페이지 ${i} 로드 중...`);
+          const response = await surveyService.getSurveyList(i, pageSize, search);
+          if (i === 0) {
+            allContent = response.content;
+          } else {
+            allContent = [...allContent, ...response.content];
+          }
+
+          // 상태 한 번에 업데이트
+          setSurveys(allContent);
+          setTotalElements(response.totalElements);
+          setHasMore(!response.last);
+          setPage(i);
+
+          console.log(`페이지 ${i} 로드 완료, 총 ${allContent.length}개 항목`);
+        }
+
+        // selectedId 복원
+        if (targetId) {
+          setSelectedId(targetId);
+          console.log('selectedId 복원:', targetId);
+
+          // DOM이 완전히 렌더링될 때까지 대기 후 스크롤
+          setTimeout(() => {
+            const selectedRow = document.querySelector(`tr[data-survey-id="${targetId}"]`);
+            console.log('스크롤 대상 찾기:', selectedRow ? '성공' : '실패');
+            if (selectedRow) {
+              selectedRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 300);
+        }
+
+        // 캐시 정리
+        sessionStorage.removeItem(STORAGE_KEY);
+      };
+
+      loadDataForScroll();
+    } else if (!savedState) {
+      // 캐시가 없는 경우: 초기 로드
       loadSurveys(0, search, true);
     }
   }, []);
@@ -232,6 +297,7 @@ function SurveyList() {
               surveys.map((survey, index) => (
                 <tr
                   key={survey.id}
+                  data-survey-id={survey.id}
                   className={selectedId === survey.id ? 'bg-highlight' : ''}
                 >
                   <td>{totalElements - index}</td>

@@ -55,9 +55,24 @@ export const downloadSurveyFile = async (id: number): Promise<void> => {
   const contentDisposition = response.headers['content-disposition'];
   let fileName = 'downloaded_file';
   if (contentDisposition) {
-    const fileNameMatch = contentDisposition.match(/filename="?(.+)"?/);
-    if (fileNameMatch && fileNameMatch.length === 2)
-      fileName = fileNameMatch[1];
+    // RFC-compliant-ish parsing: prefer filename* then filename, strip quotes/semicolons and control chars
+    // filename* example: filename*=UTF-8''%e2%82%ac%20rates.pdf
+    const filenameStarMatch = contentDisposition.match(/filename\*=(?:UTF-8'')?([^;\n\r]+)/i);
+    const filenameMatch = contentDisposition.match(/filename=(?:")?([^";\n\r]+)(?:")?/i);
+    try {
+      if (filenameStarMatch && filenameStarMatch[1]) {
+        // decode percent-encoding
+        fileName = decodeURIComponent(filenameStarMatch[1].replace(/^["']|["']$/g, '').trim());
+      } else if (filenameMatch && filenameMatch[1]) {
+        fileName = filenameMatch[1].replace(/^["']|["']$/g, '').trim();
+      }
+    } catch (e) {
+      // fallback
+      fileName = (filenameMatch && filenameMatch[1]) ? filenameMatch[1].replace(/^["']|["']$/g, '').trim() : fileName;
+    }
+
+    // sanitize: remove control chars that may be turned into underscores by the filesystem/browser
+    fileName = fileName.replace(/[\x00-\x1F\r\n\t]/g, '').trim();
   }
   
   link.setAttribute('download', fileName);
@@ -65,6 +80,21 @@ export const downloadSurveyFile = async (id: number): Promise<void> => {
   link.click();
   link.remove();
   window.URL.revokeObjectURL(url);
+};
+
+/**
+ * 단일 설문 수신파일 업로드 (named export for existing imports)
+ */
+export const uploadReceivedFile = async (id: number, file: File): Promise<any> => {
+  if (USE_MOCK && (mockSurveyService as any).uploadReceivedFile) return (mockSurveyService as any).uploadReceivedFile(id, file);
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post(`/surveys/${id}/file`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
 };
 
 /**
@@ -117,6 +147,17 @@ export const surveyService = {
     const formData = new FormData();
     formData.append('file', file);
     const response = await api.post<BulkUploadResult>('/surveys/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+  // 단일 설문의 수신파일 업로드
+  uploadReceivedFile: async (id: number, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post(`/surveys/${id}/file`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

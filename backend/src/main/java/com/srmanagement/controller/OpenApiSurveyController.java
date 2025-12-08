@@ -54,4 +54,24 @@ public class OpenApiSurveyController {
         BulkUploadResult result = openApiSurveyService.bulkCreateSurveys(file);
         return ResponseEntity.ok(result);
     }
+
+    // 단일 설문에 첨부된 수신파일 업로드
+    @PostMapping(value = "{id}/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> uploadReceivedFile(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+        openApiSurveyService.storeReceivedFile(id, file);
+        return ResponseEntity.ok().build();
+    }
+
+    // 단일 설문에 첨부된 수신파일 다운로드
+    @GetMapping("/{id}/download")
+    public ResponseEntity<org.springframework.core.io.Resource> downloadReceivedFile(@PathVariable Long id) {
+        org.springframework.core.io.Resource resource = openApiSurveyService.loadReceivedFileAsResource(id);
+
+        String fileName = openApiSurveyService.getReceivedFileName(id);
+
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
+                .body(resource);
+    }
 }

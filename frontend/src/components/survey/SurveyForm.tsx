@@ -77,10 +77,16 @@ function SurveyForm() {
       const data = await surveyService.getSurveyById(surveyId);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { id, createdAt, updatedAt, organization, ...rest } = data;
+
+      // null 값을 빈 문자열로 변환
+      const sanitizedData = Object.fromEntries(
+        Object.entries(rest).map(([key, value]) => [key, value ?? ''])
+      );
+
       setFormData({
-        ...rest,
+        ...sanitizedData,
         organizationCode: organization.code
-      });
+      } as OpenApiSurveyCreateRequest);
       setOrganizationNameDisplay(organization.name);
     } catch (error) {
       console.error(error);
@@ -174,11 +180,21 @@ function SurveyForm() {
     try {
       if (id) {
         await surveyService.updateSurvey(Number(id), formData);
+        // 수정 시 파일이 선택되어 있으면 별도 엔드포인트로 업로드
+        if (file) {
+          await surveyService.uploadReceivedFile(Number(id), file);
+        }
         alert('수정되었습니다.');
       } else {
-        await surveyService.createSurvey(formData);
+        const created = await surveyService.createSurvey(formData);
+        // 생성 후 파일이 선택되어 있으면 업로드
+        if (file && created && (created as any).id) {
+          await surveyService.uploadReceivedFile((created as any).id, file);
+        }
         alert('저장되었습니다.');
       }
+      // 수정/등록 완료 플래그를 설정하여 목록에서 최신 데이터를 가져오도록 함
+      sessionStorage.setItem('SURVEY_FORM_SUBMITTED', 'true');
       navigate('/survey'); // 목록 페이지로 이동
     } catch (error) {
       console.error(error);
