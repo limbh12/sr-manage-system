@@ -258,8 +258,8 @@ function SurveyForm() {
           <div className="grid-2">
             <div className="form-group">
               <label className="form-label">수신파일 (업로드)</label>
-              <div 
-                className={`file-upload-box ${dragActive ? 'active' : ''}`}
+              <div
+                className={`file-upload-box ${dragActive ? 'active bg-drag-active' : 'bg-drag-area'}`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
@@ -271,7 +271,6 @@ function SurveyForm() {
                   padding: '8px 12px',
                   textAlign: 'center',
                   cursor: 'pointer',
-                  backgroundColor: dragActive ? '#f0f8ff' : '#fff',
                   transition: 'all 0.2s ease',
                   height: '42px',
                   display: 'flex',
@@ -448,7 +447,7 @@ function SurveyForm() {
           </div>
 
           {/* WEB Server */}
-          <div className="mb-4 p-4 bg-gray-50 rounded" style={{ backgroundColor: '#f9fafb', padding: '16px', borderRadius: '8px' }}>
+          <div className="mb-4 bg-section">
             <h4 className="font-medium mb-3" style={{ fontWeight: 500, marginBottom: '12px' }}>WEB 서버</h4>
             <div className="grid-2">
               <div className="form-group">
@@ -494,7 +493,7 @@ function SurveyForm() {
           </div>
 
           {/* WAS Server */}
-          <div className="mb-4 p-4 bg-gray-50 rounded" style={{ backgroundColor: '#f9fafb', padding: '16px', borderRadius: '8px' }}>
+          <div className="mb-4 bg-section">
             <h4 className="font-medium mb-3" style={{ fontWeight: 500, marginBottom: '12px' }}>WAS 서버</h4>
             <div className="grid-2">
               <div className="form-group">
@@ -542,7 +541,7 @@ function SurveyForm() {
           </div>
 
           {/* DB Server */}
-          <div className="mb-4 p-4 bg-gray-50 rounded" style={{ backgroundColor: '#f9fafb', padding: '16px', borderRadius: '8px' }}>
+          <div className="mb-4 bg-section">
             <h4 className="font-medium mb-3" style={{ fontWeight: 500, marginBottom: '12px' }}>DB 서버</h4>
             <div className="grid-2">
               <div className="form-group">
@@ -590,7 +589,7 @@ function SurveyForm() {
           </div>
 
           {/* 개발 및 운영환경 */}
-          <div className="mb-4 p-4 bg-gray-50 rounded" style={{ backgroundColor: '#f9fafb', padding: '16px', borderRadius: '8px' }}>
+          <div className="mb-4 bg-section">
             <h4 className="font-medium mb-3" style={{ fontWeight: 500, marginBottom: '12px' }}>개발 및 운영환경</h4>
             <div className="grid-2">
               <div className="form-group">
