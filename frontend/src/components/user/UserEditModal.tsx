@@ -75,7 +75,6 @@ function UserEditModal({ user, onClose, onSave, loading = false }: UserEditModal
               onChange={(e) => setUsername(e.target.value)}
               disabled={isEditMode}
               required
-              style={isEditMode ? { backgroundColor: '#f5f5f5' } : {}}
             />
           </div>
 

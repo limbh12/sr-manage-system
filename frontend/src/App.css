@@ -743,3 +743,100 @@ textarea.form-input:disabled {
   justify-content: flex-end;
   gap: 8px;
 }
+
+/* 배경색 유틸리티 클래스 */
+.bg-highlight {
+  background-color: #e6f7ff;
+}
+
+[data-theme='dark'] .bg-highlight {
+  background-color: #1a3a52;
+}
+
+.bg-info-light {
+  background-color: #f0f7ff;
+  border: 1px solid #d0e3ff;
+}
+
+[data-theme='dark'] .bg-info-light {
+  background-color: #1a2942;
+  border: 1px solid #2a4a6a;
+}
+
+.bg-section {
+  background-color: #f9fafb;
+  padding: 16px;
+  border-radius: 8px;
+}
+
+[data-theme='dark'] .bg-section {
+  background-color: #2a2a2a;
+}
+
+.bg-drag-active {
+  background-color: #f0f8ff;
+}
+
+[data-theme='dark'] .bg-drag-active {
+  background-color: #1a3042;
+}
+
+.bg-drag-area {
+  background-color: #fafafa;
+}
+
+[data-theme='dark'] .bg-drag-area {
+  background-color: #2a2a2a;
+}
+
+.bg-error-light {
+  background-color: #fff0f0;
+  color: #d32f2f;
+  border-color: #ffcdd2;
+}
+
+[data-theme='dark'] .bg-error-light {
+  background-color: #3a1a1a;
+  color: #ff6b6b;
+  border-color: #6a2a2a;
+}
+
+.bg-success-light {
+  background-color: #e8f5e9;
+}
+
+[data-theme='dark'] .bg-success-light {
+  background-color: #1a3a1a;
+}
+
+.bg-gray-light {
+  background-color: #f5f5f5;
+}
+
+[data-theme='dark'] .bg-gray-light {
+  background-color: #2a2a2a;
+}
+
+.bg-history-detail {
+  background-color: #f9f9f9;
+}
+
+[data-theme='dark'] .bg-history-detail {
+  background-color: #2a2a2a;
+}
+
+.bg-diff-removed {
+  background-color: #fff0f0;
+}
+
+[data-theme='dark'] .bg-diff-removed {
+  background-color: #3a1a1a;
+}
+
+.bg-diff-added {
+  background-color: #f0fff4;
+}
+
+[data-theme='dark'] .bg-diff-added {
+  background-color: #1a3a1a;
+}

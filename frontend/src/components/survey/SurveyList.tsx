@@ -230,9 +230,9 @@ function SurveyList() {
               </tr>
             ) : (
               surveys.map((survey, index) => (
-                <tr 
+                <tr
                   key={survey.id}
-                  style={selectedId === survey.id ? { backgroundColor: '#e6f7ff' } : {}}
+                  className={selectedId === survey.id ? 'bg-highlight' : ''}
                 >
                   <td>{totalElements - index}</td>
                   <td>{survey.organization.name}</td>
