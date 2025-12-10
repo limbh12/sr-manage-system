@@ -348,8 +348,9 @@ export interface OpenApiSurvey {
 /**
  * OPEN API 현황조사 생성 요청
  */
-export type OpenApiSurveyCreateRequest = Omit<OpenApiSurvey, 'id' | 'createdAt' | 'updatedAt' | 'organization'> & {
+export type OpenApiSurveyCreateRequest = Omit<OpenApiSurvey, 'id' | 'createdAt' | 'updatedAt' | 'organization' | 'assignee'> & {
   organizationCode: string;
+  assigneeId?: number;
 };
 
 /**

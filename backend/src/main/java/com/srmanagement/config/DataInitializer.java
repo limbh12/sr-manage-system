@@ -50,6 +50,19 @@ public class DataInitializer implements CommandLineRunner {
             logger.info("Admin user created: admin / admin123");
         }
 
+        // 초기 일반 사용자 계정 생성
+        if (!userRepository.existsByUsername("user")) {
+            User user = User.builder()
+                    .username("user")
+                    .password(passwordEncoder.encode("user123"))
+                    .name("일반사용자")
+                    .email("user@example.com")
+                    .role(Role.USER)
+                    .build();
+            userRepository.save(user);
+            logger.info("Regular user created: user / user123");
+        }
+
         // 초기 데이터 적재 (기관 코드 및 공통 코드)
         // 운영 환경(prod)에서는 spring.sql.init.mode=never로 설정되어 있어 data.sql이 자동 실행되지 않음
         // 따라서 데이터가 없는 경우 수동으로 스크립트를 실행함

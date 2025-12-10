@@ -82,6 +82,8 @@ export const createSurvey = async (data: OpenApiSurveyCreateRequest): Promise<Op
     contactName: data.contactName,
     contactPhone: data.contactPhone,
     contactEmail: data.contactEmail,
+    assignee: null, // Mock: assignee would be resolved from assigneeId
+    status: data.status,
     receivedDate: data.receivedDate,
     systemName: data.systemName,
     currentMethod: data.currentMethod,

@@ -1,9 +1,12 @@
 import { useState, useRef, FormEvent, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  OpenApiSurveyCreateRequest
+import {
+  OpenApiSurveyCreateRequest,
+  User,
+  SurveyStatus
 } from '../../types';
 import * as surveyService from '../../services/surveyService';
+import * as userService from '../../services/userService';
 import OrganizationSearchModal from './OrganizationSearchModal';
 import { formatPhoneNumber } from '../../utils/formatUtils';
 
@@ -13,12 +16,15 @@ function SurveyForm() {
   const [loading, setLoading] = useState(false);
   const [isOrgModalOpen, setIsOrgModalOpen] = useState(false);
   const [organizationNameDisplay, setOrganizationNameDisplay] = useState('');
+  const [userOptions, setUserOptions] = useState<User[]>([]);
   const [formData, setFormData] = useState<OpenApiSurveyCreateRequest>({
     organizationCode: '',
     department: '',
     contactName: '',
     contactPhone: '',
     contactEmail: '',
+    assigneeId: undefined,
+    status: 'PENDING' as SurveyStatus,
     receivedDate: new Date().toISOString().split('T')[0],
     systemName: '',
     currentMethod: 'CENTRAL',
@@ -68,15 +74,25 @@ function SurveyForm() {
     if (id) {
       loadSurvey(Number(id));
     }
+    loadUsers();
     window.scrollTo(0, 0);
   }, [id]);
+
+  const loadUsers = async () => {
+    try {
+      const response = await userService.getUsers();
+      setUserOptions(response.content);
+    } catch (error) {
+      console.error('사용자 목록 로드 실패:', error);
+    }
+  };
 
   const loadSurvey = async (surveyId: number) => {
     setLoading(true);
     try {
       const data = await surveyService.getSurveyById(surveyId);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { id, createdAt, updatedAt, organization, ...rest } = data;
+      const { id, createdAt, updatedAt, organization, assignee, ...rest } = data;
 
       // null 값을 빈 문자열로 변환
       const sanitizedData = Object.fromEntries(
@@ -85,7 +101,8 @@ function SurveyForm() {
 
       setFormData({
         ...sanitizedData,
-        organizationCode: organization.code
+        organizationCode: organization.code,
+        assigneeId: assignee?.id
       } as OpenApiSurveyCreateRequest);
       setOrganizationNameDisplay(organization.name);
     } catch (error) {
@@ -272,6 +289,36 @@ function SurveyForm() {
             <div className="form-group">
               <label className="form-label">이메일 *</label>
               <input type="email" name="contactEmail" required className="form-input" value={formData.contactEmail} onChange={handleChange} style={getInputStyle(formData.contactEmail)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">담당자</label>
+              <select
+                name="assigneeId"
+                className="form-select"
+                value={formData.assigneeId || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, assigneeId: e.target.value ? Number(e.target.value) : undefined }))}
+              >
+                <option value="">선택 안 함</option>
+                {userOptions.map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.name} ({user.username})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">작성상태 *</label>
+              <select
+                name="status"
+                className="form-select"
+                value={formData.status}
+                onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as SurveyStatus }))}
+                required
+              >
+                <option value="PENDING">작성대기</option>
+                <option value="IN_PROGRESS">작성중</option>
+                <option value="COMPLETED">완료</option>
+              </select>
             </div>
           </div>
         </section>
