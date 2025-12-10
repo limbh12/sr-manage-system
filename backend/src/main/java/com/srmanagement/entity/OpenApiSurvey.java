@@ -34,6 +34,9 @@ public class OpenApiSurvey {
     @Convert(converter = EncryptConverter.class)
     private String contactName;
 
+    @Column(length = 50)
+    private String contactPosition;
+
     @Column(nullable = false, length = 100)
     @Convert(converter = EncryptConverter.class)
     private String contactPhone;

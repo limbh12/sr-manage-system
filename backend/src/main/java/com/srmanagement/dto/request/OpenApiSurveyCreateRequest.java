@@ -14,6 +14,7 @@ public class OpenApiSurveyCreateRequest {
     private String organizationCode;
     private String department;
     private String contactName;
+    private String contactPosition;
     private String contactPhone;
     private String contactEmail;
     private String receivedFileName;

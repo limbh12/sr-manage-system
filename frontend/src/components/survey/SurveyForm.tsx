@@ -262,6 +262,10 @@ function SurveyForm() {
               <input type="text" name="contactName" required className="form-input" value={formData.contactName} onChange={handleChange} style={getInputStyle(formData.contactName)} />
             </div>
             <div className="form-group">
+              <label className="form-label">직급</label>
+              <input type="text" name="contactPosition" className="form-input" value={formData.contactPosition || ''} onChange={handleChange} placeholder="예: 주무관, 팀장 등" />
+            </div>
+            <div className="form-group">
               <label className="form-label">연락처 *</label>
               <input type="text" name="contactPhone" required className="form-input" value={formData.contactPhone} onChange={handleChange} style={getInputStyle(formData.contactPhone)} />
             </div>

@@ -273,6 +273,7 @@ export interface OpenApiSurvey {
   organization: Organization;
   department: string;
   contactName: string;
+  contactPosition?: string;
   contactPhone: string;
   contactEmail: string;
 

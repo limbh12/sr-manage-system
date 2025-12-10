@@ -78,7 +78,7 @@ function OpenApiSurveyInfoCard({ survey }: Props) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
         {renderField('기관명', survey.organization.name)}
         {renderField('부서', survey.department)}
-        {renderField('담당자', survey.contactName)}
+        {renderField('담당자', survey.contactPosition ? `${survey.contactName} (${survey.contactPosition})` : survey.contactName)}
         {renderField('연락처', `${formatPhoneNumber(survey.contactPhone)} / ${survey.contactEmail}`)}
         {renderField('시스템명', survey.systemName)}
         {renderField('전환방식', `${getMethodLabel(survey.currentMethod)} → ${getMethodLabel(survey.desiredMethod)}`)}
