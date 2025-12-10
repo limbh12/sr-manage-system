@@ -37,6 +37,8 @@ CREATE TABLE open_api_survey (
     contact_position VARCHAR(50),
     contact_phone VARCHAR(30) NOT NULL,
     contact_email VARCHAR(100) NOT NULL,
+    assignee_id BIGINT,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     received_file_name VARCHAR(255),
     received_date DATE NOT NULL,
     system_name VARCHAR(100) NOT NULL,

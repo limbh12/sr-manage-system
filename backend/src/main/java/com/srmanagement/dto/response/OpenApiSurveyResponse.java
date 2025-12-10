@@ -1,5 +1,6 @@
 package com.srmanagement.dto.response;
 
+import com.srmanagement.entity.SurveyStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,6 +20,8 @@ public class OpenApiSurveyResponse {
     private String contactPosition;
     private String contactPhone;
     private String contactEmail;
+    private UserResponse assignee;
+    private SurveyStatus status;
     private String receivedFileName;
     private LocalDate receivedDate;
     private String systemName;

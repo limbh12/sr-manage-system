@@ -265,6 +265,11 @@ export interface Organization {
 }
 
 /**
+ * OPEN API 현황조사 작성상태
+ */
+export type SurveyStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
+
+/**
  * OPEN API 현황조사 데이터
  */
 export interface OpenApiSurvey {
@@ -276,6 +281,8 @@ export interface OpenApiSurvey {
   contactPosition?: string;
   contactPhone: string;
   contactEmail: string;
+  assignee: User | null;
+  status: SurveyStatus;
 
   // 수신 파일 정보
   receivedFileName?: string;

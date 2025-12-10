@@ -45,6 +45,15 @@ public class OpenApiSurvey {
     @Convert(converter = EncryptConverter.class)
     private String contactEmail;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "assignee_id")
+    private User assignee;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private SurveyStatus status = SurveyStatus.PENDING;
+
     @Column(length = 255)
     private String receivedFileName;
 

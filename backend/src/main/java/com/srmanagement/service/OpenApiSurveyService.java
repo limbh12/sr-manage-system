@@ -9,6 +9,9 @@ import com.srmanagement.entity.Organization;
 import com.srmanagement.exception.CustomException;
 import com.srmanagement.repository.OpenApiSurveyRepository;
 import com.srmanagement.repository.OrganizationRepository;
+import com.srmanagement.repository.UserRepository;
+import com.srmanagement.entity.User;
+import com.srmanagement.dto.response.UserResponse;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 import com.srmanagement.util.CryptoUtil;
@@ -43,6 +46,9 @@ public class OpenApiSurveyService {
 
     @Autowired
     private OrganizationRepository organizationRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Transactional(readOnly = true)
     public Page<OpenApiSurveyResponse> getSurveys(String keyword, Pageable pageable) {
@@ -140,6 +146,12 @@ public class OpenApiSurveyService {
         Organization organization = organizationRepository.findById(request.getOrganizationCode())
                 .orElseThrow(() -> new CustomException("Organization not found with code: " + request.getOrganizationCode(), HttpStatus.NOT_FOUND));
 
+        User assignee = null;
+        if (request.getAssigneeId() != null) {
+            assignee = userRepository.findById(request.getAssigneeId())
+                    .orElseThrow(() -> new CustomException("User not found with id: " + request.getAssigneeId(), HttpStatus.NOT_FOUND));
+        }
+
         OpenApiSurvey survey = OpenApiSurvey.builder()
                 .organization(organization)
                 .department(request.getDepartment())
@@ -147,6 +159,8 @@ public class OpenApiSurveyService {
                 .contactPosition(request.getContactPosition())
                 .contactPhone(request.getContactPhone())
                 .contactEmail(request.getContactEmail())
+                .assignee(assignee)
+                .status(request.getStatus() != null ? request.getStatus() : com.srmanagement.entity.SurveyStatus.PENDING)
                 .receivedFileName(request.getReceivedFileName())
                 .receivedDate(request.getReceivedDate())
                 .systemName(request.getSystemName())
@@ -394,6 +408,8 @@ public class OpenApiSurveyService {
                 .contactPosition(survey.getContactPosition())
                 .contactPhone(survey.getContactPhone())
                 .contactEmail(survey.getContactEmail())
+                .assignee(survey.getAssignee() != null ? UserResponse.from(survey.getAssignee()) : null)
+                .status(survey.getStatus())
                 .receivedFileName(survey.getReceivedFileName())
                 .receivedDate(survey.getReceivedDate())
                 .systemName(survey.getSystemName())
