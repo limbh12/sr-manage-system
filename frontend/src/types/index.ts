@@ -58,6 +58,8 @@ export interface Sr {
   openApiSurveyId?: number;
   applicantName?: string;
   applicantPhone?: string;
+  deleted?: boolean;
+  deletedAt?: string;
 }
 
 /**

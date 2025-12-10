@@ -9,6 +9,7 @@ interface GetSrListParams {
   status?: SrStatus;
   priority?: Priority;
   search?: string;
+  includeDeleted?: boolean;
 }
 
 /**
@@ -53,6 +54,18 @@ export const updateSr = async (id: number, data: SrUpdateRequest): Promise<Sr> =
 export const deleteSr = async (id: number): Promise<void> => {
   if (USE_MOCK) return mockSrService.deleteSr(id);
   await api.delete(`/sr/${id}`);
+};
+
+/**
+ * SR 복구 (관리자 전용)
+ */
+export const restoreSr = async (id: number): Promise<Sr> => {
+  if (USE_MOCK) {
+    // Mock 모드에서는 복구 기능 미지원
+    throw new Error('Mock mode does not support restore functionality');
+  }
+  const response = await api.post<Sr>(`/sr/${id}/restore`);
+  return response.data;
 };
 
 /**

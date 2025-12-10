@@ -4,9 +4,11 @@ interface SrListProps {
   srList: Sr[];
   onSelectSr: (sr: Sr) => void;
   onDeleteSr: (id: number) => void;
+  onRestoreSr?: (id: number) => void;
   totalElements: number;
   page: number;
   size?: number;
+  isAdmin?: boolean;
 }
 
 /**
@@ -84,7 +86,7 @@ const getPriorityLabel = (priority: Priority): string => {
 /**
  * SR 목록 컴포넌트
  */
-function SrList({ srList, onSelectSr, onDeleteSr, totalElements, page: _page, size: _size = 10 }: SrListProps) {
+function SrList({ srList, onSelectSr, onDeleteSr, onRestoreSr, totalElements, page: _page, size: _size = 10, isAdmin = false }: SrListProps) {
   return (
     <div className="table-container">
       <table className="table">
@@ -110,7 +112,7 @@ function SrList({ srList, onSelectSr, onDeleteSr, totalElements, page: _page, si
             </tr>
           ) : (
             srList.map((sr, index) => (
-              <tr key={sr.id}>
+              <tr key={sr.id} style={{ opacity: sr.deleted ? 0.6 : 1 }}>
                 <td>{totalElements - index}</td>
                 <td>{sr.srId || '-'}</td>
                 <td>
@@ -120,10 +122,14 @@ function SrList({ srList, onSelectSr, onDeleteSr, totalElements, page: _page, si
                       e.preventDefault();
                       onSelectSr(sr);
                     }}
-                    style={{ color: '#1976d2', textDecoration: 'none' }}
+                    style={{
+                      color: '#1976d2',
+                      textDecoration: sr.deleted ? 'line-through' : 'none'
+                    }}
                   >
                     {sr.title}
                   </a>
+                  {sr.deleted && <span style={{ marginLeft: '8px', color: '#999', fontSize: '12px' }}>(삭제됨)</span>}
                 </td>
                 <td>
                   <span className={getStatusBadgeClass(sr.status)}>
@@ -146,12 +152,23 @@ function SrList({ srList, onSelectSr, onDeleteSr, totalElements, page: _page, si
                   >
                     상세
                   </button>
-                  <button
-                    className="btn btn-danger"
-                    onClick={() => onDeleteSr(sr.id)}
-                  >
-                    삭제
-                  </button>
+                  {sr.deleted && isAdmin && onRestoreSr ? (
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => onRestoreSr(sr.id)}
+                      style={{ marginRight: '8px' }}
+                    >
+                      복구
+                    </button>
+                  ) : null}
+                  {!sr.deleted && (
+                    <button
+                      className="btn btn-danger"
+                      onClick={() => onDeleteSr(sr.id)}
+                    >
+                      삭제
+                    </button>
+                  )}
                 </td>
               </tr>
             ))

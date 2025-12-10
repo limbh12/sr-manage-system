@@ -68,25 +68,49 @@ public class SrService {
      * @param status 상태 필터 (optional)
      * @param priority 우선순위 필터 (optional)
      * @param search 검색어 (optional)
+     * @param includeDeleted 삭제된 항목 포함 여부 (관리자용)
      * @param pageable 페이지네이션
      * @return Page<SrResponse>
      */
     @Transactional(readOnly = true)
-    public Page<SrResponse> getSrList(SrStatus status, Priority priority, String search, Pageable pageable) {
+    public Page<SrResponse> getSrList(SrStatus status, Priority priority, String search, Boolean includeDeleted, Pageable pageable) {
         Page<Sr> srPage;
-        
+
+        // 삭제된 항목 포함 여부 결정 (관리자가 아니면 무조건 false)
+        boolean showDeleted = includeDeleted != null && includeDeleted;
+
         if (search != null && !search.isEmpty()) {
-            srPage = srRepository.searchByTitleOrDescription(search, pageable);
+            if (showDeleted) {
+                srPage = srRepository.searchByTitleOrDescription(search, pageable);
+            } else {
+                srPage = srRepository.searchByTitleOrDescriptionAndDeleted(search, false, pageable);
+            }
         } else if (status != null && priority != null) {
-            srPage = srRepository.findByStatusAndPriority(status, priority, pageable);
+            if (showDeleted) {
+                srPage = srRepository.findByStatusAndPriority(status, priority, pageable);
+            } else {
+                srPage = srRepository.findByStatusAndPriorityAndDeleted(status, priority, false, pageable);
+            }
         } else if (status != null) {
-            srPage = srRepository.findByStatus(status, pageable);
+            if (showDeleted) {
+                srPage = srRepository.findByStatus(status, pageable);
+            } else {
+                srPage = srRepository.findByStatusAndDeleted(status, false, pageable);
+            }
         } else if (priority != null) {
-            srPage = srRepository.findByPriority(priority, pageable);
+            if (showDeleted) {
+                srPage = srRepository.findByPriority(priority, pageable);
+            } else {
+                srPage = srRepository.findByPriorityAndDeleted(priority, false, pageable);
+            }
         } else {
-            srPage = srRepository.findAll(pageable);
+            if (showDeleted) {
+                srPage = srRepository.findAll(pageable);
+            } else {
+                srPage = srRepository.findByDeleted(false, pageable);
+            }
         }
-        
+
         return srPage.map(SrResponse::from);
     }
 
@@ -230,7 +254,7 @@ public class SrService {
     }
 
     /**
-     * SR 삭제
+     * SR 삭제 (소프트 삭제)
      * @param id SR ID
      * @param username 요청자 사용자명
      */
@@ -238,7 +262,7 @@ public class SrService {
     public void deleteSr(Long id, String username) {
         Sr sr = srRepository.findById(id)
                 .orElseThrow(() -> new CustomException("SR not found with id: " + id, HttpStatus.NOT_FOUND));
-        
+
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
 
@@ -247,7 +271,47 @@ public class SrService {
             throw new CustomException("삭제 권한이 없습니다.", HttpStatus.FORBIDDEN);
         }
 
-        srRepository.delete(sr);
+        // 소프트 삭제: deleted 플래그를 true로 설정
+        sr.setDeleted(true);
+        sr.setDeletedAt(LocalDateTime.now());
+        srRepository.save(sr);
+
+        // 삭제 이력 기록
+        createHistory(sr, "SR이 삭제되었습니다.", SrHistoryType.INFO_CHANGE, user);
+    }
+
+    /**
+     * SR 복구 (소프트 삭제 취소) - 관리자 전용
+     * @param id SR ID
+     * @param username 요청자 사용자명
+     * @return SrResponse
+     */
+    @Transactional
+    public SrResponse restoreSr(Long id, String username) {
+        Sr sr = srRepository.findById(id)
+                .orElseThrow(() -> new CustomException("SR not found with id: " + id, HttpStatus.NOT_FOUND));
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
+
+        // 권한 체크: 관리자만 복구 가능
+        if (user.getRole() != Role.ADMIN) {
+            throw new CustomException("복구 권한이 없습니다. 관리자만 복구할 수 있습니다.", HttpStatus.FORBIDDEN);
+        }
+
+        // 이미 복구된 SR인지 확인
+        if (!sr.getDeleted()) {
+            throw new CustomException("이미 복구된 SR입니다.", HttpStatus.BAD_REQUEST);
+        }
+
+        // SR 복구
+        sr.restore();
+        Sr restoredSr = srRepository.save(sr);
+
+        // 복구 이력 기록
+        createHistory(sr, "SR이 복구되었습니다.", SrHistoryType.INFO_CHANGE, user);
+
+        return SrResponse.from(restoredSr);
     }
 
     /**

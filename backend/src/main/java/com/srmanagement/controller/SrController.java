@@ -7,7 +7,11 @@ import com.srmanagement.dto.request.SrUpdateRequest;
 import com.srmanagement.dto.response.SrHistoryResponse;
 import com.srmanagement.dto.response.SrResponse;
 import com.srmanagement.entity.Priority;
+import com.srmanagement.entity.Role;
 import com.srmanagement.entity.SrStatus;
+import com.srmanagement.entity.User;
+import com.srmanagement.exception.CustomException;
+import com.srmanagement.repository.UserRepository;
 import com.srmanagement.service.SrService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,12 +38,17 @@ public class SrController {
     @Autowired
     private SrService srService;
 
+    @Autowired
+    private UserRepository userRepository;
+
     /**
      * SR 목록 조회
      * @param status 상태 필터
      * @param priority 우선순위 필터
      * @param search 검색어
+     * @param includeDeleted 삭제된 항목 포함 여부 (관리자만 사용 가능)
      * @param pageable 페이지네이션
+     * @param authentication 현재 인증 정보
      * @return Page<SrResponse>
      */
     @GetMapping
@@ -47,8 +56,21 @@ public class SrController {
             @RequestParam(required = false) SrStatus status,
             @RequestParam(required = false) Priority priority,
             @RequestParam(required = false) String search,
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<SrResponse> response = srService.getSrList(status, priority, search, pageable);
+            @RequestParam(required = false) Boolean includeDeleted,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+            Authentication authentication) {
+
+        // 관리자가 아닌 경우 삭제된 항목 포함 불가
+        Boolean showDeleted = false;
+        if (includeDeleted != null && includeDeleted) {
+            User user = userRepository.findByUsername(authentication.getName())
+                    .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
+            if (user.getRole() == Role.ADMIN) {
+                showDeleted = true;
+            }
+        }
+
+        Page<SrResponse> response = srService.getSrList(status, priority, search, showDeleted, pageable);
         return ResponseEntity.ok(response);
     }
 
@@ -103,6 +125,18 @@ public class SrController {
     public ResponseEntity<Void> deleteSr(@PathVariable Long id, Authentication authentication) {
         srService.deleteSr(id, authentication.getName());
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * SR 복구 (소프트 삭제 취소) - 관리자 전용
+     * @param id SR ID
+     * @param authentication 현재 인증 정보
+     * @return SrResponse
+     */
+    @PostMapping("/{id}/restore")
+    public ResponseEntity<SrResponse> restoreSr(@PathVariable Long id, Authentication authentication) {
+        SrResponse response = srService.restoreSr(id, authentication.getName());
+        return ResponseEntity.ok(response);
     }
 
     /**

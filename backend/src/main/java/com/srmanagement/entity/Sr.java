@@ -85,6 +85,14 @@ public class Sr {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
+    /** 삭제 여부 (소프트 삭제) */
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean deleted = false;
+
+    /** 삭제 일시 */
+    private LocalDateTime deletedAt;
+
     /** OPEN API 현황조사 ID */
     @Column(name = "open_api_survey_id")
     private Long openApiSurveyId;
@@ -113,5 +121,13 @@ public class Sr {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    /**
+     * SR 복구 (소프트 삭제 취소)
+     */
+    public void restore() {
+        this.deleted = false;
+        this.deletedAt = null;
     }
 }

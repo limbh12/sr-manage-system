@@ -105,8 +105,12 @@ SR 정보를 저장하는 테이블
 | requester_id | BIGINT | FK (users.id), NOT NULL | 요청자 ID |
 | assignee_id | BIGINT | FK (users.id), NULL | 담당자 ID |
 | open_api_survey_id | BIGINT | NULL | 연관된 Open API 현황조사 ID |
+| applicant_name | VARCHAR(100) | NULL | 요청자 이름 (외부 요청자, 암호화) |
+| applicant_phone | VARCHAR(100) | NULL | 요청자 연락처 (외부 요청자, 암호화) |
 | created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성 일시 |
 | updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE | 수정 일시 |
+| deleted | BOOLEAN | NOT NULL, DEFAULT FALSE | 삭제 여부 (소프트 삭제) |
+| deleted_at | TIMESTAMP | NULL | 삭제 일시 |
 
 **인덱스**
 - PRIMARY KEY (id)
@@ -116,6 +120,7 @@ SR 정보를 저장하는 테이블
 - INDEX idx_sr_requester_id (requester_id)
 - INDEX idx_sr_assignee_id (assignee_id)
 - INDEX idx_sr_created_at (created_at)
+- INDEX idx_sr_deleted (deleted)
 
 **외래 키**
 - FK_sr_requester: requester_id → users(id)
@@ -136,8 +141,12 @@ CREATE TABLE sr (
     requester_id BIGINT NOT NULL COMMENT '요청자 ID',
     assignee_id BIGINT COMMENT '담당자 ID',
     open_api_survey_id BIGINT COMMENT '연관된 Open API 현황조사 ID',
+    applicant_name VARCHAR(100) COMMENT '요청자 이름 (외부 요청자, 암호화)',
+    applicant_phone VARCHAR(100) COMMENT '요청자 연락처 (외부 요청자, 암호화)',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '생성 일시',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '수정 일시',
+    deleted BOOLEAN DEFAULT FALSE NOT NULL COMMENT '삭제 여부 (소프트 삭제)',
+    deleted_at TIMESTAMP COMMENT '삭제 일시',
     CONSTRAINT fk_sr_requester FOREIGN KEY (requester_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_sr_assignee FOREIGN KEY (assignee_id) REFERENCES users(id) ON DELETE SET NULL
 ) COMMENT='서비스 요청 정보';
@@ -148,6 +157,7 @@ CREATE INDEX idx_sr_priority ON sr(priority);
 CREATE INDEX idx_sr_requester_id ON sr(requester_id);
 CREATE INDEX idx_sr_assignee_id ON sr(assignee_id);
 CREATE INDEX idx_sr_created_at ON sr(created_at);
+CREATE INDEX idx_sr_deleted ON sr(deleted);
 ```
 
 ---
@@ -469,16 +479,21 @@ CREATE TABLE sr (
     requester_id BIGINT NOT NULL,
     assignee_id BIGINT,
     open_api_survey_id BIGINT,
+    applicant_name VARCHAR(100),
+    applicant_phone VARCHAR(100),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
+    deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP NULL,
+
     INDEX idx_sr_sr_id (sr_id),
     INDEX idx_sr_status (status),
     INDEX idx_sr_priority (priority),
     INDEX idx_sr_requester_id (requester_id),
     INDEX idx_sr_assignee_id (assignee_id),
     INDEX idx_sr_created_at (created_at),
-    
+    INDEX idx_sr_deleted (deleted),
+
     CONSTRAINT fk_sr_requester FOREIGN KEY (requester_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_sr_assignee FOREIGN KEY (assignee_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -605,8 +620,12 @@ CREATE TABLE sr (
     requester_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     assignee_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
     open_api_survey_id BIGINT,
+    applicant_name VARCHAR(100),
+    applicant_phone VARCHAR(100),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP
 );
 
 -- sr_history 테이블

@@ -17,12 +17,37 @@ import org.springframework.stereotype.Repository;
 public interface SrRepository extends JpaRepository<Sr, Long> {
 
     /**
+     * 삭제되지 않은 SR 목록 조회
+     * @param pageable 페이지네이션
+     * @return Page<Sr>
+     */
+    Page<Sr> findByDeleted(Boolean deleted, Pageable pageable);
+
+    /**
+     * 상태로 SR 목록 조회 (삭제되지 않은 항목만)
+     * @param status SR 상태
+     * @param deleted 삭제 여부
+     * @param pageable 페이지네이션
+     * @return Page<Sr>
+     */
+    Page<Sr> findByStatusAndDeleted(SrStatus status, Boolean deleted, Pageable pageable);
+
+    /**
      * 상태로 SR 목록 조회
      * @param status SR 상태
      * @param pageable 페이지네이션
      * @return Page<Sr>
      */
     Page<Sr> findByStatus(SrStatus status, Pageable pageable);
+
+    /**
+     * 우선순위로 SR 목록 조회 (삭제되지 않은 항목만)
+     * @param priority 우선순위
+     * @param deleted 삭제 여부
+     * @param pageable 페이지네이션
+     * @return Page<Sr>
+     */
+    Page<Sr> findByPriorityAndDeleted(Priority priority, Boolean deleted, Pageable pageable);
 
     /**
      * 우선순위로 SR 목록 조회
@@ -33,6 +58,16 @@ public interface SrRepository extends JpaRepository<Sr, Long> {
     Page<Sr> findByPriority(Priority priority, Pageable pageable);
 
     /**
+     * 상태와 우선순위로 SR 목록 조회 (삭제되지 않은 항목만)
+     * @param status SR 상태
+     * @param priority 우선순위
+     * @param deleted 삭제 여부
+     * @param pageable 페이지네이션
+     * @return Page<Sr>
+     */
+    Page<Sr> findByStatusAndPriorityAndDeleted(SrStatus status, Priority priority, Boolean deleted, Pageable pageable);
+
+    /**
      * 상태와 우선순위로 SR 목록 조회
      * @param status SR 상태
      * @param priority 우선순위
@@ -40,6 +75,18 @@ public interface SrRepository extends JpaRepository<Sr, Long> {
      * @return Page<Sr>
      */
     Page<Sr> findByStatusAndPriority(SrStatus status, Priority priority, Pageable pageable);
+
+    /**
+     * 제목 또는 설명에서 검색 (삭제 여부 포함)
+     * @param search 검색어
+     * @param deleted 삭제 여부
+     * @param pageable 페이지네이션
+     * @return Page<Sr>
+     */
+    @Query("SELECT s FROM Sr s WHERE s.deleted = :deleted AND (" +
+            "LOWER(s.title) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(s.description) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<Sr> searchByTitleOrDescriptionAndDeleted(@Param("search") String search, @Param("deleted") Boolean deleted, Pageable pageable);
 
     /**
      * 제목 또는 설명에서 검색

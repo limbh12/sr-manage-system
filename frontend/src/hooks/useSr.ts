@@ -7,6 +7,7 @@ import {
   createSrAsync,
   updateSrAsync,
   deleteSrAsync,
+  restoreSrAsync,
   updateSrStatusAsync,
   fetchSrHistoriesAsync,
   createSrHistoryAsync,
@@ -21,6 +22,7 @@ interface FetchSrListParams {
   status?: SrStatus;
   priority?: Priority;
   search?: string;
+  includeDeleted?: boolean;
 }
 
 /**
@@ -106,6 +108,17 @@ export const useSr = () => {
   );
 
   /**
+   * SR 복구 (관리자 전용)
+   */
+  const restoreSr = useCallback(
+    async (id: number) => {
+      const result = await dispatch(restoreSrAsync(id));
+      return restoreSrAsync.fulfilled.match(result);
+    },
+    [dispatch]
+  );
+
+  /**
    * SR 상태 변경
    */
   const updateSrStatus = useCallback(
@@ -149,6 +162,7 @@ export const useSr = () => {
     createSr,
     updateSr,
     deleteSr,
+    restoreSr,
     updateSrStatus,
     selectSr,
     resetError,

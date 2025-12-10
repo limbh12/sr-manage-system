@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSr } from '../hooks/useSr';
+import { useAuth } from '../hooks/useAuth';
 import SrList from '../components/sr/SrList';
 import SrDetail from '../components/sr/SrDetail';
 import SrForm from '../components/sr/SrForm';
@@ -21,9 +22,13 @@ function SrManagementPage() {
     createSr,
     updateSr,
     deleteSr,
+    restoreSr,
     updateSrStatus,
     selectSr,
   } = useSr();
+
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
 
   const [showForm, setShowForm] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
@@ -31,7 +36,14 @@ function SrManagementPage() {
   const [statusFilter, setStatusFilter] = useState<SrStatus | ''>('');
   const [priorityFilter, setPriorityFilter] = useState<Priority | ''>('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [includeDeleted, setIncludeDeleted] = useState(false);
   const observerTarget = useRef<HTMLDivElement>(null);
+
+  // 디버깅용: user와 isAdmin 확인
+  useEffect(() => {
+    console.log('User:', user);
+    console.log('Is Admin:', isAdmin);
+  }, [user, isAdmin]);
 
   // 초기 로딩
   useEffect(() => {
@@ -40,6 +52,7 @@ function SrManagementPage() {
       status: statusFilter || undefined,
       priority: priorityFilter || undefined,
       search: searchQuery || undefined,
+      includeDeleted: isAdmin ? includeDeleted : undefined,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -52,9 +65,10 @@ function SrManagementPage() {
         status: statusFilter || undefined,
         priority: priorityFilter || undefined,
         search: searchQuery || undefined,
+        includeDeleted: isAdmin ? includeDeleted : undefined,
       });
     }
-  }, [loading, currentPage, totalPages, fetchSrList, statusFilter, priorityFilter, searchQuery]);
+  }, [loading, currentPage, totalPages, fetchSrList, statusFilter, priorityFilter, searchQuery, isAdmin, includeDeleted]);
 
   useEffect(() => {
     const option = {
@@ -121,6 +135,16 @@ function SrManagementPage() {
     }
   };
 
+  const handleRestore = async (id: number) => {
+    if (window.confirm('이 SR을 복구하시겠습니까?')) {
+      const success = await restoreSr(id);
+      if (success) {
+        // 목록 갱신
+        handleSearch();
+      }
+    }
+  };
+
   const handleStatusChange = async (status: SrStatus) => {
     if (currentSr) {
       const success = await updateSrStatus(currentSr.id, { status });
@@ -138,6 +162,7 @@ function SrManagementPage() {
       status: statusFilter || undefined,
       priority: priorityFilter || undefined,
       search: searchQuery || undefined,
+      includeDeleted: isAdmin ? includeDeleted : undefined,
     });
   };
 
@@ -145,18 +170,27 @@ function SrManagementPage() {
     setStatusFilter('');
     setPriorityFilter('');
     setSearchQuery('');
+    setIncludeDeleted(false);
     fetchSrList({
       page: 0,
       status: undefined,
       priority: undefined,
       search: undefined,
+      includeDeleted: undefined,
     });
   };
 
   return (
     <div>
       <div className="page-header">
-        <h2 className="page-title">SR 관리</h2>
+        <div>
+          <h2 className="page-title">SR 관리</h2>
+          {user && (
+            <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+              현재 사용자: {user.name} ({user.username}) - 권한: {user.role}
+            </div>
+          )}
+        </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           {USE_MOCK && (
             <button 
@@ -179,51 +213,85 @@ function SrManagementPage() {
 
       {/* 검색 필터 */}
       <div className="card mb-4" style={{ padding: '16px' }}>
-        <form onSubmit={handleSearch} className="grid-2" style={{ alignItems: 'end', gap: '16px' }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">검색어</label>
-            <input
-              type="text"
-              className="form-input"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="제목 또는 설명 검색"
-            />
-          </div>
-          
-          <div className="grid-2" style={{ gap: '16px' }}>
+        <form onSubmit={handleSearch} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">상태</label>
-              <select
-                className="form-select"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as SrStatus | '')}
-              >
-                <option value="">전체</option>
-                <option value="OPEN">신규</option>
-                <option value="IN_PROGRESS">처리중</option>
-                <option value="RESOLVED">해결됨</option>
-                <option value="CLOSED">종료</option>
-              </select>
+              <label className="form-label">검색어</label>
+              <input
+                type="text"
+                className="form-input"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="제목 또는 설명 검색"
+              />
             </div>
-            
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">우선순위</label>
-              <select
-                className="form-select"
-                value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value as Priority | '')}
-              >
-                <option value="">전체</option>
-                <option value="LOW">낮음</option>
-                <option value="MEDIUM">보통</option>
-                <option value="HIGH">높음</option>
-                <option value="CRITICAL">긴급</option>
-              </select>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">상태</label>
+                <select
+                  className="form-select"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as SrStatus | '')}
+                >
+                  <option value="">전체</option>
+                  <option value="OPEN">신규</option>
+                  <option value="IN_PROGRESS">처리중</option>
+                  <option value="RESOLVED">해결됨</option>
+                  <option value="CLOSED">종료</option>
+                </select>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">우선순위</label>
+                <select
+                  className="form-select"
+                  value={priorityFilter}
+                  onChange={(e) => setPriorityFilter(e.target.value as Priority | '')}
+                >
+                  <option value="">전체</option>
+                  <option value="LOW">낮음</option>
+                  <option value="MEDIUM">보통</option>
+                  <option value="HIGH">높음</option>
+                  <option value="CRITICAL">긴급</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          <div className="flex-end" style={{ gridColumn: '1 / -1', marginTop: '8px' }}>
+          {/* 삭제된 항목 포함 체크박스 (관리자 전용) */}
+          {isAdmin && (
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={includeDeleted}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setIncludeDeleted(checked);
+                    // 체크박스 변경 시 즉시 목록 갱신
+                    fetchSrList({
+                      page: 0,
+                      status: statusFilter || undefined,
+                      priority: priorityFilter || undefined,
+                      search: searchQuery || undefined,
+                      includeDeleted: checked,
+                    });
+                  }}
+                  style={{ cursor: 'pointer' }}
+                />
+                <span>삭제된 항목 포함</span>
+              </label>
+            </div>
+          )}
+
+          {/* 버튼 영역 */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
             <button type="button" onClick={handleReset} className="btn btn-secondary">초기화</button>
             <button type="submit" className="btn btn-primary">검색</button>
           </div>
@@ -236,8 +304,10 @@ function SrManagementPage() {
           srList={srList}
           onSelectSr={handleSelectSr}
           onDeleteSr={handleDelete}
+          onRestoreSr={handleRestore}
           totalElements={totalElements}
           page={currentPage}
+          isAdmin={isAdmin}
         />
         
         {/* Infinite Scroll Sentinel */}

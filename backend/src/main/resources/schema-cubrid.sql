@@ -89,8 +89,12 @@ CREATE TABLE sr (
     requester_id BIGINT NOT NULL,
     assignee_id BIGINT,
     open_api_survey_id BIGINT,
+    applicant_name VARCHAR(100),
+    applicant_phone VARCHAR(100),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP,
     FOREIGN KEY (requester_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (assignee_id) REFERENCES users(id) ON DELETE SET NULL
 );

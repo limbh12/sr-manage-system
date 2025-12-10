@@ -19,6 +19,7 @@ interface FetchSrListParams {
   status?: SrStatus;
   priority?: Priority;
   search?: string;
+  includeDeleted?: boolean;
 }
 
 /**
@@ -146,6 +147,23 @@ export const deleteSrAsync = createAsyncThunk<number, number, { rejectValue: str
         return rejectWithValue(error.message);
       }
       return rejectWithValue('Failed to delete SR');
+    }
+  }
+);
+
+/**
+ * SR 복구 액션 (관리자 전용)
+ */
+export const restoreSrAsync = createAsyncThunk<Sr, number, { rejectValue: string }>(
+  'sr/restore',
+  async (id, { rejectWithValue }) => {
+    try {
+      return await srService.restoreSr(id);
+    } catch (error) {
+      if (error instanceof Error) {
+        return rejectWithValue(error.message);
+      }
+      return rejectWithValue('Failed to restore SR');
     }
   }
 );
@@ -281,6 +299,25 @@ const srSlice = createSlice({
       .addCase(deleteSrAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || 'Failed to delete SR';
+      })
+      // SR 복구
+      .addCase(restoreSrAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(restoreSrAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        const index = state.srList.findIndex((sr) => sr.id === action.payload.id);
+        if (index !== -1) {
+          state.srList[index] = action.payload;
+        }
+        if (state.currentSr?.id === action.payload.id) {
+          state.currentSr = action.payload;
+        }
+      })
+      .addCase(restoreSrAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || 'Failed to restore SR';
       })
       // SR 상태 변경
       .addCase(updateSrStatusAsync.pending, (state) => {
