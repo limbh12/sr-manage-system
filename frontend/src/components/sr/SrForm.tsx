@@ -1,5 +1,5 @@
 import { useState, FormEvent, useEffect } from 'react';
-import { Sr, SrCreateRequest, SrUpdateRequest, Priority, OpenApiSurvey, User, CommonCode } from '../../types';
+import { Sr, SrCreateRequest, SrUpdateRequest, Priority, SrStatus, OpenApiSurvey, User, CommonCode } from '../../types';
 import SurveySearchModal from './SurveySearchModal';
 import * as surveyService from '../../services/surveyService';
 import * as userService from '../../services/userService';
@@ -22,6 +22,7 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
   const [description, setDescription] = useState('');
   const [processingDetails, setProcessingDetails] = useState('');
   const [priority, setPriority] = useState<Priority>('MEDIUM');
+  const [status, setStatus] = useState<SrStatus>('OPEN');
   const [category, setCategory] = useState('OPEN_API');
   const [requestType, setRequestType] = useState('');
   const [applicantName, setApplicantName] = useState('');
@@ -49,6 +50,7 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
       setDescription(sr.description || '');
       setProcessingDetails(sr.processingDetails || '');
       setPriority(sr.priority);
+      setStatus(sr.status);
       setCategory(sr.category || '');
       setRequestType(sr.requestType || '');
       setAssigneeId(sr.assignee?.id);
@@ -120,6 +122,7 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
       onSubmit({
         ...commonData,
         processingDetails,
+        status,
       } as SrUpdateRequest);
     } else {
       onSubmit(commonData as SrCreateRequest);
@@ -385,24 +388,46 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
             </div>
           )}
 
-
-
           <div className="form-group">
-            <label htmlFor="priority" className="form-label">
-              우선순위
-            </label>
-            <select
-              id="priority"
-              className="form-select"
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as Priority)}
-              disabled={loading}
-            >
-              <option value="LOW">낮음</option>
-              <option value="MEDIUM">보통</option>
-              <option value="HIGH">높음</option>
-              <option value="CRITICAL">긴급</option>
-            </select>
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <div style={{ flex: 1 }}>
+                <label htmlFor="priority" className="form-label">
+                  우선순위
+                </label>
+                <select
+                  id="priority"
+                  className="form-select"
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as Priority)}
+                  disabled={loading}
+                >
+                  <option value="LOW">낮음</option>
+                  <option value="MEDIUM">보통</option>
+                  <option value="HIGH">높음</option>
+                  <option value="CRITICAL">긴급</option>
+                </select>
+              </div>
+
+              {isEditMode && (
+                <div style={{ flex: 1 }}>
+                  <label htmlFor="status" className="form-label">
+                    처리상태
+                  </label>
+                  <select
+                    id="status"
+                    className="form-select"
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as SrStatus)}
+                    disabled={loading}
+                  >
+                    <option value="OPEN">접수</option>
+                    <option value="IN_PROGRESS">진행중</option>
+                    <option value="RESOLVED">해결됨</option>
+                    <option value="CLOSED">종료</option>
+                  </select>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="form-group">
