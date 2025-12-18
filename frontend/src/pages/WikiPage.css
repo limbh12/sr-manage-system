@@ -54,6 +54,34 @@
   color: #24292e;
 }
 
+.btn-show-all {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #586069;
+  background: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.btn-show-all:hover {
+  background-color: #e1f0ff;
+  border-color: #0366d6;
+  color: #0366d6;
+}
+
+.btn-show-all.active {
+  background-color: #d1e7ff;
+  border-color: #0366d6;
+  color: #0366d6;
+  border-left: 3px solid #0366d6;
+}
+
 .document-item {
   padding: 10px;
   margin-bottom: 8px;

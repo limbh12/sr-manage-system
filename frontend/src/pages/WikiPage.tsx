@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import WikiCategoryTree from '../components/wiki/WikiCategoryTree';
+import WikiCategoryModal from '../components/wiki/WikiCategoryModal';
 import WikiEditor from '../components/wiki/WikiEditor';
 import WikiViewer from '../components/wiki/WikiViewer';
 import {
   wikiDocumentApi,
   wikiCategoryApi,
 } from '../services/wikiService';
-import type { WikiDocument, WikiCategory, WikiDocumentRequest } from '../types/wiki';
+import type { WikiDocument, WikiCategory, WikiDocumentRequest, WikiCategoryRequest } from '../types/wiki';
 import './WikiPage.css';
 
 const WikiPage: React.FC = () => {
@@ -26,6 +27,10 @@ const WikiPage: React.FC = () => {
   const [editTitle, setEditTitle] = useState('');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<WikiCategory | null>(null);
+  const [parentCategoryId, setParentCategoryId] = useState<number | undefined>();
+  const [showAllDocuments, setShowAllDocuments] = useState(false);
 
   // 카테고리 로드
   useEffect(() => {
@@ -53,9 +58,17 @@ const WikiPage: React.FC = () => {
   // 카테고리 선택 시 문서 목록 로드
   useEffect(() => {
     if (selectedCategoryId) {
+      setShowAllDocuments(false);
       loadDocumentsByCategory(selectedCategoryId);
     }
   }, [selectedCategoryId]);
+
+  // 전체 문서 보기
+  useEffect(() => {
+    if (showAllDocuments) {
+      loadAllDocuments();
+    }
+  }, [showAllDocuments]);
 
   const loadCategories = async () => {
     try {
@@ -88,6 +101,16 @@ const WikiPage: React.FC = () => {
       setDocuments(response.data.content);
     } catch (error) {
       console.error('문서 목록 로드 실패:', error);
+    }
+  };
+
+  const loadAllDocuments = async () => {
+    try {
+      const response = await wikiDocumentApi.getAll(0, 100);
+      setDocuments(response.data.content);
+    } catch (error) {
+      console.error('전체 문서 로드 실패:', error);
+      alert('문서 목록을 불러오는데 실패했습니다.');
     }
   };
 
@@ -163,10 +186,57 @@ const WikiPage: React.FC = () => {
       const response = await wikiDocumentApi.search(searchKeyword);
       setDocuments(response.data.content);
       setSelectedCategoryId(undefined);
+      setShowAllDocuments(false);
     } catch (error) {
       console.error('검색 실패:', error);
       alert('검색에 실패했습니다.');
     }
+  };
+
+  // 카테고리 관리 핸들러
+  const handleCreateCategory = (parentId?: number) => {
+    setEditingCategory(null);
+    setParentCategoryId(parentId);
+    setShowCategoryModal(true);
+  };
+
+  const handleEditCategory = (category: WikiCategory) => {
+    setEditingCategory(category);
+    setParentCategoryId(category.parentId);
+    setShowCategoryModal(true);
+  };
+
+  const handleDeleteCategory = async (categoryId: number) => {
+    try {
+      await wikiCategoryApi.delete(categoryId);
+      alert('카테고리가 삭제되었습니다.');
+      await loadCategories();
+    } catch (error) {
+      console.error('카테고리 삭제 실패:', error);
+      alert('카테고리 삭제에 실패했습니다. 하위 카테고리나 문서가 있는지 확인해주세요.');
+    }
+  };
+
+  const handleSubmitCategory = async (data: WikiCategoryRequest) => {
+    try {
+      if (editingCategory) {
+        await wikiCategoryApi.update(editingCategory.id, data);
+        alert('카테고리가 수정되었습니다.');
+      } else {
+        await wikiCategoryApi.create(data);
+        alert('카테고리가 생성되었습니다.');
+      }
+      await loadCategories();
+    } catch (error) {
+      console.error('카테고리 저장 실패:', error);
+      throw error;
+    }
+  };
+
+  const handleShowAllDocuments = () => {
+    setSelectedCategoryId(undefined);
+    setShowAllDocuments(true);
+    setSearchKeyword('');
   };
 
   return (
@@ -187,7 +257,19 @@ const WikiPage: React.FC = () => {
           categories={categories}
           selectedCategoryId={selectedCategoryId}
           onCategorySelect={setSelectedCategoryId}
+          onCategoryCreate={handleCreateCategory}
+          onCategoryEdit={handleEditCategory}
+          onCategoryDelete={handleDeleteCategory}
         />
+
+        <div className="document-list">
+          <button
+            className={`btn-show-all ${showAllDocuments ? 'active' : ''}`}
+            onClick={handleShowAllDocuments}
+          >
+            📄 전체 문서 보기
+          </button>
+        </div>
 
         {documents.length > 0 && (
           <div className="document-list">
@@ -282,6 +364,14 @@ const WikiPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      <WikiCategoryModal
+        isOpen={showCategoryModal}
+        onClose={() => setShowCategoryModal(false)}
+        onSubmit={handleSubmitCategory}
+        category={editingCategory}
+        parentId={parentCategoryId}
+      />
     </div>
   );
 };
