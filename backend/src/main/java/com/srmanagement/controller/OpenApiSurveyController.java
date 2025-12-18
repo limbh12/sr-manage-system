@@ -62,7 +62,7 @@ public class OpenApiSurveyController {
     public ResponseEntity<org.springframework.core.io.Resource> downloadTemplate() {
         try {
             org.springframework.core.io.ClassPathResource resource =
-                new org.springframework.core.io.ClassPathResource("static/templates/openapi_survey_template.csv");
+                new org.springframework.core.io.ClassPathResource("templates/openapi_survey_template.csv");
 
             if (!resource.exists()) {
                 return ResponseEntity.notFound().build();
