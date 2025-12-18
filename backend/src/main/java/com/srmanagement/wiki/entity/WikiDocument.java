@@ -34,9 +34,14 @@ public class WikiDocument {
     @JoinColumn(name = "category_id")
     private WikiCategory category;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sr_id")
-    private Sr sr;
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "wiki_document_sr",
+        joinColumns = @JoinColumn(name = "document_id"),
+        inverseJoinColumns = @JoinColumn(name = "sr_id")
+    )
+    @Builder.Default
+    private List<Sr> srs = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)

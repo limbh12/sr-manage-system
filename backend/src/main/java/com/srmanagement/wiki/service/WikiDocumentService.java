@@ -53,11 +53,14 @@ public class WikiDocumentService {
             document.setCategory(category);
         }
 
-        // SR 연계 설정
-        if (request.getSrId() != null) {
-            Sr sr = srRepository.findById(request.getSrId())
-                    .orElseThrow(() -> new RuntimeException("SR을 찾을 수 없습니다"));
-            document.setSr(sr);
+        // SR 연계 설정 (다대다)
+        if (request.getSrIds() != null && !request.getSrIds().isEmpty()) {
+            List<Sr> srs = srRepository.findAllById(request.getSrIds());
+            if (srs.size() != request.getSrIds().size()) {
+                throw new RuntimeException("일부 SR을 찾을 수 없습니다");
+            }
+            document.getSrs().clear();
+            document.getSrs().addAll(srs);
         }
 
         WikiDocument savedDocument = wikiDocumentRepository.save(document);
@@ -102,13 +105,14 @@ public class WikiDocumentService {
             document.setCategory(null);
         }
 
-        // SR 연계 변경
-        if (request.getSrId() != null) {
-            Sr sr = srRepository.findById(request.getSrId())
-                    .orElseThrow(() -> new RuntimeException("SR을 찾을 수 없습니다"));
-            document.setSr(sr);
-        } else {
-            document.setSr(null);
+        // SR 연계 변경 (다대다)
+        document.getSrs().clear();
+        if (request.getSrIds() != null && !request.getSrIds().isEmpty()) {
+            List<Sr> srs = srRepository.findAllById(request.getSrIds());
+            if (srs.size() != request.getSrIds().size()) {
+                throw new RuntimeException("일부 SR을 찾을 수 없습니다");
+            }
+            document.getSrs().addAll(srs);
         }
 
         WikiDocument savedDocument = wikiDocumentRepository.save(document);
@@ -176,7 +180,7 @@ public class WikiDocumentService {
 
     @Transactional(readOnly = true)
     public List<WikiDocumentResponse> getDocumentsBySr(Long srId) {
-        return wikiDocumentRepository.findBySrId(srId).stream()
+        return wikiDocumentRepository.findBySrsId(srId).stream()
                 .map(WikiDocumentResponse::fromEntity)
                 .collect(Collectors.toList());
     }

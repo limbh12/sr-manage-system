@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Sr, SrStatus, Priority, OpenApiSurvey } from '../../types';
 import * as surveyService from '../../services/surveyService';
 import { commonCodeService } from '../../services/commonCodeService';
+import { wikiDocumentApi } from '../../services/wikiService';
+import type { WikiDocument } from '../../types/wiki';
 import OpenApiSurveyInfoCard from './OpenApiSurveyInfoCard';
 import SrHistoryList from './SrHistoryList';
 import { formatPhoneNumber } from '../../utils/formatUtils';
@@ -88,8 +91,10 @@ const isDueTomorrow = (expectedDate?: string): boolean => {
  * SR 상세 컴포넌트
  */
 function SrDetail({ sr, onClose, onEdit, onStatusChange }: SrDetailProps) {
+  const navigate = useNavigate();
   const statusOptions: SrStatus[] = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
   const [linkedSurvey, setLinkedSurvey] = useState<OpenApiSurvey | null>(null);
+  const [linkedWikiDocs, setLinkedWikiDocs] = useState<WikiDocument[]>([]);
   const [categoryName, setCategoryName] = useState('');
   const [requestTypeName, setRequestTypeName] = useState('');
 
@@ -102,6 +107,13 @@ function SrDetail({ sr, onClose, onEdit, onStatusChange }: SrDetailProps) {
       setLinkedSurvey(null);
     }
   }, [sr.openApiSurveyId]);
+
+  // 연계된 Wiki 문서 로드
+  useEffect(() => {
+    wikiDocumentApi.getBySr(sr.id)
+      .then(response => setLinkedWikiDocs(response.data))
+      .catch(err => console.error('Failed to load linked wiki documents', err));
+  }, [sr.id]);
 
   useEffect(() => {
     if (sr.category) {
@@ -252,6 +264,48 @@ function SrDetail({ sr, onClose, onEdit, onStatusChange }: SrDetailProps) {
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {sr.processingDetails}
                   </ReactMarkdown>
+                </div>
+              </div>
+            )}
+
+            {/* 연계된 Wiki 문서 목록 */}
+            {linkedWikiDocs.length > 0 && (
+              <div style={{ marginBottom: '16px' }}>
+                <strong>연계된 Wiki 문서:</strong>
+                <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {linkedWikiDocs.map(doc => (
+                    <div
+                      key={doc.id}
+                      onClick={() => {
+                        onClose();
+                        navigate(`/wiki/${doc.id}`);
+                      }}
+                      style={{
+                        padding: '10px 12px',
+                        background: '#f6f8fa',
+                        border: '1px solid #d1d5da',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#e1f0ff';
+                        e.currentTarget.style.borderColor = '#0366d6';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = '#f6f8fa';
+                        e.currentTarget.style.borderColor = '#d1d5da';
+                      }}
+                    >
+                      <span style={{ fontSize: '14px', color: '#24292e', fontWeight: 500 }}>
+                        {doc.title}
+                      </span>
+                      <span style={{ fontSize: '16px', color: '#0366d6', fontWeight: 'bold' }}>→</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

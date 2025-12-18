@@ -4,11 +4,12 @@ import WikiCategoryTree from '../components/wiki/WikiCategoryTree';
 import WikiCategoryModal from '../components/wiki/WikiCategoryModal';
 import WikiEditor from '../components/wiki/WikiEditor';
 import WikiViewer from '../components/wiki/WikiViewer';
+import SrSelector from '../components/wiki/SrSelector';
 import {
   wikiDocumentApi,
   wikiCategoryApi,
 } from '../services/wikiService';
-import type { WikiDocument, WikiCategory, WikiDocumentRequest, WikiCategoryRequest } from '../types/wiki';
+import type { WikiDocument, WikiCategory, WikiDocumentRequest, WikiCategoryRequest, SrInfo } from '../types/wiki';
 import './WikiPage.css';
 
 const WikiPage: React.FC = () => {
@@ -33,6 +34,7 @@ const WikiPage: React.FC = () => {
   const [showAllDocuments, setShowAllDocuments] = useState(false);
   const [editCategoryId, setEditCategoryId] = useState<number | undefined>();
   const [flatCategories, setFlatCategories] = useState<WikiCategory[]>([]);
+  const [editSrs, setEditSrs] = useState<SrInfo[]>([]);
 
   // 카테고리 로드
   useEffect(() => {
@@ -118,6 +120,7 @@ const WikiPage: React.FC = () => {
       setEditTitle(response.data.title);
       setEditContent(response.data.content);
       setEditCategoryId(response.data.categoryId);
+      setEditSrs(response.data.srs || []);
     } catch (error) {
       console.error('문서 로드 실패:', error);
       alert('문서를 불러오는데 실패했습니다.');
@@ -152,6 +155,7 @@ const WikiPage: React.FC = () => {
     setEditTitle('');
     setEditContent('');
     setEditCategoryId(selectedCategoryId);
+    setEditSrs([]);
     navigate('/wiki');
   };
 
@@ -165,6 +169,7 @@ const WikiPage: React.FC = () => {
       title: editTitle,
       content: editContent,
       categoryId: editCategoryId,
+      srIds: editSrs.map(sr => sr.id),
     };
 
     try {
@@ -401,6 +406,10 @@ const WikiPage: React.FC = () => {
                 ))}
               </select>
             </div>
+            <SrSelector
+              selectedSrs={editSrs}
+              onChange={setEditSrs}
+            />
             <WikiEditor
               initialValue={editContent}
               onChange={setEditContent}
@@ -416,6 +425,31 @@ const WikiPage: React.FC = () => {
               <span>수정일: {new Date(currentDocument.updatedAt).toLocaleString()}</span>
               <span>조회수: {currentDocument.viewCount}</span>
             </div>
+
+            {/* 연계된 SR 목록 */}
+            {currentDocument.srs && currentDocument.srs.length > 0 && (
+              <div className="linked-srs">
+                <h3>연계된 SR</h3>
+                <div className="linked-sr-list">
+                  {currentDocument.srs.map(sr => (
+                    <div
+                      key={sr.id}
+                      className="linked-sr-item"
+                      onClick={() => navigate(`/sr?id=${sr.id}`)}
+                    >
+                      <span className={`sr-status-badge status-${sr.status.toLowerCase().replace('_', '-')}`}>
+                        {sr.status === 'OPEN' ? '접수' :
+                         sr.status === 'IN_PROGRESS' ? '진행중' :
+                         sr.status === 'RESOLVED' ? '해결' : '종료'}
+                      </span>
+                      <span className="linked-sr-title">{sr.title}</span>
+                      <span className="link-arrow">→</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <WikiViewer content={currentDocument.content} />
           </div>
         ) : (

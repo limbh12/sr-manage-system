@@ -1,3 +1,10 @@
+// SR 정보 (Wiki 문서 연계용)
+export interface SrInfo {
+  id: number;
+  title: string;
+  status: string;
+}
+
 // Wiki 문서
 export interface WikiDocument {
   id: number;
@@ -5,8 +12,7 @@ export interface WikiDocument {
   content: string;
   categoryId?: number;
   categoryName?: string;
-  srId?: number;
-  srTitle?: string;
+  srs: SrInfo[];
   createdById: number;
   createdByName: string;
   updatedById?: number;
@@ -22,7 +28,7 @@ export interface WikiDocumentRequest {
   title: string;
   content: string;
   categoryId?: number;
-  srId?: number;
+  srIds?: number[];
   changeSummary?: string;
 }
 

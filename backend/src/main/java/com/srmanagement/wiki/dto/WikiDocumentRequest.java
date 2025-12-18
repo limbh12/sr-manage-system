@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,7 +23,7 @@ public class WikiDocumentRequest {
 
     private Long categoryId;
 
-    private Long srId;
+    private List<Long> srIds;
 
     @Size(max = 200, message = "변경 요약은 200자를 초과할 수 없습니다")
     private String changeSummary;

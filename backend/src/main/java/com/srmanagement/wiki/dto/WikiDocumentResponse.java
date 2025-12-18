@@ -7,6 +7,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Data
 @NoArgsConstructor
@@ -19,8 +22,7 @@ public class WikiDocumentResponse {
     private String content;
     private Long categoryId;
     private String categoryName;
-    private Long srId;
-    private String srTitle;
+    private List<SrInfo> srs;
     private Long createdById;
     private String createdByName;
     private Long updatedById;
@@ -29,6 +31,16 @@ public class WikiDocumentResponse {
     private LocalDateTime updatedAt;
     private Integer viewCount;
     private Integer currentVersion;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class SrInfo {
+        private Long id;
+        private String title;
+        private String status;
+    }
 
     public static WikiDocumentResponse fromEntity(WikiDocument document) {
         WikiDocumentResponseBuilder builder = WikiDocumentResponse.builder()
@@ -46,9 +58,18 @@ public class WikiDocumentResponse {
                    .categoryName(document.getCategory().getName());
         }
 
-        if (document.getSr() != null) {
-            builder.srId(document.getSr().getId())
-                   .srTitle(document.getSr().getTitle());
+        // SR 목록 매핑
+        if (document.getSrs() != null && !document.getSrs().isEmpty()) {
+            List<SrInfo> srInfos = document.getSrs().stream()
+                    .map(sr -> SrInfo.builder()
+                            .id(sr.getId())
+                            .title(sr.getTitle())
+                            .status(sr.getStatus().name())
+                            .build())
+                    .collect(Collectors.toList());
+            builder.srs(srInfos);
+        } else {
+            builder.srs(new ArrayList<>());
         }
 
         if (document.getUpdatedBy() != null) {

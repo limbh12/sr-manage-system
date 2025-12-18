@@ -263,6 +263,88 @@
   color: #586069;
 }
 
+/* 연계된 SR 목록 */
+.linked-srs {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+}
+
+.linked-srs h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #24292e;
+}
+
+.linked-sr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.linked-sr-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: white;
+  border: 1px solid #d1d5da;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.linked-sr-item:hover {
+  background: #e1f0ff;
+  border-color: #0366d6;
+  box-shadow: 0 2px 4px rgba(3, 102, 214, 0.1);
+}
+
+.linked-sr-title {
+  flex: 1;
+  font-size: 14px;
+  color: #24292e;
+  font-weight: 500;
+}
+
+.link-arrow {
+  font-size: 16px;
+  color: #0366d6;
+  font-weight: bold;
+}
+
+/* SR 상태 뱃지 */
+.sr-status-badge {
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.sr-status-badge.status-open {
+  background-color: #28a745;
+  color: white;
+}
+
+.sr-status-badge.status-in-progress {
+  background-color: #0366d6;
+  color: white;
+}
+
+.sr-status-badge.status-resolved {
+  background-color: #6f42c1;
+  color: white;
+}
+
+.sr-status-badge.status-closed {
+  background-color: #6a737d;
+  color: white;
+}
+
 /* 반응형 */
 @media (max-width: 768px) {
   .wiki-sidebar {

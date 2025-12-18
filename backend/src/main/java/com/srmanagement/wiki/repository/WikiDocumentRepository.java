@@ -17,8 +17,9 @@ public interface WikiDocumentRepository extends JpaRepository<WikiDocument, Long
     // 카테고리별 문서 조회
     Page<WikiDocument> findByCategoryId(Long categoryId, Pageable pageable);
 
-    // SR 연계 문서 조회
-    List<WikiDocument> findBySrId(Long srId);
+    // SR 연계 문서 조회 (다대다 관계)
+    @Query("SELECT wd FROM WikiDocument wd JOIN wd.srs s WHERE s.id = :srId")
+    List<WikiDocument> findBySrsId(@Param("srId") Long srId);
 
     // 제목으로 검색
     @Query("SELECT wd FROM WikiDocument wd WHERE LOWER(wd.title) LIKE LOWER(CONCAT('%', :keyword, '%'))")
