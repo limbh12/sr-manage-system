@@ -26,8 +26,10 @@ public class OpenApiSurveyController {
     @GetMapping
     public ResponseEntity<Page<OpenApiSurveyResponse>> getSurveys(
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String currentMethod,
+            @RequestParam(required = false) String desiredMethod,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<OpenApiSurveyResponse> page = openApiSurveyService.getSurveys(keyword, pageable);
+        Page<OpenApiSurveyResponse> page = openApiSurveyService.getSurveys(keyword, currentMethod, desiredMethod, pageable);
         return ResponseEntity.ok(page);
     }
 

@@ -51,11 +51,16 @@ public class OpenApiSurveyService {
     private UserRepository userRepository;
 
     @Transactional(readOnly = true)
-    public Page<OpenApiSurveyResponse> getSurveys(String keyword, Pageable pageable) {
+    public Page<OpenApiSurveyResponse> getSurveys(String keyword, String currentMethod, String desiredMethod, Pageable pageable) {
         // keyword: LIKE 검색용 (평문 유지)
         // exactKeyword: 일치 검색용 (JPA Converter에 의해 암호화됨)
         // 동일한 파라미터 이름을 사용하면 JPA가 컨텍스트에 따라 암호화 여부를 혼동할 수 있어 분리함
-        Page<OpenApiSurvey> page = openApiSurveyRepository.search(keyword, keyword, pageable);
+
+        // 빈 문자열을 null로 변환
+        String normalizedCurrentMethod = (currentMethod != null && !currentMethod.trim().isEmpty()) ? currentMethod : null;
+        String normalizedDesiredMethod = (desiredMethod != null && !desiredMethod.trim().isEmpty()) ? desiredMethod : null;
+
+        Page<OpenApiSurvey> page = openApiSurveyRepository.search(keyword, keyword, normalizedCurrentMethod, normalizedDesiredMethod, pageable);
         return page.map(this::convertToResponse);
     }
 
@@ -164,8 +169,8 @@ public class OpenApiSurveyService {
                 .receivedFileName(request.getReceivedFileName())
                 .receivedDate(request.getReceivedDate())
                 .systemName(request.getSystemName())
-                .currentMethod(request.getCurrentMethod())
-                .desiredMethod(request.getDesiredMethod())
+                .currentMethod(normalizeCurrentMethod(request.getCurrentMethod()))
+                .desiredMethod(normalizeDesiredMethod(request.getDesiredMethod()))
                 .reasonForDistributed(request.getReasonForDistributed())
                 .maintenanceOperation(request.getMaintenanceOperation())
                 .maintenanceLocation(request.getMaintenanceLocation())
@@ -223,8 +228,8 @@ public class OpenApiSurveyService {
         survey.setReceivedFileName(request.getReceivedFileName());
         survey.setReceivedDate(request.getReceivedDate());
         survey.setSystemName(request.getSystemName());
-        survey.setCurrentMethod(request.getCurrentMethod());
-        survey.setDesiredMethod(request.getDesiredMethod());
+        survey.setCurrentMethod(normalizeCurrentMethod(request.getCurrentMethod()));
+        survey.setDesiredMethod(normalizeDesiredMethod(request.getDesiredMethod()));
         survey.setReasonForDistributed(request.getReasonForDistributed());
         survey.setMaintenanceOperation(request.getMaintenanceOperation());
         survey.setMaintenanceLocation(request.getMaintenanceLocation());
@@ -306,8 +311,8 @@ public class OpenApiSurveyService {
                             .receivedFileName(getValue(record, 5))
                             .receivedDate(parseDate(getValue(record, 6)))
                             .systemName(getValueOrDefault(record, 7, "미입력"))
-                            .currentMethod(getValueOrDefault(record, 8, "NO_RESPONSE"))
-                            .desiredMethod(getValueOrDefault(record, 9, "NO_RESPONSE"))
+                            .currentMethod(normalizeCurrentMethod(getValue(record, 8)))
+                            .desiredMethod(normalizeDesiredMethod(getValue(record, 9)))
                             .reasonForDistributed(getValue(record, 10))
                             .maintenanceOperation(getValueOrDefault(record, 11, "NO_RESPONSE"))
                             .maintenanceLocation(getValueOrDefault(record, 12, "NO_RESPONSE"))
@@ -500,6 +505,60 @@ public class OpenApiSurveyService {
     private void validateLength(String fieldName, String value, int maxLength) {
         if (value != null && value.length() > maxLength) {
             throw new IllegalArgumentException(String.format("%s 항목의 길이가 %d자를 초과했습니다. (현재: %d자)", fieldName, maxLength, value.length()));
+        }
+    }
+
+    /**
+     * 현재방식 한글 → 영문 코드 변환
+     */
+    private String normalizeCurrentMethod(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return "NO_RESPONSE";
+        }
+
+        String normalized = value.trim();
+        switch (normalized) {
+            case "중앙":
+            case "중앙형":
+                return "CENTRAL";
+            case "분산":
+            case "분산형":
+                return "DISTRIBUTED";
+            case "미회신":
+                return "NO_RESPONSE";
+            default:
+                // 이미 영문 코드인 경우 그대로 반환
+                if (normalized.equals("CENTRAL") || normalized.equals("DISTRIBUTED") || normalized.equals("NO_RESPONSE")) {
+                    return normalized;
+                }
+                return "NO_RESPONSE";
+        }
+    }
+
+    /**
+     * 희망전환방식 한글 → 영문 코드 변환
+     */
+    private String normalizeDesiredMethod(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            return "NO_RESPONSE";
+        }
+
+        String normalized = value.trim();
+        switch (normalized) {
+            case "중앙개선형":
+            case "중앙 개선형":
+                return "CENTRAL_IMPROVED";
+            case "분산개선형":
+            case "분산 개선형":
+                return "DISTRIBUTED_IMPROVED";
+            case "미회신":
+                return "NO_RESPONSE";
+            default:
+                // 이미 영문 코드인 경우 그대로 반환
+                if (normalized.equals("CENTRAL_IMPROVED") || normalized.equals("DISTRIBUTED_IMPROVED") || normalized.equals("NO_RESPONSE")) {
+                    return normalized;
+                }
+                return "NO_RESPONSE";
         }
     }
 }

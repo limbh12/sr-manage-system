@@ -17,6 +17,12 @@ public interface OpenApiSurveyRepository extends JpaRepository<OpenApiSurvey, Lo
            "LOWER(s.department) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
            "LOWER(s.systemName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
            "s.contactName = :exactKeyword OR " +
-           "s.contactPhone = :exactKeyword)")
-    Page<OpenApiSurvey> search(@Param("keyword") String keyword, @Param("exactKeyword") String exactKeyword, Pageable pageable);
+           "s.contactPhone = :exactKeyword) AND " +
+           "(:currentMethod IS NULL OR s.currentMethod = :currentMethod) AND " +
+           "(:desiredMethod IS NULL OR s.desiredMethod = :desiredMethod)")
+    Page<OpenApiSurvey> search(@Param("keyword") String keyword,
+                                @Param("exactKeyword") String exactKeyword,
+                                @Param("currentMethod") String currentMethod,
+                                @Param("desiredMethod") String desiredMethod,
+                                Pageable pageable);
 }

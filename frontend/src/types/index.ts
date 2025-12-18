@@ -60,6 +60,7 @@ export interface Sr {
   applicantPhone?: string;
   deleted?: boolean;
   deletedAt?: string;
+  expectedCompletionDate?: string;
 }
 
 /**
@@ -104,6 +105,7 @@ export interface SrCreateRequest {
   openApiSurveyId?: number;
   applicantName?: string;
   applicantPhone?: string;
+  expectedCompletionDate?: string;
 }
 
 /**
@@ -121,6 +123,7 @@ export interface SrUpdateRequest {
   openApiSurveyId?: number;
   applicantName?: string;
   applicantPhone?: string;
+  expectedCompletionDate?: string;
 }
 
 /**

@@ -7,6 +7,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 /**
  * SR 수정 요청 DTO
  */
@@ -48,4 +50,7 @@ public class SrUpdateRequest {
 
     /** 요청자 연락처 */
     private String applicantPhone;
+
+    /** 처리예정일자 */
+    private LocalDate expectedCompletionDate;
 }

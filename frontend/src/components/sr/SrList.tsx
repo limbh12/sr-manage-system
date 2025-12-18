@@ -1,4 +1,21 @@
+import { useEffect, useState } from 'react';
 import { Sr, SrStatus, Priority } from '../../types';
+import { commonCodeService } from '../../services/commonCodeService';
+
+/**
+ * 처리예정일자가 내일인지 확인
+ */
+const isDueTomorrow = (expectedDate?: string): boolean => {
+  if (!expectedDate) return false;
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(0, 0, 0, 0);
+
+  const dueDate = new Date(expectedDate);
+  dueDate.setHours(0, 0, 0, 0);
+
+  return dueDate.getTime() === tomorrow.getTime();
+};
 
 interface SrListProps {
   srList: Sr[];
@@ -87,6 +104,25 @@ const getPriorityLabel = (priority: Priority): string => {
  * SR 목록 컴포넌트
  */
 function SrList({ srList, onSelectSr, onDeleteSr, onRestoreSr, totalElements, page: _page, size: _size = 10, isAdmin = false }: SrListProps) {
+  const [categoryMap, setCategoryMap] = useState<Map<string, string>>(new Map());
+  const [requestTypeMap, setRequestTypeMap] = useState<Map<string, string>>(new Map());
+
+  useEffect(() => {
+    // 분류 코드 로드
+    commonCodeService.getActiveCodesByGroup('SR_CATEGORY').then(codes => {
+      const map = new Map<string, string>();
+      codes.forEach(code => map.set(code.codeValue, code.codeName));
+      setCategoryMap(map);
+    }).catch(console.error);
+
+    // 요청구분 코드 로드
+    commonCodeService.getActiveCodesByGroup('SR_REQUEST_TYPE').then(codes => {
+      const map = new Map<string, string>();
+      codes.forEach(code => map.set(code.codeValue, code.codeName));
+      setRequestTypeMap(map);
+    }).catch(console.error);
+  }, []);
+
   return (
     <div className="table-container">
       <table className="table">
@@ -94,11 +130,14 @@ function SrList({ srList, onSelectSr, onDeleteSr, onRestoreSr, totalElements, pa
           <tr>
             <th>No</th>
             <th>ID</th>
+            <th>분류</th>
+            <th>요청구분</th>
             <th>제목</th>
+            <th>요청자</th>
             <th>상태</th>
             <th>우선순위</th>
-            <th>접수자</th>
             <th>담당자</th>
+            <th>처리예정일자</th>
             <th>등록일(접수일)</th>
             <th>작업</th>
           </tr>
@@ -106,7 +145,7 @@ function SrList({ srList, onSelectSr, onDeleteSr, onRestoreSr, totalElements, pa
         <tbody>
           {srList.length === 0 ? (
             <tr>
-              <td colSpan={9} style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+              <td colSpan={12} style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
                 등록된 SR이 없습니다.
               </td>
             </tr>
@@ -115,6 +154,8 @@ function SrList({ srList, onSelectSr, onDeleteSr, onRestoreSr, totalElements, pa
               <tr key={sr.id} style={{ opacity: sr.deleted ? 0.6 : 1 }}>
                 <td>{totalElements - index}</td>
                 <td>{sr.srId || '-'}</td>
+                <td>{sr.category ? (categoryMap.get(sr.category) || sr.category) : '-'}</td>
+                <td>{sr.requestType ? (requestTypeMap.get(sr.requestType) || sr.requestType) : '-'}</td>
                 <td>
                   <a
                     href="#"
@@ -131,6 +172,7 @@ function SrList({ srList, onSelectSr, onDeleteSr, onRestoreSr, totalElements, pa
                   </a>
                   {sr.deleted && <span style={{ marginLeft: '8px', color: '#999', fontSize: '12px' }}>(삭제됨)</span>}
                 </td>
+                <td>{sr.applicantName || sr.requester.name || sr.requester.username}</td>
                 <td>
                   <span className={getStatusBadgeClass(sr.status)}>
                     {getStatusLabel(sr.status)}
@@ -141,17 +183,23 @@ function SrList({ srList, onSelectSr, onDeleteSr, onRestoreSr, totalElements, pa
                     {getPriorityLabel(sr.priority)}
                   </span>
                 </td>
-                <td>{sr.requester.name || sr.requester.username}</td>
                 <td>{sr.assignee ? (sr.assignee.name || sr.assignee.username) : '-'}</td>
+                <td>
+                  {sr.expectedCompletionDate ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>{new Date(sr.expectedCompletionDate).toLocaleDateString()}</span>
+                      {isDueTomorrow(sr.expectedCompletionDate) && (
+                        <span className="badge badge-critical" style={{ fontSize: '10px', padding: '2px 6px' }}>
+                          D-1
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    '-'
+                  )}
+                </td>
                 <td>{new Date(sr.createdAt).toLocaleDateString()}</td>
                 <td>
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => onSelectSr(sr)}
-                    style={{ marginRight: '8px' }}
-                  >
-                    상세
-                  </button>
                   {sr.deleted && isAdmin && onRestoreSr ? (
                     <button
                       className="btn btn-primary"

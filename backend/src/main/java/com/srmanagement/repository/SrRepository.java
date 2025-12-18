@@ -77,26 +77,34 @@ public interface SrRepository extends JpaRepository<Sr, Long> {
     Page<Sr> findByStatusAndPriority(SrStatus status, Priority priority, Pageable pageable);
 
     /**
-     * 제목 또는 설명에서 검색 (삭제 여부 포함)
+     * 제목, 설명, SR ID, 분류, 요청구분에서 검색 (삭제 여부 포함)
+     * 주의: 요청자 이름은 암호화되어 있어 LIKE 검색이 불가능하므로 제외
      * @param search 검색어
      * @param deleted 삭제 여부
      * @param pageable 페이지네이션
      * @return Page<Sr>
      */
     @Query("SELECT s FROM Sr s WHERE s.deleted = :deleted AND (" +
+            "LOWER(s.srId) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
             "LOWER(s.title) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-            "LOWER(s.description) LIKE LOWER(CONCAT('%', :search, '%')))")
+            "LOWER(s.description) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(s.category) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(s.requestType) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<Sr> searchByTitleOrDescriptionAndDeleted(@Param("search") String search, @Param("deleted") Boolean deleted, Pageable pageable);
 
     /**
-     * 제목 또는 설명에서 검색
+     * 제목, 설명, SR ID, 분류, 요청구분에서 검색
+     * 주의: 요청자 이름은 암호화되어 있어 LIKE 검색이 불가능하므로 제외
      * @param search 검색어
      * @param pageable 페이지네이션
      * @return Page<Sr>
      */
     @Query("SELECT s FROM Sr s WHERE " +
+            "LOWER(s.srId) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
             "LOWER(s.title) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-            "LOWER(s.description) LIKE LOWER(CONCAT('%', :search, '%'))")
+            "LOWER(s.description) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(s.category) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(s.requestType) LIKE LOWER(CONCAT('%', :search, '%'))")
     Page<Sr> searchByTitleOrDescription(@Param("search") String search, Pageable pageable);
 
     /**
@@ -139,4 +147,28 @@ public interface SrRepository extends JpaRepository<Sr, Long> {
 
     long countByCategory(String category);
     long countByRequestType(String requestType);
+
+    /**
+     * 다중 조건으로 SR 목록 조회 (복합 필터)
+     */
+    @Query("SELECT s FROM Sr s WHERE " +
+            "(:deleted IS NULL OR s.deleted = :deleted) AND " +
+            "(:status IS NULL OR s.status = :status) AND " +
+            "(:priority IS NULL OR s.priority = :priority) AND " +
+            "(:category IS NULL OR s.category = :category) AND " +
+            "(:requestType IS NULL OR s.requestType = :requestType) AND " +
+            "(:assigneeId IS NULL OR s.assignee.id = :assigneeId) AND " +
+            "(:search IS NULL OR :search = '' OR " +
+            "LOWER(s.srId) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(s.title) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
+            "LOWER(s.description) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<Sr> findByMultipleFilters(
+            @Param("deleted") Boolean deleted,
+            @Param("status") SrStatus status,
+            @Param("priority") Priority priority,
+            @Param("category") String category,
+            @Param("requestType") String requestType,
+            @Param("assigneeId") Long assigneeId,
+            @Param("search") String search,
+            Pageable pageable);
 }

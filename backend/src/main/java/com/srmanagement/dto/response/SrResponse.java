@@ -8,6 +8,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -73,6 +74,9 @@ public class SrResponse {
     /** 삭제 일시 */
     private LocalDateTime deletedAt;
 
+    /** 처리예정일자 */
+    private LocalDate expectedCompletionDate;
+
     /**
      * Sr 엔티티를 SrResponse로 변환
      * @param sr Sr 엔티티
@@ -98,6 +102,7 @@ public class SrResponse {
                 .applicantPhone(sr.getApplicantPhone())
                 .deleted(sr.getDeleted())
                 .deletedAt(sr.getDeletedAt())
+                .expectedCompletionDate(sr.getExpectedCompletionDate())
                 .build();
     }
 }

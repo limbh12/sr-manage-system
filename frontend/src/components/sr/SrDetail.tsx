@@ -70,6 +70,21 @@ const getPriorityBadgeClass = (priority: Priority): string => {
 };
 
 /**
+ * 처리예정일자가 내일인지 확인
+ */
+const isDueTomorrow = (expectedDate?: string): boolean => {
+  if (!expectedDate) return false;
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(0, 0, 0, 0);
+
+  const dueDate = new Date(expectedDate);
+  dueDate.setHours(0, 0, 0, 0);
+
+  return dueDate.getTime() === tomorrow.getTime();
+};
+
+/**
  * SR 상세 컴포넌트
  */
 function SrDetail({ sr, onClose, onEdit, onStatusChange }: SrDetailProps) {
@@ -190,6 +205,22 @@ function SrDetail({ sr, onClose, onEdit, onStatusChange }: SrDetailProps) {
               <div>
                 <strong>연락처:</strong> {sr.applicantPhone ? formatPhoneNumber(sr.applicantPhone) : '-'}
               </div>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <strong>처리예정일자:</strong>{' '}
+              {sr.expectedCompletionDate ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  <span>{new Date(sr.expectedCompletionDate).toLocaleDateString()}</span>
+                  {isDueTomorrow(sr.expectedCompletionDate) && (
+                    <span className="badge badge-critical" style={{ fontSize: '12px' }}>
+                      D-1 (내일 마감)
+                    </span>
+                  )}
+                </span>
+              ) : (
+                '(미지정)'
+              )}
             </div>
 
             {linkedSurvey && (

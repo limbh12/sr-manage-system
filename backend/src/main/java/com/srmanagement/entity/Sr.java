@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import com.srmanagement.converter.EncryptConverter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -106,6 +107,10 @@ public class Sr {
     @Column(length = 100)
     @Convert(converter = EncryptConverter.class)
     private String applicantPhone;
+
+    /** 처리예정일자 */
+    @Column(name = "expected_completion_date")
+    private LocalDate expectedCompletionDate;
 
     @OneToMany(mappedBy = "sr", cascade = CascadeType.REMOVE, orphanRemoval = true)
     @ToString.Exclude

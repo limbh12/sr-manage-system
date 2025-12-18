@@ -4,8 +4,10 @@ import { useAuth } from '../hooks/useAuth';
 import SrList from '../components/sr/SrList';
 import SrDetail from '../components/sr/SrDetail';
 import SrForm from '../components/sr/SrForm';
-import { Sr, SrCreateRequest, SrUpdateRequest, SrStatus, Priority } from '../types';
+import { Sr, SrCreateRequest, SrUpdateRequest, SrStatus, Priority, CommonCode, User } from '../types';
 import { USE_MOCK } from '../config';
+import { commonCodeService } from '../services/commonCodeService';
+import * as userService from '../services/userService';
 
 /**
  * SR 관리 페이지
@@ -35,15 +37,30 @@ function SrManagementPage() {
   const [editMode, setEditMode] = useState(false);
   const [statusFilter, setStatusFilter] = useState<SrStatus | ''>('');
   const [priorityFilter, setPriorityFilter] = useState<Priority | ''>('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [requestTypeFilter, setRequestTypeFilter] = useState('');
+  const [assigneeFilter, setAssigneeFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const observerTarget = useRef<HTMLDivElement>(null);
+
+  // 옵션 데이터
+  const [categoryOptions, setCategoryOptions] = useState<CommonCode[]>([]);
+  const [requestTypeOptions, setRequestTypeOptions] = useState<CommonCode[]>([]);
+  const [userOptions, setUserOptions] = useState<User[]>([]);
 
   // 디버깅용: user와 isAdmin 확인
   useEffect(() => {
     console.log('User:', user);
     console.log('Is Admin:', isAdmin);
   }, [user, isAdmin]);
+
+  // 옵션 데이터 로드
+  useEffect(() => {
+    commonCodeService.getActiveCodesByGroup('SR_CATEGORY').then(setCategoryOptions).catch(console.error);
+    commonCodeService.getActiveCodesByGroup('SR_REQUEST_TYPE').then(setRequestTypeOptions).catch(console.error);
+    userService.getUserOptions().then(setUserOptions).catch(console.error);
+  }, []);
 
   // 초기 로딩
   useEffect(() => {
@@ -64,11 +81,14 @@ function SrManagementPage() {
         page: currentPage + 1,
         status: statusFilter || undefined,
         priority: priorityFilter || undefined,
+        category: categoryFilter || undefined,
+        requestType: requestTypeFilter || undefined,
+        assigneeId: assigneeFilter ? Number(assigneeFilter) : undefined,
         search: searchQuery || undefined,
         includeDeleted: isAdmin ? includeDeleted : undefined,
       });
     }
-  }, [loading, currentPage, totalPages, fetchSrList, statusFilter, priorityFilter, searchQuery, isAdmin, includeDeleted]);
+  }, [loading, currentPage, totalPages, fetchSrList, statusFilter, priorityFilter, categoryFilter, requestTypeFilter, assigneeFilter, searchQuery, isAdmin, includeDeleted]);
 
   useEffect(() => {
     const option = {
@@ -161,6 +181,9 @@ function SrManagementPage() {
       page: 0,
       status: statusFilter || undefined,
       priority: priorityFilter || undefined,
+      category: categoryFilter || undefined,
+      requestType: requestTypeFilter || undefined,
+      assigneeId: assigneeFilter ? Number(assigneeFilter) : undefined,
       search: searchQuery || undefined,
       includeDeleted: isAdmin ? includeDeleted : undefined,
     });
@@ -169,12 +192,18 @@ function SrManagementPage() {
   const handleReset = () => {
     setStatusFilter('');
     setPriorityFilter('');
+    setCategoryFilter('');
+    setRequestTypeFilter('');
+    setAssigneeFilter('');
     setSearchQuery('');
     setIncludeDeleted(false);
     fetchSrList({
       page: 0,
       status: undefined,
       priority: undefined,
+      category: undefined,
+      requestType: undefined,
+      assigneeId: undefined,
       search: undefined,
       includeDeleted: undefined,
     });
@@ -213,8 +242,41 @@ function SrManagementPage() {
 
       {/* 검색 필터 */}
       <div className="card mb-4" style={{ padding: '16px' }}>
-        <form onSubmit={handleSearch} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <form onSubmit={handleSearch} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* 모든 필터를 한 줄로 배치 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr 1fr 1fr 1fr', gap: '12px', alignItems: 'end' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">분류</label>
+              <select
+                className="form-select"
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+              >
+                <option value="">전체</option>
+                {categoryOptions.map((option) => (
+                  <option key={option.id} value={option.codeValue}>
+                    {option.codeName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">요청구분</label>
+              <select
+                className="form-select"
+                value={requestTypeFilter}
+                onChange={(e) => setRequestTypeFilter(e.target.value)}
+              >
+                <option value="">전체</option>
+                {requestTypeOptions.map((option) => (
+                  <option key={option.id} value={option.codeValue}>
+                    {option.codeName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label className="form-label">검색어</label>
               <input
@@ -222,78 +284,95 @@ function SrManagementPage() {
                 className="form-input"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="제목 또는 설명 검색"
+                placeholder="SR ID, 제목, 설명, 요청자명, 전화번호 검색"
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">상태</label>
-                <select
-                  className="form-select"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as SrStatus | '')}
-                >
-                  <option value="">전체</option>
-                  <option value="OPEN">신규</option>
-                  <option value="IN_PROGRESS">처리중</option>
-                  <option value="RESOLVED">해결됨</option>
-                  <option value="CLOSED">종료</option>
-                </select>
-              </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">상태</label>
+              <select
+                className="form-select"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as SrStatus | '')}
+              >
+                <option value="">전체</option>
+                <option value="OPEN">신규</option>
+                <option value="IN_PROGRESS">처리중</option>
+                <option value="RESOLVED">해결됨</option>
+                <option value="CLOSED">종료</option>
+              </select>
+            </div>
 
-              <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">우선순위</label>
-                <select
-                  className="form-select"
-                  value={priorityFilter}
-                  onChange={(e) => setPriorityFilter(e.target.value as Priority | '')}
-                >
-                  <option value="">전체</option>
-                  <option value="LOW">낮음</option>
-                  <option value="MEDIUM">보통</option>
-                  <option value="HIGH">높음</option>
-                  <option value="CRITICAL">긴급</option>
-                </select>
-              </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">우선순위</label>
+              <select
+                className="form-select"
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value as Priority | '')}
+              >
+                <option value="">전체</option>
+                <option value="LOW">낮음</option>
+                <option value="MEDIUM">보통</option>
+                <option value="HIGH">높음</option>
+                <option value="CRITICAL">긴급</option>
+              </select>
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">담당자</label>
+              <select
+                className="form-select"
+                value={assigneeFilter}
+                onChange={(e) => setAssigneeFilter(e.target.value)}
+              >
+                <option value="">전체</option>
+                {userOptions.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} ({u.email})
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
-          {/* 삭제된 항목 포함 체크박스 (관리자 전용) */}
-          {isAdmin && (
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer'
-              }}>
-                <input
-                  type="checkbox"
-                  checked={includeDeleted}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setIncludeDeleted(checked);
-                    // 체크박스 변경 시 즉시 목록 갱신
-                    fetchSrList({
-                      page: 0,
-                      status: statusFilter || undefined,
-                      priority: priorityFilter || undefined,
-                      search: searchQuery || undefined,
-                      includeDeleted: checked,
-                    });
-                  }}
-                  style={{ cursor: 'pointer' }}
-                />
-                <span>삭제된 항목 포함</span>
-              </label>
+          {/* 검색 설명 및 버튼 영역 */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: '11px', color: '#666' }}>
+              * SR ID, 제목, 설명(요청사항), 요청자명, 전화번호로 검색 가능 (분류/요청구분/담당자는 select로 선택)
             </div>
-          )}
-
-          {/* 버튼 영역 */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-            <button type="button" onClick={handleReset} className="btn btn-secondary">초기화</button>
-            <button type="submit" className="btn btn-primary">검색</button>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              {/* 삭제된 항목 포함 체크박스 (관리자 전용) */}
+              {isAdmin && (
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  marginBottom: 0
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={includeDeleted}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setIncludeDeleted(checked);
+                      // 체크박스 변경 시 즉시 목록 갱신
+                      fetchSrList({
+                        page: 0,
+                        status: statusFilter || undefined,
+                        priority: priorityFilter || undefined,
+                        search: searchQuery || undefined,
+                        includeDeleted: checked,
+                      });
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <span>삭제된 항목 포함</span>
+                </label>
+              )}
+              <button type="button" onClick={handleReset} className="btn btn-secondary">초기화</button>
+              <button type="submit" className="btn btn-primary">검색</button>
+            </div>
           </div>
         </form>
       </div>

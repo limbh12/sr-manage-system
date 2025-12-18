@@ -35,6 +35,7 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
   const [modalInitialKeyword, setModalInitialKeyword] = useState('');
   const [selectedSurvey, setSelectedSurvey] = useState<OpenApiSurvey | null>(null);
   const [openApiSurveyId, setOpenApiSurveyId] = useState<number | undefined>(undefined);
+  const [expectedCompletionDate, setExpectedCompletionDate] = useState('');
 
   const isEditMode = !!sr;
 
@@ -56,6 +57,7 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
       setAssigneeId(sr.assignee?.id);
       setApplicantName(sr.applicantName || '');
       setApplicantPhone(formatPhoneNumber(sr.applicantPhone || ''));
+      setExpectedCompletionDate(sr.expectedCompletionDate || '');
 
       if (sr.openApiSurveyId) {
         setOpenApiSurveyId(sr.openApiSurveyId);
@@ -116,6 +118,7 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
       assigneeId,
       applicantName,
       applicantPhone: applicantPhone.replace(/-/g, ''), // 하이픈 제거
+      expectedCompletionDate: expectedCompletionDate || undefined,
     };
 
     if (isEditMode) {
@@ -431,23 +434,40 @@ function SrForm({ sr, onSubmit, onCancel, loading = false }: SrFormProps) {
           </div>
 
           <div className="form-group">
-            <label htmlFor="assignee" className="form-label">
-              담당자
-            </label>
-            <select
-              id="assignee"
-              className="form-select"
-              value={assigneeId || ''}
-              onChange={(e) => setAssigneeId(e.target.value ? Number(e.target.value) : undefined)}
-              disabled={loading}
-            >
-              <option value="">미지정</option>
-              {assigneeOptions.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.email})
-                </option>
-              ))}
-            </select>
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <div style={{ flex: 1 }}>
+                <label htmlFor="assignee" className="form-label">
+                  담당자
+                </label>
+                <select
+                  id="assignee"
+                  className="form-select"
+                  value={assigneeId || ''}
+                  onChange={(e) => setAssigneeId(e.target.value ? Number(e.target.value) : undefined)}
+                  disabled={loading}
+                >
+                  <option value="">미지정</option>
+                  {assigneeOptions.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name} ({user.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label htmlFor="expectedCompletionDate" className="form-label">
+                  처리예정일자
+                </label>
+                <input
+                  type="date"
+                  id="expectedCompletionDate"
+                  className="form-input"
+                  value={expectedCompletionDate}
+                  onChange={(e) => setExpectedCompletionDate(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="modal-footer">

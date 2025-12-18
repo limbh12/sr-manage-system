@@ -18,6 +18,9 @@ interface FetchSrListParams {
   size?: number;
   status?: SrStatus;
   priority?: Priority;
+  category?: string;
+  requestType?: string;
+  assigneeId?: number;
   search?: string;
   includeDeleted?: boolean;
 }

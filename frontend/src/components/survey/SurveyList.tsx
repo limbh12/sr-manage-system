@@ -320,7 +320,7 @@ function SurveyList() {
             <input
               type="text"
               className="form-input"
-              placeholder="기관명, 부서, 시스템명 검색"
+              placeholder="기관명, 부서, 담당자, 시스템명 검색"
               value={search.keyword}
               onChange={(e) => setSearch({ ...search, keyword: e.target.value })}
             />

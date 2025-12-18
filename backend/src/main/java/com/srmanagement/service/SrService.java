@@ -67,48 +67,60 @@ public class SrService {
      * SR 목록 조회
      * @param status 상태 필터 (optional)
      * @param priority 우선순위 필터 (optional)
-     * @param search 검색어 (optional)
+     * @param category 분류 필터 (optional)
+     * @param requestType 요청구분 필터 (optional)
+     * @param assigneeId 담당자 ID 필터 (optional)
+     * @param search 검색어 (optional) - SR ID, 제목, 설명, 요청자명, 전화번호로 검색
      * @param includeDeleted 삭제된 항목 포함 여부 (관리자용)
      * @param pageable 페이지네이션
      * @return Page<SrResponse>
      */
     @Transactional(readOnly = true)
-    public Page<SrResponse> getSrList(SrStatus status, Priority priority, String search, Boolean includeDeleted, Pageable pageable) {
-        Page<Sr> srPage;
-
+    public Page<SrResponse> getSrList(SrStatus status, Priority priority, String category, String requestType,
+                                      Long assigneeId, String search, Boolean includeDeleted, Pageable pageable) {
         // 삭제된 항목 포함 여부 결정 (관리자가 아니면 무조건 false)
-        boolean showDeleted = includeDeleted != null && includeDeleted;
+        Boolean deleted = (includeDeleted != null && includeDeleted) ? null : false;
 
+        // 복합 필터 쿼리 사용
+        Page<Sr> srPage = srRepository.findByMultipleFilters(
+                deleted,
+                status,
+                priority,
+                category,
+                requestType,
+                assigneeId,
+                search,
+                pageable
+        );
+
+        // 검색어가 있고 요청자 정보로 검색 가능한 경우, 추가 필터링
         if (search != null && !search.isEmpty()) {
-            if (showDeleted) {
-                srPage = srRepository.searchByTitleOrDescription(search, pageable);
-            } else {
-                srPage = srRepository.searchByTitleOrDescriptionAndDeleted(search, false, pageable);
-            }
-        } else if (status != null && priority != null) {
-            if (showDeleted) {
-                srPage = srRepository.findByStatusAndPriority(status, priority, pageable);
-            } else {
-                srPage = srRepository.findByStatusAndPriorityAndDeleted(status, priority, false, pageable);
-            }
-        } else if (status != null) {
-            if (showDeleted) {
-                srPage = srRepository.findByStatus(status, pageable);
-            } else {
-                srPage = srRepository.findByStatusAndDeleted(status, false, pageable);
-            }
-        } else if (priority != null) {
-            if (showDeleted) {
-                srPage = srRepository.findByPriority(priority, pageable);
-            } else {
-                srPage = srRepository.findByPriorityAndDeleted(priority, false, pageable);
-            }
-        } else {
-            if (showDeleted) {
-                srPage = srRepository.findAll(pageable);
-            } else {
-                srPage = srRepository.findByDeleted(false, pageable);
-            }
+            String searchLower = search.toLowerCase();
+            // 암호화된 필드(applicantName, applicantPhone)는 복호화 후 검색
+            // JPA Converter가 자동으로 복호화하므로 엔티티에서 직접 비교 가능
+            List<Sr> filteredList = srPage.getContent().stream()
+                    .filter(sr -> {
+                        // 기본 검색 (srId, title, description)은 이미 쿼리에서 처리됨
+                        // 추가로 요청자 정보로 검색
+                        if (sr.getApplicantName() != null && sr.getApplicantName().toLowerCase().contains(searchLower)) {
+                            return true;
+                        }
+                        if (sr.getApplicantPhone() != null && sr.getApplicantPhone().replace("-", "").contains(search.replace("-", ""))) {
+                            return true;
+                        }
+                        // 이미 다른 필드로 매칭된 경우도 포함
+                        return sr.getSrId() != null && sr.getSrId().toLowerCase().contains(searchLower) ||
+                               sr.getTitle().toLowerCase().contains(searchLower) ||
+                               (sr.getDescription() != null && sr.getDescription().toLowerCase().contains(searchLower));
+                    })
+                    .collect(java.util.stream.Collectors.toList());
+
+            // 페이지 정보 유지하면서 필터링된 결과 반환
+            return new org.springframework.data.domain.PageImpl<>(
+                    filteredList.stream().map(SrResponse::from).collect(java.util.stream.Collectors.toList()),
+                    pageable,
+                    filteredList.size()
+            );
         }
 
         return srPage.map(SrResponse::from);
@@ -156,6 +168,7 @@ public class SrService {
                 .openApiSurveyId(request.getOpenApiSurveyId())
                 .applicantName(request.getApplicantName())
                 .applicantPhone(request.getApplicantPhone())
+                .expectedCompletionDate(request.getExpectedCompletionDate())
                 .build();
 
         Sr savedSr = srRepository.save(sr);
@@ -247,6 +260,17 @@ public class SrService {
         if (request.getApplicantPhone() != null && !request.getApplicantPhone().equals(sr.getApplicantPhone())) {
             createHistory(sr, "요청자 연락처가 변경되었습니다: " + (sr.getApplicantPhone() != null ? sr.getApplicantPhone() : "없음") + " -> " + request.getApplicantPhone(), SrHistoryType.INFO_CHANGE, modifier);
             sr.setApplicantPhone(request.getApplicantPhone());
+        }
+        if (request.getExpectedCompletionDate() != null) {
+            if (sr.getExpectedCompletionDate() == null || !request.getExpectedCompletionDate().equals(sr.getExpectedCompletionDate())) {
+                String oldDate = sr.getExpectedCompletionDate() != null ? sr.getExpectedCompletionDate().toString() : "없음";
+                String newDate = request.getExpectedCompletionDate().toString();
+                createHistory(sr, "처리예정일자가 변경되었습니다: " + oldDate + " -> " + newDate, SrHistoryType.INFO_CHANGE, modifier);
+                sr.setExpectedCompletionDate(request.getExpectedCompletionDate());
+            }
+        } else if (sr.getExpectedCompletionDate() != null) {
+            createHistory(sr, "처리예정일자가 삭제되었습니다: " + sr.getExpectedCompletionDate().toString() + " -> 없음", SrHistoryType.INFO_CHANGE, modifier);
+            sr.setExpectedCompletionDate(null);
         }
 
         Sr updatedSr = srRepository.save(sr);

@@ -45,6 +45,9 @@ public class SrController {
      * SR 목록 조회
      * @param status 상태 필터
      * @param priority 우선순위 필터
+     * @param category 분류 필터
+     * @param requestType 요청구분 필터
+     * @param assigneeId 담당자 ID 필터
      * @param search 검색어
      * @param includeDeleted 삭제된 항목 포함 여부 (관리자만 사용 가능)
      * @param pageable 페이지네이션
@@ -55,6 +58,9 @@ public class SrController {
     public ResponseEntity<Page<SrResponse>> getSrList(
             @RequestParam(required = false) SrStatus status,
             @RequestParam(required = false) Priority priority,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String requestType,
+            @RequestParam(required = false) Long assigneeId,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Boolean includeDeleted,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
@@ -70,7 +76,7 @@ public class SrController {
             }
         }
 
-        Page<SrResponse> response = srService.getSrList(status, priority, search, showDeleted, pageable);
+        Page<SrResponse> response = srService.getSrList(status, priority, category, requestType, assigneeId, search, showDeleted, pageable);
         return ResponseEntity.ok(response);
     }
 
