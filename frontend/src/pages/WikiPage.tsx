@@ -172,16 +172,25 @@ const WikiPage: React.FC = () => {
       if (isCreating) {
         const response = await wikiDocumentApi.create(request);
         alert('문서가 생성되었습니다.');
+        // 카테고리 트리 갱신 (문서 개수 업데이트)
+        await loadCategories();
         navigate(`/wiki/${response.data.id}`);
         setIsCreating(false);
       } else if (currentDocument) {
+        const oldCategoryId = currentDocument.categoryId;
         await wikiDocumentApi.update(currentDocument.id, request);
         alert('문서가 수정되었습니다.');
+        // 카테고리가 변경되었으면 트리 갱신
+        if (oldCategoryId !== editCategoryId) {
+          await loadCategories();
+        }
         await loadDocument(currentDocument.id);
       }
       setIsEditing(false);
       if (selectedCategoryId) {
         loadDocumentsByCategory(selectedCategoryId);
+      } else if (showAllDocuments) {
+        loadAllDocuments();
       }
     } catch (error) {
       console.error('문서 저장 실패:', error);
@@ -201,9 +210,13 @@ const WikiPage: React.FC = () => {
     try {
       await wikiDocumentApi.delete(currentDocument.id);
       alert('문서가 삭제되었습니다.');
+      // 카테고리 트리 갱신 (문서 개수 업데이트)
+      await loadCategories();
       navigate('/wiki');
       if (selectedCategoryId) {
         loadDocumentsByCategory(selectedCategoryId);
+      } else if (showAllDocuments) {
+        loadAllDocuments();
       }
     } catch (error) {
       console.error('문서 삭제 실패:', error);
