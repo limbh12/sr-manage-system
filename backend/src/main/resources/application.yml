@@ -167,9 +167,16 @@ spring:
       schema-locations: classpath:migration_20251211_soft_delete_h2.sql
   
   # H2 콘솔 비활성화 (보안)
+  #h2:
+  #  console:
+  #    enabled: false
+  # H2 콘솔 설정 (http://localhost:8080/h2-console)
   h2:
     console:
-      enabled: false
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: true    
 
 # 로깅 설정
 logging:

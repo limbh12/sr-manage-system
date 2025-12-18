@@ -232,12 +232,41 @@ npm run build
 
 별도의 웹 서버(Nginx/Apache) 없이 Spring Boot JAR 하나로 프론트엔드까지 함께 배포할 수 있습니다. 소규모/내부 시스템에 적합합니다.
 
+**방법 1: 자동 빌드 스크립트 사용 (권장)**
+
+프로젝트 루트에서 제공하는 스크립트를 사용하면 프론트엔드 빌드, 백엔드 포함, JAR 빌드, 서버 시작을 자동으로 수행합니다.
+
+```bash
+# 프로젝트 루트 디렉토리에서
+./backend/scripts/start.sh
+```
+
+**스크립트가 수행하는 작업:**
+1. 프론트엔드 빌드 (`npm run build`)
+2. 빌드 결과물을 `backend/src/main/resources/static/`에 자동 복사
+3. 백엔드 Maven 빌드 (`mvn clean package -DskipTests`)
+4. 백엔드 서버 자동 시작 (백그라운드 실행)
+
+**서버 중지:**
+```bash
+./backend/scripts/stop.sh
+```
+
+**로그 확인:**
+```bash
+tail -f backend/logs/server.log
+```
+
+**방법 2: 수동 빌드 (스크립트를 사용할 수 없는 경우)**
+
 1. 프론트엔드 빌드 결과물(`frontend/dist/*`)을 백엔드의 정적 리소스 폴더로 복사합니다.
   - 복사 경로: `backend/src/main/resources/static/` (폴더가 없으면 생성)
   - 예시:
     ```bash
-    mkdir -p backend/src/main/resources/static
-    cp -r frontend/dist/* backend/src/main/resources/static/
+    cd frontend
+    npm run build
+    mkdir -p ../backend/src/main/resources/static
+    cp -r dist/* ../backend/src/main/resources/static/
     ```
 2. 백엔드를 빌드합니다.
   ```bash
@@ -245,6 +274,9 @@ npm run build
   mvn clean package
   ```
 3. 생성된 JAR 파일을 실행하면 `http://localhost:8080` 접속 시 프론트엔드 화면이 바로 표시됩니다.
+  ```bash
+  java -jar target/sr-management-0.0.1-SNAPSHOT.jar
+  ```
   - API 경로(`/api`)는 기존과 동일하게 백엔드 컨트롤러로 라우팅됩니다.
 
 **장점**: 운영이 단순하며, 별도 웹 서버가 필요 없습니다.

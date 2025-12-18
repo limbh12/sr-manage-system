@@ -11,7 +11,35 @@ SR(Service Request) 관리 시스템 - PUBC 오픈API 전환 지원을 위한 �
 
 ## 개발 명령어
 
-### Backend (backend/ 디렉토리에서)
+### 통합 실행 (권장)
+
+**프론트엔드 + 백엔드 통합 실행 (프로덕션 모드)**
+```bash
+# 프로젝트 루트에서 실행
+./backend/scripts/start.sh
+
+# 서버 중지
+./backend/scripts/stop.sh
+
+# 로그 확인
+tail -f backend/logs/server.log
+```
+
+**자동으로 수행되는 작업:**
+1. 프론트엔드 빌드 (`npm run build`)
+2. 빌드 결과물을 백엔드 static 폴더로 복사
+3. 백엔드 Maven 빌드 (`mvn clean package -DskipTests`)
+4. 서버 시작 (백그라운드 실행)
+
+**접속 URL:**
+- 통합 서버: http://localhost:8080 (프론트엔드 + API)
+- H2 Console: http://localhost:8080/h2-console (개발 환경만)
+
+### 개발 모드 (별도 실행)
+
+개발 중에는 프론트엔드와 백엔드를 별도로 실행하여 Hot Reload를 활용할 수 있습니다.
+
+**Backend (backend/ 디렉토리에서)**
 ```bash
 # 개발 서버 실행 (H2 파일 모드)
 mvn spring-boot:run
@@ -29,9 +57,9 @@ mvn spring-boot:run -Dspring-boot.run.profiles=cubrid
 mvn spring-boot:run -Dspring-boot.run.profiles=prod
 ```
 
-### Frontend (frontend/ 디렉토리에서)
+**Frontend (frontend/ 디렉토리에서)**
 ```bash
-# 개발 서버 실행
+# 개발 서버 실행 (Hot Reload)
 npm run dev
 
 # 빌드
@@ -47,8 +75,8 @@ npm run lint
 npm run preview
 ```
 
-### 실행 환경
-- Frontend: http://localhost:5173
+**개발 모드 접속 URL:**
+- Frontend (개발 서버): http://localhost:5173
 - Backend API: http://localhost:8080
 - H2 Console: http://localhost:8080/h2-console (개발 환경만)
 

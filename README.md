@@ -92,49 +92,79 @@ sr-manage-system/
 ### 사전 요구사항
 - Java 17 이상
 - Node.js 18 이상
-- CUBRID 10.x 이상 (또는 MySQL/PostgreSQL)
+- Maven 3.6 이상
+- CUBRID 10.x 이상 (또는 MySQL/PostgreSQL, 개발환경에서는 H2 사용 가능)
 
-### Backend 실행
-### Backend 실행
+### 방법 1: 통합 실행 스크립트 (권장)
+
+프론트엔드와 백엔드를 한 번에 빌드하고 실행하는 가장 간단한 방법입니다.
+
+```bash
+# 프로젝트 루트 디렉토리에서
+./backend/scripts/start.sh
+
+# 서버 중지
+./backend/scripts/stop.sh
+
+# 로그 확인
+tail -f backend/logs/server.log
+```
+
+**스크립트가 자동으로 수행하는 작업:**
+1. 프론트엔드 빌드 (`npm run build`)
+2. 빌드 결과물을 백엔드 static 폴더로 복사
+3. 백엔드 Maven 빌드 (`mvn clean package -DskipTests`)
+4. 서버 시작 (백그라운드 실행)
+
+**접속:**
+- 통합 서버: http://localhost:8080 (프론트엔드 + API)
+- H2 Console: http://localhost:8080/h2-console (개발 환경)
+
+### 방법 2: 개발 모드 (별도 실행)
+
+개발 중에는 Hot Reload를 활용하기 위해 프론트엔드와 백엔드를 별도로 실행할 수 있습니다.
+
+**Backend 실행**
 
 ```bash
 cd backend
 
 # 데이터베이스 설정 (application.yml 수정 필요)
 
-# 빌드
-mvn clean package
-
-# 실행
+# 빌드 및 실행
 mvn spring-boot:run
-```
-### Frontend 실행
 
-#### 1. Dev Container 환경 (VS Code)
-VS Code에서 Dev Container로 프로젝트를 열었다면, 의존성 설치(`npm install`)가 자동으로 완료됩니다.
-터미널에서 바로 개발 서버를 실행하세요.
-
-```bash
-cd frontend
-npm run dev
+# 또는 프로필 지정 실행
+mvn spring-boot:run -Dspring-boot.run.profiles=prod
 ```
 
-#### 2. 로컬 환경 (Node.js 직접 설치)
-Node.js가 설치된 로컬 환경에서 실행하는 경우:
+**Frontend 실행**
 
-```bash
-cd frontend
+1. **Dev Container 환경 (VS Code)**
 
-# 의존성 설치
-npm install
+   VS Code에서 Dev Container로 프로젝트를 열었다면, 의존성 설치(`npm install`)가 자동으로 완료됩니다.
 
-# 개발 서버 실행
-npm run dev
-```
+   ```bash
+   cd frontend
+   npm run dev
+   ```
 
-### 접속 정보
-- Frontend: http://localhost:5173
+2. **로컬 환경 (Node.js 직접 설치)**
+
+   ```bash
+   cd frontend
+
+   # 의존성 설치
+   npm install
+
+   # 개발 서버 실행
+   npm run dev
+   ```
+
+**개발 모드 접속:**
+- Frontend (개발 서버): http://localhost:5173
 - Backend API: http://localhost:8080
+- H2 Console: http://localhost:8080/h2-console
 
 ## 환경 설정
 
