@@ -73,12 +73,26 @@ const WikiPage: React.FC = () => {
   }, [showAllDocuments]);
 
   // 카테고리 트리를 평면 리스트로 변환 (드롭다운용)
-  const flattenCategories = (cats: WikiCategory[], prefix = ''): WikiCategory[] => {
+  const flattenCategories = (cats: WikiCategory[], level = 0, isLast: boolean[] = []): WikiCategory[] => {
     const result: WikiCategory[] = [];
-    cats.forEach((cat) => {
+    cats.forEach((cat, index) => {
+      const isLastItem = index === cats.length - 1;
+
+      // 트리 구조 시각화
+      let prefix = '';
+      if (level > 0) {
+        // 상위 레벨의 연결선 표시
+        for (let i = 0; i < level - 1; i++) {
+          prefix += isLast[i] ? '    ' : '│   ';
+        }
+        // 현재 항목 연결선
+        prefix += isLastItem ? '└── ' : '├── ';
+      }
+
       result.push({ ...cat, name: prefix + cat.name });
+
       if (cat.children && cat.children.length > 0) {
-        result.push(...flattenCategories(cat.children, prefix + '  '));
+        result.push(...flattenCategories(cat.children, level + 1, [...isLast, isLastItem]));
       }
     });
     return result;
