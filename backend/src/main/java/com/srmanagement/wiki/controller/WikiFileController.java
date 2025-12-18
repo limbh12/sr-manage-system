@@ -3,7 +3,9 @@ package com.srmanagement.wiki.controller;
 import com.srmanagement.entity.User;
 import com.srmanagement.exception.CustomException;
 import com.srmanagement.repository.UserRepository;
+import com.srmanagement.wiki.dto.WikiDocumentResponse;
 import com.srmanagement.wiki.dto.WikiFileResponse;
+import com.srmanagement.wiki.entity.WikiDocument;
 import com.srmanagement.wiki.service.WikiFileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,7 +47,7 @@ public class WikiFileController {
         WikiFileResponse fileInfo = wikiFileService.getFile(fileId);
 
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(fileInfo.getFileType()))
+                .contentType(MediaType.parseMediaType(fileInfo.getMimeType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "inline; filename=\"" + fileInfo.getOriginalFileName() + "\"")
                 .body(resource);
@@ -79,5 +81,55 @@ public class WikiFileController {
     public ResponseEntity<Void> deleteFile(@PathVariable Long fileId) throws IOException {
         wikiFileService.deleteFile(fileId);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * PDF 업로드 및 자동 마크다운 변환
+     */
+    @PostMapping("/upload-pdf")
+    public ResponseEntity<WikiDocumentResponse> uploadAndConvertPdf(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "categoryId", required = false) Long categoryId,
+            Authentication authentication) throws IOException {
+
+        // PDF 파일인지 확인
+        if (!"application/pdf".equals(file.getContentType())) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        User user = userRepository.findByUsername(authentication.getName())
+                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
+
+        WikiDocument document = wikiFileService.uploadAndConvertPdf(file, categoryId, user.getId());
+        WikiDocumentResponse response = WikiDocumentResponse.fromEntity(document);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * 파일 ID로 PDF를 마크다운으로 변환
+     */
+    @PostMapping("/{fileId}/convert")
+    public ResponseEntity<WikiDocumentResponse> convertPdfToMarkdown(
+            @PathVariable Long fileId,
+            Authentication authentication) {
+
+        User user = userRepository.findByUsername(authentication.getName())
+                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
+
+        WikiDocument document = wikiFileService.convertPdfToWikiDocument(fileId, user.getId());
+        WikiDocumentResponse response = WikiDocumentResponse.fromEntity(document);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 대기 중인 PDF 변환 작업 처리 (관리자 전용)
+     */
+    @PostMapping("/process-pending")
+    public ResponseEntity<Void> processPendingConversions(Authentication authentication) {
+        // TODO: 관리자 권한 체크
+        wikiFileService.processPendingConversions();
+        return ResponseEntity.ok().build();
     }
 }

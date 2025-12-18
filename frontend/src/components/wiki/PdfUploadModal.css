@@ -1,0 +1,358 @@
+.pdf-upload-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.pdf-upload-modal {
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
+}
+
+/* 다크모드 지원 */
+:root[data-theme="dark"] .pdf-upload-modal {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.pdf-upload-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e1e4e8;
+}
+
+:root[data-theme="dark"] .pdf-upload-modal-header {
+  border-bottom-color: var(--border-color);
+}
+
+.pdf-upload-modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #24292e;
+}
+
+:root[data-theme="dark"] .pdf-upload-modal-header h2 {
+  color: var(--text-primary);
+}
+
+.pdf-upload-modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #586069;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.pdf-upload-modal-close:hover {
+  background-color: #f3f4f6;
+}
+
+:root[data-theme="dark"] .pdf-upload-modal-close {
+  color: var(--text-secondary);
+}
+
+:root[data-theme="dark"] .pdf-upload-modal-close:hover {
+  background-color: var(--bg-hover);
+}
+
+.pdf-upload-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.pdf-upload-dropzone {
+  border: 2px dashed #d1d5da;
+  border-radius: 8px;
+  padding: 40px 20px;
+  text-align: center;
+  background: #f6f8fa;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.pdf-upload-dropzone:hover {
+  border-color: #0366d6;
+  background: #e1f0ff;
+}
+
+:root[data-theme="dark"] .pdf-upload-dropzone {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+}
+
+:root[data-theme="dark"] .pdf-upload-dropzone:hover {
+  border-color: #4a9eff;
+  background: rgba(74, 158, 255, 0.1);
+}
+
+.pdf-upload-dropzone-label {
+  cursor: pointer;
+  display: block;
+}
+
+.pdf-upload-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.pdf-upload-dropzone p {
+  margin: 8px 0;
+  color: #586069;
+}
+
+:root[data-theme="dark"] .pdf-upload-dropzone p {
+  color: var(--text-secondary);
+}
+
+.pdf-upload-hint {
+  font-size: 13px;
+  color: #6a737d !important;
+}
+
+.pdf-upload-selected-file {
+  margin-top: 16px;
+  padding: 16px;
+  background: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+:root[data-theme="dark"] .pdf-upload-selected-file {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+}
+
+.pdf-file-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.pdf-file-icon {
+  font-size: 24px;
+}
+
+.pdf-file-details {
+  flex: 1;
+}
+
+.pdf-file-name {
+  font-weight: 500;
+  color: #24292e;
+  margin-bottom: 4px;
+}
+
+:root[data-theme="dark"] .pdf-file-name {
+  color: var(--text-primary);
+}
+
+.pdf-file-size {
+  font-size: 13px;
+  color: #586069;
+}
+
+:root[data-theme="dark"] .pdf-file-size {
+  color: var(--text-secondary);
+}
+
+.pdf-file-remove {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #d73a49;
+  cursor: pointer;
+  padding: 4px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.pdf-file-remove:hover {
+  background-color: #ffeef0;
+}
+
+.pdf-upload-error {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #ffeef0;
+  border: 1px solid #fdb8c0;
+  border-radius: 6px;
+  color: #d73a49;
+  font-size: 14px;
+}
+
+.pdf-upload-progress {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.pdf-progress-status {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0366d6;
+  margin-bottom: 16px;
+}
+
+:root[data-theme="dark"] .pdf-progress-status {
+  color: #4a9eff;
+}
+
+.pdf-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #e1e4e8;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+:root[data-theme="dark"] .pdf-progress-bar {
+  background: var(--bg-tertiary);
+}
+
+.pdf-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0366d6, #2188ff);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.pdf-progress-percentage {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0366d6;
+  margin-bottom: 16px;
+}
+
+:root[data-theme="dark"] .pdf-progress-percentage {
+  color: #4a9eff;
+}
+
+.pdf-conversion-info {
+  margin-top: 24px;
+  padding: 16px;
+  background: #f6f8fa;
+  border-radius: 6px;
+}
+
+:root[data-theme="dark"] .pdf-conversion-info {
+  background: var(--bg-tertiary);
+}
+
+.pdf-conversion-info p {
+  margin: 8px 0;
+  font-size: 14px;
+  color: #586069;
+}
+
+:root[data-theme="dark"] .pdf-conversion-info p {
+  color: var(--text-secondary);
+}
+
+.pdf-upload-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #e1e4e8;
+}
+
+:root[data-theme="dark"] .pdf-upload-modal-footer {
+  border-top-color: var(--border-color);
+}
+
+.pdf-upload-button-cancel,
+.pdf-upload-button-upload {
+  padding: 8px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.pdf-upload-button-cancel {
+  background: #f6f8fa;
+  color: #24292e;
+}
+
+.pdf-upload-button-cancel:hover:not(:disabled) {
+  background: #e1e4e8;
+}
+
+:root[data-theme="dark"] .pdf-upload-button-cancel {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+:root[data-theme="dark"] .pdf-upload-button-cancel:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.pdf-upload-button-upload {
+  background: #0366d6;
+  color: white;
+}
+
+.pdf-upload-button-upload:hover:not(:disabled) {
+  background: #0256c7;
+}
+
+.pdf-upload-button-upload:disabled,
+.pdf-upload-button-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -730,19 +730,25 @@ export OLLAMA_EMBEDDING_MODEL=nomic-embed-text
 
 ---
 
-### Phase 2: PDF 변환 기능 (3주)
+### Phase 2: PDF 변환 기능 (3주) ✅ 완료
 **목표**: PDF 문서를 위키로 자동 변환
 
-* [ ] D-1: PDF to Markdown 변환 (Apache Tika)
-* [ ] D-2: PDF 내 이미지 추출 및 저장
-* [ ] PDF 업로드 UI 및 진행 상태 표시
-* [ ] 변환 결과 미리보기
-* [ ] W-2: 문서 버전 관리 및 이력
+* [x] D-1: PDF to Markdown 변환 (Apache Tika)
+  - Apache Tika를 통한 PDF 텍스트 추출
+  - 마크다운 형식 자동 변환 (제목, 단락, 리스트 인식)
+  - 변환 상태 관리 (PENDING, PROCESSING, COMPLETED, FAILED)
+* [x] PDF 업로드 UI 및 진행 상태 표시
+  - 드래그 앤 드롭 방식의 PDF 업로드 모달
+  - 실시간 변환 진행 상태 표시 (Progress Bar)
+  - 변환 완료 시 자동으로 Wiki 문서 생성
+* [ ] D-2: PDF 내 이미지 추출 및 저장 (향후 개선 예정)
+* [ ] 변환 결과 미리보기 (향후 개선 예정)
 
-**Deliverables**
-- PDF 파일을 업로드하면 자동으로 마크다운 변환됨
-- 변환된 문서를 위키에 저장하고 편집 가능
-- 문서 수정 이력을 추적하고 이전 버전으로 복구 가능
+**Deliverables** ✅
+- ✅ PDF 파일을 업로드하면 자동으로 마크다운 변환됨
+- ✅ 변환된 문서를 위키에 저장하고 편집 가능
+- ✅ 변환 상태 추적 (DB에 저장)
+- ✅ 변환 실패 시 에러 메시지 표시
 
 ---
 

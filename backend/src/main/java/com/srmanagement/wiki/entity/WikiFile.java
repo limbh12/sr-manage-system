@@ -37,12 +37,20 @@ public class WikiFile {
     private Long fileSize;
 
     @Column(length = 50)
-    private String fileType;
+    private String mimeType;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
     private FileType type = FileType.ATTACHMENT;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private ConversionStatus conversionStatus = ConversionStatus.NOT_APPLICABLE;
+
+    @Column(length = 1000)
+    private String conversionErrorMessage;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "uploaded_by", nullable = false)
@@ -52,9 +60,20 @@ public class WikiFile {
     @Column(name = "uploaded_at", nullable = false, updatable = false)
     private LocalDateTime uploadedAt;
 
+    @Column
+    private LocalDateTime convertedAt;
+
     public enum FileType {
         IMAGE,      // 이미지 (PNG, JPG, GIF)
         DOCUMENT,   // 문서 (PDF, DOCX)
         ATTACHMENT  // 기타 첨부파일
+    }
+
+    public enum ConversionStatus {
+        NOT_APPLICABLE, // 변환 불필요 (이미지, 일반 첨부파일)
+        PENDING,        // 변환 대기
+        PROCESSING,     // 변환 중
+        COMPLETED,      // 변환 완료
+        FAILED          // 변환 실패
     }
 }

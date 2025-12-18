@@ -91,3 +91,6 @@ test-output/
 script_output.txt
 backend/data/
 
+# Upload files
+backend/uploads/
+

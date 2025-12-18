@@ -33,4 +33,15 @@ public interface WikiFileRepository extends JpaRepository<WikiFile, Long> {
     // 문서별 이미지 파일만 조회
     @Query("SELECT f FROM WikiFile f WHERE f.document.id = :documentId AND f.type = 'IMAGE' ORDER BY f.uploadedAt ASC")
     List<WikiFile> findImagesByDocumentId(@Param("documentId") Long documentId);
+
+    // 변환 대기 중인 PDF 파일 조회
+    @Query("SELECT f FROM WikiFile f WHERE f.type = 'DOCUMENT' AND f.conversionStatus = 'PENDING' ORDER BY f.uploadedAt ASC")
+    List<WikiFile> findPendingConversions();
+
+    // 변환 상태별 파일 조회
+    List<WikiFile> findByConversionStatus(WikiFile.ConversionStatus status);
+
+    // 특정 문서의 PDF 파일 조회
+    @Query("SELECT f FROM WikiFile f WHERE f.document.id = :documentId AND f.type = 'DOCUMENT' AND f.mimeType = 'application/pdf'")
+    Optional<WikiFile> findPdfByDocumentId(@Param("documentId") Long documentId);
 }

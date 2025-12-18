@@ -6,6 +6,7 @@ import WikiEditor from '../components/wiki/WikiEditor';
 import WikiViewer from '../components/wiki/WikiViewer';
 import SrSelector from '../components/wiki/SrSelector';
 import SrDetailPanel from '../components/sr/SrDetailPanel';
+import PdfUploadModal from '../components/wiki/PdfUploadModal';
 import {
   wikiDocumentApi,
   wikiCategoryApi,
@@ -37,6 +38,7 @@ const WikiPage: React.FC = () => {
   const [flatCategories, setFlatCategories] = useState<WikiCategory[]>([]);
   const [editSrs, setEditSrs] = useState<SrInfo[]>([]);
   const [selectedSrId, setSelectedSrId] = useState<number | null>(null);
+  const [showPdfUpload, setShowPdfUpload] = useState(false);
 
   // 카테고리 로드
   useEffect(() => {
@@ -349,6 +351,9 @@ const WikiPage: React.FC = () => {
               <button className="btn-primary" onClick={handleCreateDocument}>
                 + 새 문서
               </button>
+              <button className="btn-secondary" onClick={() => setShowPdfUpload(true)}>
+                📄 PDF 업로드
+              </button>
               {currentDocument && (
                 <>
                   <button className="btn-secondary" onClick={() => setIsEditing(true)}>
@@ -473,6 +478,16 @@ const WikiPage: React.FC = () => {
       <SrDetailPanel
         srId={selectedSrId}
         onClose={() => setSelectedSrId(null)}
+      />
+
+      {/* PDF 업로드 모달 */}
+      <PdfUploadModal
+        isOpen={showPdfUpload}
+        onClose={() => setShowPdfUpload(false)}
+        onUploadSuccess={(documentId) => {
+          setShowPdfUpload(false);
+          navigate(`/wiki/${documentId}`);
+        }}
       />
     </div>
   );
