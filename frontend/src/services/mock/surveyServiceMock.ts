@@ -86,6 +86,7 @@ export const createSurvey = async (data: OpenApiSurveyCreateRequest): Promise<Op
     status: data.status,
     receivedDate: data.receivedDate,
     systemName: data.systemName,
+    operationStatus: data.operationStatus || 'OPERATING',
     currentMethod: data.currentMethod,
     desiredMethod: data.desiredMethod,
     reasonForDistributed: data.reasonForDistributed,
