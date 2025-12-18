@@ -248,6 +248,44 @@ SR 관리 시스템에 AI 기반 지식 관리를 위한 Wiki 기능의 Phase 1 
   - 선택 상태 표시
   - 카테고리 액션 버튼 (추가, 수정, 삭제)
 
+**SlidePanel.tsx** (공통 컴포넌트)
+- 위치: `frontend/src/components/common/SlidePanel.tsx`
+- 기능: 재사용 가능한 슬라이드 패널
+- 특징:
+  - 우측에서 슬라이드 인 애니메이션
+  - 배경 오버레이 (클릭 시 닫기)
+  - ESC 키 지원
+  - Body 스크롤 방지
+  - 커스터마이징 가능한 너비
+  - z-index: 9999
+
+**SrDetailPanel.tsx**
+- 위치: `frontend/src/components/sr/SrDetailPanel.tsx`
+- 기능: SR 상세 정보를 슬라이드 패널로 표시
+- 특징:
+  - SrDetail 컴포넌트를 SlidePanel로 래핑
+  - Wiki 링크 클릭 시 WikiDetailPanel 오픈
+  - 패널 모드 (isModal=false)로 렌더링
+  - 편집/상태 변경 불가 (읽기 전용)
+
+**WikiDetailPanel.tsx**
+- 위치: `frontend/src/components/wiki/WikiDetailPanel.tsx`
+- 기능: Wiki 문서를 슬라이드 패널로 표시
+- 특징:
+  - 문서 정보 (카테고리, 작성자, 조회수)
+  - 연계된 SR 목록 (클릭 가능)
+  - Markdown 렌더링 (ReactMarkdown + remark-gfm)
+  - SR 클릭 시 콜백 전달
+
+**SrSelector.tsx**
+- 위치: `frontend/src/components/wiki/SrSelector.tsx`
+- 기능: Wiki 문서 작성 시 연계 SR 선택
+- 특징:
+  - 검색 기능 (제목, 요청자명, 전화번호)
+  - 다중 선택 지원
+  - 선택된 SR 배지 표시
+  - 드롭다운 UI
+
 #### 2.4 페이지
 
 **WikiPage.tsx**
@@ -423,6 +461,33 @@ CREATE TABLE wiki_file (
 - 접기/펼치기 상태 관리
 - CSS 애니메이션
 
+#### 5.5 SR-Wiki 연계 및 슬라이드 패널
+
+**다대다 관계 (Many-to-Many)**
+- SR ↔ WikiDocument: `@ManyToMany` 양방향 관계
+- 중간 테이블: `sr_wiki_document` (자동 생성)
+- 한 SR에 여러 Wiki 문서 연계 가능
+- 한 Wiki 문서가 여러 SR과 연계 가능
+
+**슬라이드 패널 네비게이션**
+- **SR 관리 페이지**:
+  - SR 모달에서 Wiki 링크 클릭 → WikiDetailPanel 슬라이드
+  - Wiki 패널에서 SR 링크 클릭 → 기존 SR 모달 닫고 SrDetailPanel 슬라이드
+- **Wiki 페이지**:
+  - Wiki 문서에서 SR 링크 클릭 → SrDetailPanel 슬라이드
+  - SR 패널에서 Wiki 링크 클릭 → WikiDetailPanel 슬라이드
+- **중첩 패널**: Wiki → SR → Wiki 무한 네비게이션 가능
+- **모달/패널 모드 자동 전환**: SrDetail 컴포넌트의 `isModal` prop으로 제어
+
+**SrDetail 모달/패널 이중 모드**
+```typescript
+// 모달 모드 (기본)
+<SrDetail sr={sr} isModal={true} />
+
+// 패널 모드 (SlidePanel 내부)
+<SrDetail sr={sr} isModal={false} />
+```
+
 ---
 
 ### 6. 보안 및 인증
@@ -544,7 +609,7 @@ Frontend: http://localhost:8080
 - `wiki/dto/WikiVersionResponse.java`
 - `wiki/dto/WikiFileResponse.java`
 
-#### Frontend 신규 파일 (8개)
+#### Frontend 신규 파일 (14개)
 
 **Types (1개)**
 - `types/wiki.ts`
@@ -552,20 +617,41 @@ Frontend: http://localhost:8080
 **Services (1개)**
 - `services/wikiService.ts`
 
-**Components (3개)**
+**Components (8개)**
 - `components/wiki/WikiEditor.tsx`
 - `components/wiki/WikiViewer.tsx`
 - `components/wiki/WikiCategoryTree.tsx`
+- `components/wiki/WikiCategoryModal.tsx`
+- `components/wiki/WikiDetailPanel.tsx`
+- `components/wiki/SrSelector.tsx`
+- `components/sr/SrDetailPanel.tsx`
+- `components/common/SlidePanel.tsx`
 
 **Pages (1개)**
 - `pages/WikiPage.tsx`
 
-**CSS (2개)**
+**CSS (4개)**
 - `components/wiki/WikiViewer.css`
 - `components/wiki/WikiCategoryTree.css`
+- `components/wiki/WikiDetailPanel.css`
+- `components/wiki/WikiCategoryModal.css`
+- `components/common/SlidePanel.css`
 - `pages/WikiPage.css`
 
-#### Frontend 수정 파일 (2개)
+#### Backend 수정 파일 (3개)
+
+**Sr.java** (Entity)
+- `@ManyToMany` 관계 추가: `wikiDocuments` 필드
+- 양방향 관계 설정: `mappedBy = "srs"`
+
+**WikiDocumentRepository.java**
+- 커스텀 쿼리 추가: `findBySrsId()`
+- JPA Join Query: SR 연계 문서 조회
+
+**types/index.ts** (Frontend)
+- `Sr` 타입에 `wikiDocuments?: WikiDocument[]` 추가 (Optional)
+
+#### Frontend 수정 파일 (5개)
 
 **App.tsx**
 - Wiki 라우트 추가: `/wiki`, `/wiki/:id`
@@ -573,6 +659,23 @@ Frontend: http://localhost:8080
 
 **Sidebar.tsx**
 - 네비게이션 메뉴 추가: "📚 Wiki"
+
+**SrDetail.tsx**
+- `isModal` prop 추가 (모달/패널 모드 전환)
+- `onWikiClick` prop 추가 (Wiki 링크 클릭 콜백)
+- 연계된 Wiki 문서 목록 표시
+- 모달 모드: modal-overlay로 래핑
+- 패널 모드: 내용만 렌더링
+
+**SrManagementPage.tsx**
+- `WikiDetailPanel` 컴포넌트 추가
+- `SrDetailPanel` 컴포넌트 추가
+- SR 모달에서 Wiki 클릭 시 슬라이드 패널 오픈
+- Wiki 패널에서 SR 클릭 시 기존 모달 닫고 슬라이드 패널 오픈
+
+**WikiPage.tsx**
+- `SrDetailPanel` 컴포넌트 추가
+- Wiki 문서에서 SR 클릭 시 슬라이드 패널 오픈
 
 #### 의존성 추가
 

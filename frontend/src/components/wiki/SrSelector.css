@@ -59,6 +59,8 @@
 /* SR 검색 */
 .sr-search-container {
   position: relative;
+  /* 드롭다운이 부모의 overflow에 영향받지 않도록 isolation 추가 */
+  isolation: isolate;
 }
 
 .sr-search-input {
@@ -87,19 +89,18 @@
 
 /* 검색 결과 드롭다운 */
 .sr-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  max-width: 600px;
   max-height: 300px;
-  margin-top: 4px;
   background: white;
   border: 1px solid #d1d5da;
   border-radius: 4px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   overflow-y: auto;
-  z-index: 1000;
+  z-index: 9999; /* 최상위에 표시 */
+}
+
+/* Portal로 렌더링되는 드롭다운 */
+.sr-dropdown-portal {
+  /* position: fixed와 top/left는 인라인 스타일로 동적 설정됨 */
 }
 
 .sr-dropdown-item {
@@ -146,6 +147,16 @@
   text-align: center;
   color: #586069;
   font-size: 14px;
+}
+
+.sr-dropdown-more-hint {
+  padding: 12px;
+  text-align: center;
+  color: #0366d6;
+  font-size: 13px;
+  background-color: #f1f8ff;
+  border-top: 1px solid #c8e1ff;
+  font-style: italic;
 }
 
 /* SR 상태 뱃지 */

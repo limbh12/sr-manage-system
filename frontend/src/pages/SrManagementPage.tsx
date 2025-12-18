@@ -3,7 +3,9 @@ import { useSr } from '../hooks/useSr';
 import { useAuth } from '../hooks/useAuth';
 import SrList from '../components/sr/SrList';
 import SrDetail from '../components/sr/SrDetail';
+import SrDetailPanel from '../components/sr/SrDetailPanel';
 import SrForm from '../components/sr/SrForm';
+import WikiDetailPanel from '../components/wiki/WikiDetailPanel';
 import { Sr, SrCreateRequest, SrUpdateRequest, SrStatus, Priority, CommonCode, User } from '../types';
 import { USE_MOCK } from '../config';
 import { commonCodeService } from '../services/commonCodeService';
@@ -48,6 +50,11 @@ function SrManagementPage() {
   const [categoryOptions, setCategoryOptions] = useState<CommonCode[]>([]);
   const [requestTypeOptions, setRequestTypeOptions] = useState<CommonCode[]>([]);
   const [userOptions, setUserOptions] = useState<User[]>([]);
+
+  // Wiki 패널
+  const [selectedWikiId, setSelectedWikiId] = useState<number | null>(null);
+  // Wiki에서 SR 클릭 시 슬라이드 패널로 표시하기 위한 state
+  const [wikiLinkedSrId, setWikiLinkedSrId] = useState<number | null>(null);
 
   // 디버깅용: user와 isAdmin 확인
   useEffect(() => {
@@ -402,6 +409,7 @@ function SrManagementPage() {
           onClose={handleCloseDetail}
           onEdit={handleEdit}
           onStatusChange={handleStatusChange}
+          onWikiClick={setSelectedWikiId}
         />
       )}
 
@@ -417,6 +425,24 @@ function SrManagementPage() {
           loading={loading}
         />
       )}
+
+      {/* Wiki 상세 슬라이드 패널 */}
+      <WikiDetailPanel
+        documentId={selectedWikiId}
+        onClose={() => setSelectedWikiId(null)}
+        onSrClick={(srId) => {
+          setSelectedWikiId(null);  // Wiki 패널 닫기
+          setShowDetail(false);     // 기존 SR 모달 닫기
+          selectSr(null);           // 선택된 SR 초기화
+          setWikiLinkedSrId(srId);  // SR 슬라이드 패널 열기
+        }}
+      />
+
+      {/* Wiki에서 클릭한 SR 슬라이드 패널 */}
+      <SrDetailPanel
+        srId={wikiLinkedSrId}
+        onClose={() => setWikiLinkedSrId(null)}
+      />
     </div>
   );
 }

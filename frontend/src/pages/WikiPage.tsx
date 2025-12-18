@@ -5,6 +5,7 @@ import WikiCategoryModal from '../components/wiki/WikiCategoryModal';
 import WikiEditor from '../components/wiki/WikiEditor';
 import WikiViewer from '../components/wiki/WikiViewer';
 import SrSelector from '../components/wiki/SrSelector';
+import SrDetailPanel from '../components/sr/SrDetailPanel';
 import {
   wikiDocumentApi,
   wikiCategoryApi,
@@ -35,6 +36,7 @@ const WikiPage: React.FC = () => {
   const [editCategoryId, setEditCategoryId] = useState<number | undefined>();
   const [flatCategories, setFlatCategories] = useState<WikiCategory[]>([]);
   const [editSrs, setEditSrs] = useState<SrInfo[]>([]);
+  const [selectedSrId, setSelectedSrId] = useState<number | null>(null);
 
   // 카테고리 로드
   useEffect(() => {
@@ -435,7 +437,7 @@ const WikiPage: React.FC = () => {
                     <div
                       key={sr.id}
                       className="linked-sr-item"
-                      onClick={() => navigate(`/sr?id=${sr.id}`)}
+                      onClick={() => setSelectedSrId(sr.id)}
                     >
                       <span className={`sr-status-badge status-${sr.status.toLowerCase().replace('_', '-')}`}>
                         {sr.status === 'OPEN' ? '접수' :
@@ -465,6 +467,12 @@ const WikiPage: React.FC = () => {
         onSubmit={handleSubmitCategory}
         category={editingCategory}
         parentId={parentCategoryId}
+      />
+
+      {/* SR 상세 슬라이드 패널 */}
+      <SrDetailPanel
+        srId={selectedSrId}
+        onClose={() => setSelectedSrId(null)}
       />
     </div>
   );

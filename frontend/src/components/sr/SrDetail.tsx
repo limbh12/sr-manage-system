@@ -16,6 +16,8 @@ interface SrDetailProps {
   onClose: () => void;
   onEdit: () => void;
   onStatusChange: (status: SrStatus) => void;
+  onWikiClick?: (wikiId: number) => void; // Wiki 문서 클릭 시 콜백 (선택사항)
+  isModal?: boolean; // true: 모달로 렌더링 (기본값), false: 패널 내용만 렌더링
 }
 
 /**
@@ -90,7 +92,7 @@ const isDueTomorrow = (expectedDate?: string): boolean => {
 /**
  * SR 상세 컴포넌트
  */
-function SrDetail({ sr, onClose, onEdit, onStatusChange }: SrDetailProps) {
+function SrDetail({ sr, onClose, onEdit, onStatusChange, onWikiClick, isModal = true }: SrDetailProps) {
   const navigate = useNavigate();
   const statusOptions: SrStatus[] = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
   const [linkedSurvey, setLinkedSurvey] = useState<OpenApiSurvey | null>(null);
@@ -147,17 +149,19 @@ function SrDetail({ sr, onClose, onEdit, onStatusChange }: SrDetailProps) {
     };
   }, [onClose]);
 
-  return (
-    <div className="modal-overlay">
-      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '1400px', width: '95%' }}>
+  // SR 상세 내용 (모달/패널 공통)
+  const detailContent = (
+    <>
+      {isModal && (
         <div className="modal-header">
           <h2 className="modal-title">SR 상세 정보</h2>
           <button className="modal-close" onClick={onClose}>
             ×
           </button>
         </div>
+      )}
 
-        <div style={{ display: 'flex', gap: '32px', minHeight: '400px' }}>
+      <div style={{ display: 'flex', gap: '32px', minHeight: '400px' }}>
           {/* 좌측: 상세 정보 */}
           <div style={{ flex: 1 }}>
             <div style={{ marginBottom: '16px' }}>
@@ -277,8 +281,12 @@ function SrDetail({ sr, onClose, onEdit, onStatusChange }: SrDetailProps) {
                     <div
                       key={doc.id}
                       onClick={() => {
-                        onClose();
-                        navigate(`/wiki/${doc.id}`);
+                        if (onWikiClick) {
+                          onWikiClick(doc.id);
+                        } else {
+                          onClose();
+                          navigate(`/wiki/${doc.id}`);
+                        }
                       }}
                       style={{
                         padding: '10px 12px',
@@ -326,17 +334,32 @@ function SrDetail({ sr, onClose, onEdit, onStatusChange }: SrDetailProps) {
           </div>
         </div>
 
-        <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>
-            닫기
-          </button>
-          <button className="btn btn-primary" onClick={onEdit}>
-            수정
-          </button>
+        {isModal && (
+          <div className="modal-footer">
+            <button className="btn btn-secondary" onClick={onClose}>
+              닫기
+            </button>
+            <button className="btn btn-primary" onClick={onEdit}>
+              수정
+            </button>
+          </div>
+        )}
+      </>
+  );
+
+  // 모달 모드: modal-overlay로 감싸서 렌더링
+  if (isModal) {
+    return (
+      <div className="modal-overlay">
+        <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '1400px', width: '95%' }}>
+          {detailContent}
         </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  // 패널 모드: 내용만 렌더링
+  return detailContent;
 }
 
 export default SrDetail;

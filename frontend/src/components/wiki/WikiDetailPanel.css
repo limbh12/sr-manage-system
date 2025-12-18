@@ -1,0 +1,221 @@
+.wiki-detail-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* 문서 정보 */
+.wiki-panel-info {
+  padding: 16px;
+  background: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.wiki-panel-category {
+  padding: 4px 12px;
+  background: #0366d6;
+  color: white;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.wiki-panel-meta {
+  color: #586069;
+  font-size: 13px;
+}
+
+/* 연계된 SR 목록 */
+.wiki-panel-linked-srs {
+  padding: 16px;
+  background: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+}
+
+.wiki-panel-linked-srs h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #24292e;
+}
+
+.wiki-panel-sr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wiki-panel-sr-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: white;
+  border: 1px solid #d1d5da;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.wiki-panel-sr-item:hover {
+  background: #e1f0ff;
+  border-color: #0366d6;
+  box-shadow: 0 2px 4px rgba(3, 102, 214, 0.1);
+}
+
+.wiki-panel-sr-title {
+  flex: 1;
+  font-size: 14px;
+  color: #24292e;
+  font-weight: 500;
+}
+
+.sr-status-badge {
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.sr-status-badge.status-open {
+  background-color: #28a745;
+  color: white;
+}
+
+.sr-status-badge.status-in-progress {
+  background-color: #0366d6;
+  color: white;
+}
+
+.sr-status-badge.status-resolved {
+  background-color: #6f42c1;
+  color: white;
+}
+
+.sr-status-badge.status-closed {
+  background-color: #6a737d;
+  color: white;
+}
+
+.link-arrow {
+  font-size: 16px;
+  color: #0366d6;
+  font-weight: bold;
+}
+
+/* 문서 내용 영역 */
+.wiki-panel-content-area {
+  padding: 20px;
+  background: white;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+}
+
+/* Markdown 스타일 */
+.wiki-panel-content-area .markdown-body {
+  font-size: 15px;
+  line-height: 1.7;
+  color: #24292e;
+}
+
+.wiki-panel-content-area .markdown-body h1,
+.wiki-panel-content-area .markdown-body h2,
+.wiki-panel-content-area .markdown-body h3,
+.wiki-panel-content-area .markdown-body h4,
+.wiki-panel-content-area .markdown-body h5,
+.wiki-panel-content-area .markdown-body h6 {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #24292e;
+}
+
+.wiki-panel-content-area .markdown-body h1 {
+  font-size: 2em;
+  border-bottom: 1px solid #e1e4e8;
+  padding-bottom: 0.3em;
+}
+
+.wiki-panel-content-area .markdown-body h2 {
+  font-size: 1.5em;
+  border-bottom: 1px solid #e1e4e8;
+  padding-bottom: 0.3em;
+}
+
+.wiki-panel-content-area .markdown-body h3 {
+  font-size: 1.25em;
+}
+
+.wiki-panel-content-area .markdown-body code {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  background-color: #f6f8fa;
+  border-radius: 3px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+.wiki-panel-content-area .markdown-body pre {
+  padding: 16px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: #f6f8fa;
+  border-radius: 6px;
+}
+
+.wiki-panel-content-area .markdown-body pre code {
+  display: inline;
+  max-width: auto;
+  padding: 0;
+  margin: 0;
+  overflow: visible;
+  line-height: inherit;
+  word-wrap: normal;
+  background-color: transparent;
+  border: 0;
+}
+
+.wiki-panel-content-area .markdown-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 16px 0;
+}
+
+.wiki-panel-content-area .markdown-body table th,
+.wiki-panel-content-area .markdown-body table td {
+  padding: 6px 13px;
+  border: 1px solid #d1d5da;
+}
+
+.wiki-panel-content-area .markdown-body table th {
+  font-weight: 600;
+  background-color: #f6f8fa;
+}
+
+.wiki-panel-content-area .markdown-body blockquote {
+  margin: 0;
+  padding: 0 1em;
+  color: #586069;
+  border-left: 4px solid #d1d5da;
+}
+
+.wiki-panel-content-area .markdown-body ul,
+.wiki-panel-content-area .markdown-body ol {
+  padding-left: 2em;
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.wiki-panel-content-area .markdown-body li {
+  margin-top: 0.25em;
+}
