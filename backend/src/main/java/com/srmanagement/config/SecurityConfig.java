@@ -89,6 +89,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/surveys/template").permitAll()  // CSV 템플릿 다운로드 허용
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        // Wiki 파일 다운로드 허용 (이미지 표시를 위해)
+                        .requestMatchers(HttpMethod.GET, "/api/wiki/files/**").permitAll()
                         // 정적 리소스 허용 (프론트엔드 배포용)
                         .requestMatchers(
                             "/",
