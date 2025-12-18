@@ -86,6 +86,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 인증 API는 허용
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/surveys/template").permitAll()  // CSV 템플릿 다운로드 허용
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         // 정적 리소스 허용 (프론트엔드 배포용)
