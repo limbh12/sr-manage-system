@@ -1,14 +1,20 @@
 package com.srmanagement.service;
 
 import com.srmanagement.dto.request.OpenApiSurveyCreateRequest;
+import com.srmanagement.dto.request.SrCreateRequest;
 import com.srmanagement.dto.response.BulkUploadResult;
 import com.srmanagement.dto.response.OpenApiSurveyResponse;
 import com.srmanagement.dto.response.OrganizationResponse;
+import com.srmanagement.dto.response.SrResponse;
 import com.srmanagement.entity.OpenApiSurvey;
 import com.srmanagement.entity.Organization;
+import com.srmanagement.entity.Priority;
+import com.srmanagement.entity.Sr;
+import com.srmanagement.entity.SrStatus;
 import com.srmanagement.exception.CustomException;
 import com.srmanagement.repository.OpenApiSurveyRepository;
 import com.srmanagement.repository.OrganizationRepository;
+import com.srmanagement.repository.SrRepository;
 import com.srmanagement.repository.UserRepository;
 import com.srmanagement.entity.User;
 import com.srmanagement.dto.response.UserResponse;
@@ -19,6 +25,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -49,6 +57,12 @@ public class OpenApiSurveyService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private SrRepository srRepository;
+
+    @Autowired
+    private SrService srService;
 
     @Transactional(readOnly = true)
     public Page<OpenApiSurveyResponse> getSurveys(String keyword, String currentMethod, String desiredMethod, Pageable pageable) {
@@ -207,6 +221,13 @@ public class OpenApiSurveyService {
                 .build();
 
         OpenApiSurvey savedSurvey = openApiSurveyRepository.save(survey);
+
+        // SR 자동 생성
+        User currentUser = getCurrentUser();
+        if (currentUser != null) {
+            createSrForNewSurvey(savedSurvey, currentUser);
+        }
+
         return convertToResponse(savedSurvey);
     }
 
@@ -215,10 +236,22 @@ public class OpenApiSurveyService {
         OpenApiSurvey survey = openApiSurveyRepository.findById(id)
                 .orElseThrow(() -> new CustomException("Survey not found with id: " + id, HttpStatus.NOT_FOUND));
 
+        // 이전 상태 복사 (SR 생성용)
+        OpenApiSurvey oldSurvey = copyForComparison(survey);
+
         if (!survey.getOrganization().getCode().equals(request.getOrganizationCode())) {
             Organization organization = organizationRepository.findById(request.getOrganizationCode())
                     .orElseThrow(() -> new CustomException("Organization not found with code: " + request.getOrganizationCode(), HttpStatus.NOT_FOUND));
             survey.setOrganization(organization);
+        }
+
+        // 담당자 업데이트
+        if (request.getAssigneeId() != null) {
+            User assignee = userRepository.findById(request.getAssigneeId())
+                    .orElseThrow(() -> new CustomException("User not found with id: " + request.getAssigneeId(), HttpStatus.NOT_FOUND));
+            survey.setAssignee(assignee);
+        } else {
+            survey.setAssignee(null);
         }
 
         survey.setDepartment(request.getDepartment());
@@ -263,6 +296,12 @@ public class OpenApiSurveyService {
         survey.setDevFrameworkVersion(request.getDevFrameworkVersion());
         survey.setOtherRequests(request.getOtherRequests());
         survey.setNote(request.getNote());
+
+        // SR 자동 생성
+        User currentUser = getCurrentUser();
+        if (currentUser != null) {
+            createSrForUpdatedSurvey(oldSurvey, survey, currentUser);
+        }
 
         return convertToResponse(survey);
     }
@@ -559,6 +598,218 @@ public class OpenApiSurveyService {
                     return normalized;
                 }
                 return "NO_RESPONSE";
+        }
+    }
+
+    /**
+     * 현재 로그인한 사용자 조회
+     */
+    private User getCurrentUser() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated()) {
+                String username = authentication.getName();
+                return userRepository.findByUsername(username).orElse(null);
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to get current user: " + e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * 현황조사 데이터 복사 (비교용)
+     */
+    private OpenApiSurvey copyForComparison(OpenApiSurvey survey) {
+        return OpenApiSurvey.builder()
+                .id(survey.getId())
+                .organization(survey.getOrganization())
+                .department(survey.getDepartment())
+                .contactName(survey.getContactName())
+                .contactPhone(survey.getContactPhone())
+                .contactEmail(survey.getContactEmail())
+                .assignee(survey.getAssignee())
+                .systemName(survey.getSystemName())
+                .currentMethod(survey.getCurrentMethod())
+                .desiredMethod(survey.getDesiredMethod())
+                .build();
+    }
+
+    /**
+     * 현황조사 생성 시 SR 자동 생성
+     */
+    private void createSrForNewSurvey(OpenApiSurvey survey, User requester) {
+        try {
+            // 1. SR 생성
+            SrCreateRequest srRequest = new SrCreateRequest();
+            srRequest.setTitle(String.format("[OPEN API 현황조사] %s - %s",
+                    survey.getOrganization().getName(), survey.getSystemName()));
+            srRequest.setDescription(buildSurveyDescription(survey, true));
+            srRequest.setPriority(Priority.MEDIUM);
+            srRequest.setCategory("OPEN_API");
+            srRequest.setRequestType("SURVEY");
+            srRequest.setAssigneeId(survey.getAssignee() != null ? survey.getAssignee().getId() : null);
+            srRequest.setOpenApiSurveyId(survey.getId());
+            srRequest.setApplicantName(survey.getContactName());
+            srRequest.setApplicantPhone(survey.getContactPhone());
+
+            SrResponse createdSr = srService.createSr(srRequest, requester.getUsername());
+
+            // 2. SR을 CLOSED 상태로 변경하고 처리내용 설정
+            Sr sr = srRepository.findById(createdSr.getId())
+                    .orElseThrow(() -> new CustomException("SR not found", HttpStatus.NOT_FOUND));
+            sr.setStatus(SrStatus.CLOSED);
+            sr.setProcessingDetails("현황조사 정보가 신규 등록되었습니다.");
+            srRepository.save(sr);
+        } catch (Exception e) {
+            // SR 생성 실패 시 로그만 남기고 현황조사 저장은 계속 진행
+            System.err.println("Failed to create SR for survey: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 현황조사 수정 시 SR 자동 생성
+     */
+    private void createSrForUpdatedSurvey(OpenApiSurvey oldSurvey, OpenApiSurvey newSurvey, User requester) {
+        try {
+            String changes = buildChangeDescription(oldSurvey, newSurvey);
+
+            // 1. SR 생성
+            SrCreateRequest srRequest = new SrCreateRequest();
+            srRequest.setTitle(String.format("[OPEN API 현황조사 수정] %s - %s",
+                    newSurvey.getOrganization().getName(), newSurvey.getSystemName()));
+            srRequest.setDescription(buildSurveyDescription(newSurvey, false));
+            srRequest.setPriority(Priority.MEDIUM);
+            srRequest.setCategory("OPEN_API");
+            srRequest.setRequestType("SURVEY");
+            srRequest.setAssigneeId(newSurvey.getAssignee() != null ? newSurvey.getAssignee().getId() : null);
+            srRequest.setOpenApiSurveyId(newSurvey.getId());
+            srRequest.setApplicantName(newSurvey.getContactName());
+            srRequest.setApplicantPhone(newSurvey.getContactPhone());
+
+            SrResponse createdSr = srService.createSr(srRequest, requester.getUsername());
+
+            // 2. SR을 CLOSED 상태로 변경하고 처리내용 설정 (변경사항 요약)
+            Sr sr = srRepository.findById(createdSr.getId())
+                    .orElseThrow(() -> new CustomException("SR not found", HttpStatus.NOT_FOUND));
+            sr.setStatus(SrStatus.CLOSED);
+            sr.setProcessingDetails(changes);
+            srRepository.save(sr);
+        } catch (Exception e) {
+            // SR 생성 실패 시 로그만 남기고 현황조사 저장은 계속 진행
+            System.err.println("Failed to create SR for updated survey: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 현황조사 정보로 SR 요청사항 생성
+     */
+    private String buildSurveyDescription(OpenApiSurvey survey, boolean isNew) {
+        StringBuilder sb = new StringBuilder();
+
+        if (isNew) {
+            sb.append("## 현황조사 정보 신규 등록\n\n");
+        } else {
+            sb.append("## 현황조사 정보 수정\n\n");
+        }
+
+        sb.append("### 기본 정보\n");
+        sb.append("- **기관명**: ").append(survey.getOrganization().getName()).append("\n");
+        sb.append("- **부서**: ").append(survey.getDepartment()).append("\n");
+        sb.append("- **시스템명**: ").append(survey.getSystemName()).append("\n");
+        sb.append("- **수신일자**: ").append(survey.getReceivedDate()).append("\n\n");
+
+        sb.append("### API 시스템 현황\n");
+        sb.append("- **현재방식**: ").append(getMethodLabel(survey.getCurrentMethod())).append("\n");
+        sb.append("- **희망전환방식**: ").append(getMethodLabel(survey.getDesiredMethod())).append("\n");
+
+        if (survey.getReasonForDistributed() != null && !survey.getReasonForDistributed().isEmpty()) {
+            sb.append("- **분산형 희망사유**: ").append(survey.getReasonForDistributed()).append("\n");
+        }
+        sb.append("\n");
+
+        sb.append("### 담당자 정보\n");
+        sb.append("- **담당자명**: ").append(survey.getContactName()).append("\n");
+        sb.append("- **연락처**: ").append(survey.getContactPhone()).append("\n");
+        sb.append("- **이메일**: ").append(survey.getContactEmail()).append("\n");
+
+        return sb.toString();
+    }
+
+    /**
+     * 현황조사 변경사항 생성
+     */
+    private String buildChangeDescription(OpenApiSurvey oldSurvey, OpenApiSurvey newSurvey) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("## 현황조사 정보 수정 내역\n\n");
+
+        // 기본 정보 변경
+        if (!oldSurvey.getDepartment().equals(newSurvey.getDepartment())) {
+            sb.append("- **부서**: ").append(oldSurvey.getDepartment())
+              .append(" → ").append(newSurvey.getDepartment()).append("\n");
+        }
+
+        if (!oldSurvey.getSystemName().equals(newSurvey.getSystemName())) {
+            sb.append("- **시스템명**: ").append(oldSurvey.getSystemName())
+              .append(" → ").append(newSurvey.getSystemName()).append("\n");
+        }
+
+        // 전환방식 변경
+        if (!oldSurvey.getCurrentMethod().equals(newSurvey.getCurrentMethod())) {
+            sb.append("- **현재방식**: ").append(getMethodLabel(oldSurvey.getCurrentMethod()))
+              .append(" → ").append(getMethodLabel(newSurvey.getCurrentMethod())).append("\n");
+        }
+
+        if (!oldSurvey.getDesiredMethod().equals(newSurvey.getDesiredMethod())) {
+            sb.append("- **희망전환방식**: ").append(getMethodLabel(oldSurvey.getDesiredMethod()))
+              .append(" → ").append(getMethodLabel(newSurvey.getDesiredMethod())).append("\n");
+        }
+
+        // 담당자 변경
+        if (!oldSurvey.getContactName().equals(newSurvey.getContactName())) {
+            sb.append("- **담당자명**: ").append(oldSurvey.getContactName())
+              .append(" → ").append(newSurvey.getContactName()).append("\n");
+        }
+
+        if (!oldSurvey.getContactPhone().equals(newSurvey.getContactPhone())) {
+            sb.append("- **연락처**: ").append(oldSurvey.getContactPhone())
+              .append(" → ").append(newSurvey.getContactPhone()).append("\n");
+        }
+
+        // 담당자(assignee) 변경
+        String oldAssignee = oldSurvey.getAssignee() != null ? oldSurvey.getAssignee().getName() : "미지정";
+        String newAssignee = newSurvey.getAssignee() != null ? newSurvey.getAssignee().getName() : "미지정";
+        if (!oldAssignee.equals(newAssignee)) {
+            sb.append("- **담당자(처리)**: ").append(oldAssignee)
+              .append(" → ").append(newAssignee).append("\n");
+        }
+
+        if (sb.toString().equals("## 현황조사 정보 수정 내역\n\n")) {
+            sb.append("변경사항 없음\n");
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * 전환방식 코드를 한글 레이블로 변환
+     */
+    private String getMethodLabel(String methodCode) {
+        if (methodCode == null) return "미회신";
+
+        switch (methodCode) {
+            case "CENTRAL":
+                return "중앙형";
+            case "DISTRIBUTED":
+                return "분산형";
+            case "CENTRAL_IMPROVED":
+                return "중앙개선형";
+            case "DISTRIBUTED_IMPROVED":
+                return "분산개선형";
+            case "NO_RESPONSE":
+                return "미회신";
+            default:
+                return methodCode;
         }
     }
 }
