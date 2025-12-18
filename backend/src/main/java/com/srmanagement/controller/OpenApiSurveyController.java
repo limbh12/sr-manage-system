@@ -57,6 +57,27 @@ public class OpenApiSurveyController {
         return ResponseEntity.ok(result);
     }
 
+    // CSV 템플릿 다운로드
+    @GetMapping("/template")
+    public ResponseEntity<org.springframework.core.io.Resource> downloadTemplate() {
+        try {
+            org.springframework.core.io.ClassPathResource resource =
+                new org.springframework.core.io.ClassPathResource("static/templates/openapi_survey_template.csv");
+
+            if (!resource.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            return ResponseEntity.ok()
+                    .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"openapi_survey_template.csv\"")
+                    .contentType(org.springframework.http.MediaType.parseMediaType("text/csv"))
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     // 단일 설문에 첨부된 수신파일 업로드
     @PostMapping(value = "{id}/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> uploadReceivedFile(@PathVariable Long id, @RequestParam("file") MultipartFile file) {

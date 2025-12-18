@@ -283,7 +283,7 @@ function SurveyList() {
 
   const handleDownloadTemplate = () => {
     const link = document.createElement('a');
-    link.href = '/templates/openapi_survey_template.csv';
+    link.href = '/api/surveys/template';
     link.download = 'openapi_survey_template.csv';
     document.body.appendChild(link);
     link.click();
