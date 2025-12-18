@@ -290,6 +290,100 @@ function SurveyList() {
     document.body.removeChild(link);
   };
 
+  const handleExportToCSV = () => {
+    if (surveys.length === 0) {
+      alert('내보낼 데이터가 없습니다.');
+      return;
+    }
+
+    // CSV 헤더 (템플릿과 동일한 순서)
+    const headers = [
+      '기관명', '부서', '담당자명', '연락처', '이메일', '수신파일명', '수신일자',
+      '시스템명', '운영상태', '현행방식', '희망방식', '분산형희망사유',
+      '유지관리운영', '유지관리장소', '유지관리주소', '유지관리비고',
+      '운영환경', '서버위치',
+      'WEB서버OS', 'WEB서버OS종류', 'WEB서버OS버전', 'WEB서버종류', 'WEB서버종류기타', 'WEB서버버전',
+      'WAS서버OS', 'WAS서버OS종류', 'WAS서버OS버전', 'WAS서버종류', 'WAS서버종류기타', 'WAS서버버전',
+      'DB서버OS', 'DB서버OS종류', 'DB서버OS버전', 'DB서버종류', 'DB서버종류기타', 'DB서버버전',
+      '개발언어', '개발언어기타', '개발언어버전', '개발프레임워크', '개발프레임워크기타', '개발프레임워크버전',
+      '기타요청사항', '비고'
+    ];
+
+    // CSV 데이터 생성
+    const rows = surveys.map(survey => [
+      survey.organization?.name || '',
+      survey.department || '',
+      survey.contactName || '',
+      survey.contactPhone || '',
+      survey.contactEmail || '',
+      survey.receivedFileName || '',
+      survey.receivedDate || '',
+      survey.systemName || '',
+      survey.operationStatus || 'OPERATING',  // 운영상태 추가
+      survey.currentMethod || '',
+      survey.desiredMethod || '',
+      survey.reasonForDistributed || '',
+      survey.maintenanceOperation || '',
+      survey.maintenanceLocation || '',
+      survey.maintenanceAddress || '',
+      survey.maintenanceNote || '',
+      survey.operationEnv || '',
+      survey.serverLocation || '',
+      survey.webServerOs || '',
+      survey.webServerOsType || '',
+      survey.webServerOsVersion || '',
+      survey.webServerType || '',
+      survey.webServerTypeOther || '',
+      survey.webServerVersion || '',
+      survey.wasServerOs || '',
+      survey.wasServerOsType || '',
+      survey.wasServerOsVersion || '',
+      survey.wasServerType || '',
+      survey.wasServerTypeOther || '',
+      survey.wasServerVersion || '',
+      survey.dbServerOs || '',
+      survey.dbServerOsType || '',
+      survey.dbServerOsVersion || '',
+      survey.dbServerType || '',
+      survey.dbServerTypeOther || '',
+      survey.dbServerVersion || '',
+      survey.devLanguage || '',
+      survey.devLanguageOther || '',
+      survey.devLanguageVersion || '',
+      survey.devFramework || '',
+      survey.devFrameworkOther || '',
+      survey.devFrameworkVersion || '',
+      survey.otherRequests || '',
+      survey.note || ''
+    ]);
+
+    // CSV 문자열 생성 (BOM 추가로 한글 깨짐 방지)
+    const csvContent = '\uFEFF' + [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => {
+        // 쉼표, 따옴표, 줄바꿈이 포함된 경우 따옴표로 감싸기
+        const cellStr = String(cell);
+        if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+          return `"${cellStr.replace(/"/g, '""')}"`;
+        }
+        return cellStr;
+      }).join(','))
+    ].join('\n');
+
+    // Blob 생성 및 다운로드
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    const timestamp = new Date().toISOString().split('T')[0];
+
+    link.href = url;
+    link.download = `openapi_survey_result_${timestamp}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const handleUploadSuccess = () => {
     setPage(0);
     loadSurveys(0, search, true);
@@ -302,6 +396,9 @@ function SurveyList() {
         <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={handleDownloadTemplate} className="btn btn-secondary">
             템플릿 다운로드
+          </button>
+          <button onClick={handleExportToCSV} className="btn btn-secondary">
+            엑셀 내보내기
           </button>
           <button onClick={() => setIsUploadModalOpen(true)} className="btn btn-secondary">
             일괄 등록
