@@ -194,6 +194,36 @@
   border-color: #0366d6;
 }
 
+.document-category-select {
+  margin-bottom: 16px;
+}
+
+.document-category-select label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #24292e;
+}
+
+.document-category-select select {
+  width: 100%;
+  max-width: 400px;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid #d1d5da;
+  border-radius: 4px;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.document-category-select select:focus {
+  outline: none;
+  border-color: #0366d6;
+  box-shadow: 0 0 0 3px rgba(3, 102, 214, 0.1);
+}
+
 .wiki-document {
   flex: 1;
   overflow: auto;

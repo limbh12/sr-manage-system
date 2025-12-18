@@ -31,6 +31,8 @@ const WikiPage: React.FC = () => {
   const [editingCategory, setEditingCategory] = useState<WikiCategory | null>(null);
   const [parentCategoryId, setParentCategoryId] = useState<number | undefined>();
   const [showAllDocuments, setShowAllDocuments] = useState(false);
+  const [editCategoryId, setEditCategoryId] = useState<number | undefined>();
+  const [flatCategories, setFlatCategories] = useState<WikiCategory[]>([]);
 
   // 카테고리 로드
   useEffect(() => {
@@ -70,10 +72,24 @@ const WikiPage: React.FC = () => {
     }
   }, [showAllDocuments]);
 
+  // 카테고리 트리를 평면 리스트로 변환 (드롭다운용)
+  const flattenCategories = (cats: WikiCategory[], prefix = ''): WikiCategory[] => {
+    const result: WikiCategory[] = [];
+    cats.forEach((cat) => {
+      result.push({ ...cat, name: prefix + cat.name });
+      if (cat.children && cat.children.length > 0) {
+        result.push(...flattenCategories(cat.children, prefix + '  '));
+      }
+    });
+    return result;
+  };
+
   const loadCategories = async () => {
     try {
       const response = await wikiCategoryApi.getRoot();
       setCategories(response.data);
+      // 평면화된 카테고리 목록도 생성
+      setFlatCategories(flattenCategories(response.data));
     } catch (error) {
       console.error('카테고리 로드 실패:', error);
       alert('카테고리를 불러오는데 실패했습니다.');
@@ -87,6 +103,7 @@ const WikiPage: React.FC = () => {
       setCurrentDocument(response.data);
       setEditTitle(response.data.title);
       setEditContent(response.data.content);
+      setEditCategoryId(response.data.categoryId);
     } catch (error) {
       console.error('문서 로드 실패:', error);
       alert('문서를 불러오는데 실패했습니다.');
@@ -120,6 +137,7 @@ const WikiPage: React.FC = () => {
     setCurrentDocument(null);
     setEditTitle('');
     setEditContent('');
+    setEditCategoryId(selectedCategoryId);
     navigate('/wiki');
   };
 
@@ -132,7 +150,7 @@ const WikiPage: React.FC = () => {
     const request: WikiDocumentRequest = {
       title: editTitle,
       content: editContent,
-      categoryId: selectedCategoryId,
+      categoryId: editCategoryId,
     };
 
     try {
@@ -341,6 +359,21 @@ const WikiPage: React.FC = () => {
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
             />
+            <div className="document-category-select">
+              <label htmlFor="category-select">카테고리</label>
+              <select
+                id="category-select"
+                value={editCategoryId || ''}
+                onChange={(e) => setEditCategoryId(e.target.value ? parseInt(e.target.value) : undefined)}
+              >
+                <option value="">카테고리 없음</option>
+                {flatCategories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
             <WikiEditor
               initialValue={editContent}
               onChange={setEditContent}
