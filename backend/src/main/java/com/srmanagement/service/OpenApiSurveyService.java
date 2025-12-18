@@ -183,6 +183,7 @@ public class OpenApiSurveyService {
                 .receivedFileName(request.getReceivedFileName())
                 .receivedDate(request.getReceivedDate())
                 .systemName(request.getSystemName())
+                .operationStatus(request.getOperationStatus() != null ? request.getOperationStatus() : "OPERATING")
                 .currentMethod(normalizeCurrentMethod(request.getCurrentMethod()))
                 .desiredMethod(normalizeDesiredMethod(request.getDesiredMethod()))
                 .reasonForDistributed(request.getReasonForDistributed())
@@ -261,6 +262,7 @@ public class OpenApiSurveyService {
         survey.setReceivedFileName(request.getReceivedFileName());
         survey.setReceivedDate(request.getReceivedDate());
         survey.setSystemName(request.getSystemName());
+        survey.setOperationStatus(request.getOperationStatus() != null ? request.getOperationStatus() : "OPERATING");
         survey.setCurrentMethod(normalizeCurrentMethod(request.getCurrentMethod()));
         survey.setDesiredMethod(normalizeDesiredMethod(request.getDesiredMethod()));
         survey.setReasonForDistributed(request.getReasonForDistributed());
@@ -350,46 +352,47 @@ public class OpenApiSurveyService {
                             .receivedFileName(getValue(record, 5))
                             .receivedDate(parseDate(getValue(record, 6)))
                             .systemName(getValueOrDefault(record, 7, "미입력"))
-                            .currentMethod(normalizeCurrentMethod(getValue(record, 8)))
-                            .desiredMethod(normalizeDesiredMethod(getValue(record, 9)))
-                            .reasonForDistributed(getValue(record, 10))
-                            .maintenanceOperation(getValueOrDefault(record, 11, "NO_RESPONSE"))
-                            .maintenanceLocation(getValueOrDefault(record, 12, "NO_RESPONSE"))
-                            .maintenanceAddress(getValue(record, 13))
-                            .maintenanceNote(getValue(record, 14))
-                            .operationEnv(getValueOrDefault(record, 15, "NO_RESPONSE"))
-                            .serverLocation(getValueOrDefault(record, 16, "NO_RESPONSE"))
+                            .operationStatus(getValueOrDefault(record, 8, "OPERATING"))
+                            .currentMethod(normalizeCurrentMethod(getValue(record, 9)))
+                            .desiredMethod(normalizeDesiredMethod(getValue(record, 10)))
+                            .reasonForDistributed(getValue(record, 11))
+                            .maintenanceOperation(getValueOrDefault(record, 12, "NO_RESPONSE"))
+                            .maintenanceLocation(getValueOrDefault(record, 13, "NO_RESPONSE"))
+                            .maintenanceAddress(getValue(record, 14))
+                            .maintenanceNote(getValue(record, 15))
+                            .operationEnv(getValueOrDefault(record, 16, "NO_RESPONSE"))
+                            .serverLocation(getValueOrDefault(record, 17, "NO_RESPONSE"))
                             // WEB
-                            .webServerOs(getValueOrDefault(record, 17, "NO_RESPONSE"))
-                            .webServerOsType(getValue(record, 18))
-                            .webServerOsVersion(getValue(record, 19))
-                            .webServerType(getValueOrDefault(record, 20, "NO_RESPONSE"))
-                            .webServerTypeOther(getValue(record, 21))
-                            .webServerVersion(getValue(record, 22))
+                            .webServerOs(getValueOrDefault(record, 18, "NO_RESPONSE"))
+                            .webServerOsType(getValue(record, 19))
+                            .webServerOsVersion(getValue(record, 20))
+                            .webServerType(getValueOrDefault(record, 21, "NO_RESPONSE"))
+                            .webServerTypeOther(getValue(record, 22))
+                            .webServerVersion(getValue(record, 23))
                             // WAS
-                            .wasServerOs(getValueOrDefault(record, 23, "NO_RESPONSE"))
-                            .wasServerOsType(getValue(record, 24))
-                            .wasServerOsVersion(getValue(record, 25))
-                            .wasServerType(getValueOrDefault(record, 26, "NO_RESPONSE"))
-                            .wasServerTypeOther(getValue(record, 27))
-                            .wasServerVersion(getValue(record, 28))
+                            .wasServerOs(getValueOrDefault(record, 24, "NO_RESPONSE"))
+                            .wasServerOsType(getValue(record, 25))
+                            .wasServerOsVersion(getValue(record, 26))
+                            .wasServerType(getValueOrDefault(record, 27, "NO_RESPONSE"))
+                            .wasServerTypeOther(getValue(record, 28))
+                            .wasServerVersion(getValue(record, 29))
                             // DB
-                            .dbServerOs(getValueOrDefault(record, 29, "NO_RESPONSE"))
-                            .dbServerOsType(getValue(record, 30))
-                            .dbServerOsVersion(getValue(record, 31))
-                            .dbServerType(getValueOrDefault(record, 32, "NO_RESPONSE"))
-                            .dbServerTypeOther(getValue(record, 33))
-                            .dbServerVersion(getValue(record, 34))
+                            .dbServerOs(getValueOrDefault(record, 30, "NO_RESPONSE"))
+                            .dbServerOsType(getValue(record, 31))
+                            .dbServerOsVersion(getValue(record, 32))
+                            .dbServerType(getValueOrDefault(record, 33, "NO_RESPONSE"))
+                            .dbServerTypeOther(getValue(record, 34))
+                            .dbServerVersion(getValue(record, 35))
                             // Dev
-                            .devLanguage(getValueOrDefault(record, 35, "NO_RESPONSE"))
-                            .devLanguageOther(getValue(record, 36))
-                            .devLanguageVersion(getValue(record, 37))
-                            .devFramework(getValueOrDefault(record, 38, "NO_RESPONSE"))
-                            .devFrameworkOther(getValue(record, 39))
-                            .devFrameworkVersion(getValue(record, 40))
+                            .devLanguage(getValueOrDefault(record, 36, "NO_RESPONSE"))
+                            .devLanguageOther(getValue(record, 37))
+                            .devLanguageVersion(getValue(record, 38))
+                            .devFramework(getValueOrDefault(record, 39, "NO_RESPONSE"))
+                            .devFrameworkOther(getValue(record, 40))
+                            .devFrameworkVersion(getValue(record, 41))
                             // Others
-                            .otherRequests(getValue(record, 41))
-                            .note(getValue(record, 42))
+                            .otherRequests(getValue(record, 42))
+                            .note(getValue(record, 43))
                             .build();
 
                     validateRequest(request);
@@ -457,6 +460,7 @@ public class OpenApiSurveyService {
                 .receivedFileName(survey.getReceivedFileName())
                 .receivedDate(survey.getReceivedDate())
                 .systemName(survey.getSystemName())
+                .operationStatus(survey.getOperationStatus())
                 .currentMethod(survey.getCurrentMethod())
                 .desiredMethod(survey.getDesiredMethod())
                 .reasonForDistributed(survey.getReasonForDistributed())
@@ -754,6 +758,11 @@ public class OpenApiSurveyService {
               .append(" → ").append(newSurvey.getSystemName()).append("\n");
         }
 
+        if (!oldSurvey.getOperationStatus().equals(newSurvey.getOperationStatus())) {
+            sb.append("- **운영상태**: ").append(getOperationStatusLabel(oldSurvey.getOperationStatus()))
+              .append(" → ").append(getOperationStatusLabel(newSurvey.getOperationStatus())).append("\n");
+        }
+
         // 전환방식 변경
         if (!oldSurvey.getCurrentMethod().equals(newSurvey.getCurrentMethod())) {
             sb.append("- **현재방식**: ").append(getMethodLabel(oldSurvey.getCurrentMethod()))
@@ -810,6 +819,24 @@ public class OpenApiSurveyService {
                 return "미회신";
             default:
                 return methodCode;
+        }
+    }
+
+    /**
+     * 운영상태 코드를 한글 레이블로 변환
+     */
+    private String getOperationStatusLabel(String statusCode) {
+        if (statusCode == null) return "운영중";
+
+        switch (statusCode) {
+            case "OPERATING":
+                return "운영중";
+            case "DEPRECATED":
+                return "폐기";
+            case "SCHEDULED_DEPRECATION":
+                return "폐기예정";
+            default:
+                return statusCode;
         }
     }
 }

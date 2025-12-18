@@ -23,6 +23,7 @@ public class OpenApiSurveyCreateRequest {
     private String receivedFileName;
     private LocalDate receivedDate;
     private String systemName;
+    private String operationStatus;
     private String currentMethod;
     private String desiredMethod;
     private String reasonForDistributed;

@@ -27,6 +27,7 @@ function SurveyForm() {
     status: 'PENDING' as SurveyStatus,
     receivedDate: new Date().toISOString().split('T')[0],
     systemName: '',
+    operationStatus: 'OPERATING',
     currentMethod: 'CENTRAL',
     desiredMethod: 'CENTRAL_IMPROVED',
     reasonForDistributed: '',
@@ -397,11 +398,21 @@ function SurveyForm() {
         <section className="mb-4">
           <h3 className="section-title">3. API 시스템 현황</h3>
           <div className="space-y-4">
-            <div className="form-group">
-              <label className="form-label">시스템명 *</label>
-              <input type="text" name="systemName" required className="form-input" value={formData.systemName} onChange={handleChange} style={getInputStyle(formData.systemName)} />
+            <div className="grid-2">
+              <div className="form-group">
+                <label className="form-label">시스템명 *</label>
+                <input type="text" name="systemName" required className="form-input" value={formData.systemName} onChange={handleChange} style={getInputStyle(formData.systemName)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">운영상태 *</label>
+                <select name="operationStatus" className="form-select" value={formData.operationStatus} onChange={handleChange} style={getInputStyle(formData.operationStatus)}>
+                  <option value="OPERATING">운영중</option>
+                  <option value="DEPRECATED">폐기</option>
+                  <option value="SCHEDULED_DEPRECATION">폐기예정</option>
+                </select>
+              </div>
             </div>
-            
+
             <div className="grid-2">
               <div className="form-group">
                 <label className="form-label">현재방식 *</label>

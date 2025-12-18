@@ -64,6 +64,10 @@ public class OpenApiSurvey {
     private String systemName;
 
     @Column(nullable = false, length = 20)
+    @Builder.Default
+    private String operationStatus = "OPERATING";
+
+    @Column(nullable = false, length = 20)
     private String currentMethod;
 
     @Column(nullable = false, length = 20)

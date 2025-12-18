@@ -215,6 +215,11 @@ export type TransitionMethod = 'CENTRAL' | 'DISTRIBUTED' | 'NO_RESPONSE';
 export type DesiredTransitionMethod = 'CENTRAL_IMPROVED' | 'DISTRIBUTED_IMPROVED' | 'NO_RESPONSE';
 
 /**
+ * 운영상태
+ */
+export type OperationStatus = 'OPERATING' | 'DEPRECATED' | 'SCHEDULED_DEPRECATION';
+
+/**
  * 유지보수 운영인력
  */
 export type MaintenanceOperation = 'INTERNAL' | 'PROFESSIONAL_RESIDENT' | 'PROFESSIONAL_NON_RESIDENT' | 'OTHER' | 'NO_RESPONSE';
@@ -293,6 +298,7 @@ export interface OpenApiSurvey {
 
   // API 시스템 현황
   systemName: string;
+  operationStatus: OperationStatus;
   currentMethod: TransitionMethod;
   desiredMethod: DesiredTransitionMethod;
   reasonForDistributed?: string; // 분산개선형 선택 시 사유

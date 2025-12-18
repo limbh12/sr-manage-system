@@ -168,6 +168,7 @@ spring:
         - classpath:migration_20251211_soft_delete_h2.sql
         - classpath:db/migration/add_survey_status_column.sql
         - classpath:db/migration/migrate_method_values.sql
+        - classpath:db/migration/add_operation_status_column.sql
   
   # H2 콘솔 비활성화 (보안)
   #h2:
