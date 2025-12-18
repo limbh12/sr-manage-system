@@ -44,6 +44,13 @@ function Sidebar({ isOpen, onClose }: SidebarProps) {
         >
           📋 OPEN API 현황조사
         </NavLink>
+        <NavLink
+          to="/wiki"
+          className={({ isActive }) => `sidebar-nav-link ${isActive ? 'active' : ''}`}
+          onClick={handleLinkClick}
+        >
+          📚 Wiki
+        </NavLink>
         {user?.role === 'ADMIN' && (
           <>
             <NavLink 

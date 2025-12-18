@@ -1,11 +1,6 @@
----
-
-# 📑 PB: AI-Powered Knowledge Wiki for SR Management System
+# PB: AI-Powered Knowledge Wiki for SR Management System
 
 SR 관리 시스템에 AI 기반 지능형 위키 기능을 추가하여, 폐쇄망 환경에서 지식의 체계적 축적과 AI를 활용한 지능형 검색 및 분석을 제공합니다.
-
-> **Note**: 이 문서는 기존 SR 관리 시스템에 **추가 개발**할 기능에 대한 Product Backlog입니다.
-> 현재 시스템 현황은 [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md)를 참조하세요.
 
 ---
 
@@ -42,12 +37,15 @@ SR 관리 시스템에 AI 기반 지능형 위키 기능을 추가하여, 폐쇄
 | --- | --- | --- | --- |
 | **AI Engine** | Ollama + Llama 3.2 | Local LLM 추론 | ✅ |
 | **AI Framework** | Spring AI | LLM 연동 | ✅ |
-| **Vector DB** | Chroma / Qdrant (Embedded) | 임베딩 벡터 저장 | ✅ |
+| **Vector Store** | Spring AI JdbcVectorStore (H2 기반) | 임베딩 벡터 저장 | ✅ |
+| **Full-text Search** | H2 Full-text Index | 키워드 검색 (보조) | ✅ |
 | **Document Parser** | Apache Tika | PDF/DOCX 파싱 | ✅ |
 | **Markdown Editor** | Toast UI Editor | 위키 편집기 | ✅ |
 | **Markdown Renderer** | react-markdown | 마크다운 렌더링 | ✅ |
 | **Syntax Highlighting** | highlight.js | 코드 블록 강조 | ✅ |
 | **PDF Converter** | Pandoc (Optional) | PDF→Markdown | ✅ |
+
+**Note**: 별도 Vector DB(Chroma/Qdrant) 대신 **H2의 JdbcVectorStore**를 사용하여 벡터 저장 및 유사도 검색을 구현합니다. 이를 통해 외부 의존성 없이 통합 환경에서 RAG를 구현할 수 있습니다.
 
 ---
 
@@ -249,14 +247,15 @@ CREATE TABLE wiki_category (
 * [ ] Ollama 서버 연동 (Local LLM)
 * [ ] Spring AI를 통한 LLM 호출
 * [ ] 위키 문서 임베딩 생성 (문서 저장 시 자동)
-* [ ] Vector DB(Chroma/Qdrant)에 임베딩 저장
-* [ ] 사용자 질문 → 유사 문서 검색 (Top-K)
+* [ ] H2 JdbcVectorStore에 임베딩 저장
+* [ ] 사용자 질문 → 유사 문서 검색 (Top-K, 코사인 유사도)
 * [ ] 검색된 문서를 컨텍스트로 LLM에 전달
 * [ ] AI 답변 생성 및 반환
+* [ ] (보조) H2 Full-text Index를 이용한 키워드 검색
 
 **Architecture**
 ```
-사용자 질문 → Embedding → Vector Search → 관련 문서 Top-3
+사용자 질문 → Embedding → H2 Vector Search (Cosine Similarity) → 관련 문서 Top-3
 → Prompt Template → Ollama (Llama 3.2) → AI 답변
 ```
 
@@ -268,9 +267,10 @@ CREATE TABLE wiki_category (
     <artifactId>spring-ai-ollama-spring-boot-starter</artifactId>
     <version>1.0.0-M1</version>
 </dependency>
+<!-- JDBC Vector Store (H2 지원) -->
 <dependency>
     <groupId>org.springframework.ai</groupId>
-    <artifactId>spring-ai-chroma-store-spring-boot-starter</artifactId>
+    <artifactId>spring-ai-jdbc-store</artifactId>
     <version>1.0.0-M1</version>
 </dependency>
 ```
@@ -281,14 +281,42 @@ CREATE TABLE wiki_category (
 spring:
   ai:
     ollama:
-      base-url: http://localhost:11434
+      base-url: http://219.248.153.178:11434
       chat:
-        model: llama3.2
+        model: gpt-oss:20b
+        options:
+          temperature: 0.7
+          top-p: 0.9
+          stream: false
     vectorstore:
-      chroma:
-        client:
-          host: localhost
-          port: 8000
+      jdbc:
+        # H2 기존 DataSource 재사용
+        initialize-schema: true
+        table-name: vector_store
+        distance-type: COSINE_SIMILARITY
+```
+
+**Vector Store 테이블 스키마 (자동 생성)**
+```sql
+CREATE TABLE vector_store (
+    id VARCHAR(255) PRIMARY KEY,
+    content TEXT,
+    metadata TEXT,
+    embedding ARRAY  -- H2에서 ARRAY 타입으로 벡터 저장
+);
+
+-- 성능 최적화를 위한 인덱스
+CREATE INDEX idx_vector_store_embedding ON vector_store(embedding);
+```
+
+**Full-text Search 보조 기능 (Optional)**
+```sql
+-- H2 Full-text Index 생성
+CREATE ALIAS IF NOT EXISTS FTL_INIT FOR "org.h2.fulltext.FullText.init";
+CALL FTL_INIT();
+
+-- 위키 문서 테이블에 Full-text Index 추가
+CALL FTL_CREATE_INDEX('PUBLIC', 'WIKI_DOCUMENT', 'TITLE,CONTENT');
 ```
 
 ---
@@ -370,27 +398,50 @@ spring:
 │  │   REST API: /api/wiki/**                      │  │
 │  │   - WikiController                            │  │
 │  │   - WikiFileController                        │  │
-│  │   - WikiSearchController                      │  │
+│  │   - WikiSearchController (AI 검색)            │  │
 │  └───────────────────────────────────────────────┘  │
 │  ┌───────────────────────────────────────────────┐  │
 │  │   Service Layer                               │  │
 │  │   - WikiService                               │  │
 │  │   - PdfConversionService                      │  │
 │  │   - AiSearchService (Spring AI)               │  │
+│  │   - VectorStoreService (JdbcVectorStore)      │  │
 │  └───────────────────────────────────────────────┘  │
 │  ┌───────────────────────────────────────────────┐  │
 │  │   Repository + Vector Store                   │  │
-│  │   - WikiDocumentRepository                    │  │
-│  │   - ChromaVectorStore                         │  │
+│  │   - WikiDocumentRepository (JPA)              │  │
+│  │   - JdbcVectorStore (Spring AI)               │  │
 │  └───────────────────────────────────────────────┘  │
 └──────────────┬──────────────────┬───────────────────┘
                │                  │
-               │ JDBC             │ REST API
+               │ JDBC             │ HTTP
                ▼                  ▼
-       ┌──────────────┐   ┌─────────────────┐
-       │   Database   │   │ Ollama + Chroma │
-       │  (H2/CUBRID) │   │  (localhost)    │
-       └──────────────┘   └─────────────────┘
+       ┌─────────────────────────────────────┐
+       │      H2 Database (통합)              │
+       │  ┌─────────────────────────────┐   │
+       │  │ 일반 테이블                  │   │
+       │  │ - wiki_document             │   │
+       │  │ - wiki_version              │   │
+       │  │ - wiki_category             │   │
+       │  │ - sr (기존 테이블)           │   │
+       │  └─────────────────────────────┘   │
+       │  ┌─────────────────────────────┐   │
+       │  │ Vector Store 테이블          │   │
+       │  │ - vector_store              │   │
+       │  │   (embedding ARRAY)         │   │
+       │  └─────────────────────────────┘   │
+       │  ┌─────────────────────────────┐   │
+       │  │ Full-text Index (보조)       │   │
+       │  │ - FTL_INDEX                 │   │
+       │  └─────────────────────────────┘   │
+       └─────────────────────────────────────┘
+                       ▲
+                       │ HTTP
+                       │
+               ┌───────────────┐
+               │ Ollama Server │
+               │ (localhost)   │
+               └───────────────┘
 ```
 
 ### 3.2 RAG 처리 흐름
@@ -398,25 +449,43 @@ spring:
 ```
 [사용자 질문] "SR 생성 API는 어떻게 사용하나요?"
         ↓
-[1] Embedding 생성 (Spring AI + Ollama)
+[1] Embedding 생성 (Spring AI + Ollama Embeddings)
+   → 질문 텍스트를 벡터로 변환 (1536차원)
         ↓
-[2] Vector Search (Chroma)
+[2] Vector Search (H2 JdbcVectorStore)
+   → SELECT * FROM vector_store
+     ORDER BY COSINE_SIMILARITY(embedding, ?)
+     LIMIT 3
    → 유사 문서 Top-3 검색
-   → 관련도 점수 계산
+   → 관련도 점수 계산 (0~1)
+        ↓
+[2-1] (Optional) Full-text Search 병행
+   → SELECT * FROM FTL_SEARCH_DATA('SR API', 0, 0)
+   → 키워드 매칭 결과 결합
         ↓
 [3] Context 생성
    → 검색된 문서 내용 결합
+   → 메타데이터 추가 (제목, 카테고리)
         ↓
 [4] Prompt Template
    → "다음 문서를 참고하여 답변하세요: [문서 내용]"
    → 사용자 질문 추가
         ↓
-[5] LLM 추론 (Ollama Llama 3.2)
+[5] LLM 추론 (Ollama gpt-oss:20b)
+   → HTTP POST http://219.248.153.178:11434/api/generate
+   → 답변 생성 (stream: false)
         ↓
 [6] 답변 생성 + 참고 문서 링크
+   → 응답 JSON: { answer, sources }
         ↓
-[Frontend] AI 답변 표시
+[Frontend] AI 답변 표시 (마크다운 렌더링)
 ```
+
+**성능 최적화 포인트**
+1. **Embedding 캐싱**: 동일한 질문은 캐시에서 임베딩 재사용
+2. **벡터 검색 인덱스**: H2에서 ARRAY 타입에 대한 인덱스 활용
+3. **병렬 검색**: Vector Search + Full-text Search 병렬 실행 후 결과 병합
+4. **답변 캐싱**: 자주 묻는 질문(FAQ)에 대한 답변 캐시
 
 ---
 
@@ -452,7 +521,7 @@ backend/src/main/java/com/srmanagement/
 │       └── AiSearchResponse
 └── config/
     ├── OllamaConfig          # Ollama 연동 설정
-    └── VectorStoreConfig     # Chroma 설정
+    └── VectorStoreConfig     # H2 JdbcVectorStore 설정
 ```
 
 ### 4.2 Frontend 컴포넌트 구조 (추가)
@@ -480,76 +549,159 @@ frontend/src/
 
 ## ⚙️ 5. 배포 및 환경 설정
 
-### 5.1 Ollama 설치 (폐쇄망 환경)
+### 5.1 Ollama 서버 연동 (폐쇄망 환경)
 
-**1. Ollama 다운로드 (외부망에서)**
+**✅ 현재 상태: Ollama 서버 이미 설치 완료**
+
+**서버 정보**
+- **URL**: `http://219.248.153.178:11434`
+- **모델**: `gpt-oss:20b` (이미 설치됨)
+- **포트**: 11434
+
+**API 호출 테스트**
 ```bash
-# macOS/Linux
-curl -fsSL https://ollama.com/install.sh | sh
+# Chat API 테스트
+curl http://219.248.153.178:11434/api/generate -d '{
+  "model": "gpt-oss:20b",
+  "prompt": "하늘은 왜 파란색이야?",
+  "stream": false
+}'
 
-# 또는 바이너리 직접 다운로드
-# https://ollama.com/download
+# 사용 가능한 모델 목록 확인
+curl http://219.248.153.178:11434/api/tags
+
+# 모델 정보 확인
+curl http://219.248.153.178:11434/api/show -d '{
+  "name": "gpt-oss:20b"
+}'
 ```
 
-**2. Llama 3.2 모델 다운로드**
-```bash
-ollama pull llama3.2
-```
+**추가 모델 설치 (필요 시)**
 
-**3. 모델 파일을 폐쇄망으로 이동**
+만약 Embedding 전용 모델이나 다른 모델이 필요한 경우:
+
 ```bash
-# 모델 위치: ~/.ollama/models/
+# 외부망에서 모델 다운로드
+ollama pull nomic-embed-text    # Embedding 모델
+ollama pull llama3.2            # 다른 LLM 모델
+
+# 모델 파일 압축
 tar -czf ollama-models.tar.gz ~/.ollama/models/
-# → 폐쇄망 서버로 복사
+
+# 폐쇄망 서버로 복사 후 압축 해제
+scp ollama-models.tar.gz user@219.248.153.178:/path/to/
+ssh user@219.248.153.178
+cd /path/to/
+tar -xzf ollama-models.tar.gz -C ~/.ollama/
 ```
 
-**4. 폐쇄망 서버에서 Ollama 실행**
-```bash
-ollama serve
-# 기본 포트: 11434
+**주의사항**
+- 현재 `gpt-oss:20b` 모델이 Chat과 Embedding을 모두 지원하는지 확인 필요
+- Embedding 전용 모델이 필요하면 `nomic-embed-text` 또는 `all-minilm` 추가 설치 권장
+
+### 5.2 H2 Vector Store 설정
+
+**별도 설치 불필요!** 기존 H2 데이터베이스를 그대로 사용합니다.
+
+**Vector Store 테이블 자동 생성**
+```yaml
+spring:
+  ai:
+    vectorstore:
+      jdbc:
+        initialize-schema: true  # 자동으로 vector_store 테이블 생성
 ```
 
-### 5.2 Chroma Vector DB 설치
+**수동 생성 (필요 시)**
+```sql
+-- backend/src/main/resources/db/migration/create_vector_store.sql
+CREATE TABLE IF NOT EXISTS vector_store (
+    id VARCHAR(255) PRIMARY KEY,
+    content TEXT NOT NULL,
+    metadata TEXT,
+    embedding ARRAY NOT NULL
+);
 
-**1. Docker로 실행 (권장)**
-```bash
-docker run -d --name chroma -p 8000:8000 chromadb/chroma:latest
-```
-
-**2. 또는 Python으로 실행**
-```bash
-pip install chromadb
-python -m chromadb.cli run --host 0.0.0.0 --port 8000
+CREATE INDEX IF NOT EXISTS idx_vector_store_id ON vector_store(id);
 ```
 
 ### 5.3 Application 설정
 
+**기본 설정 (application-wiki.yml)**
 ```yaml
 # backend/src/main/resources/application-wiki.yml
 spring:
   ai:
+    # Ollama 연동 설정 (폐쇄망 서버)
     ollama:
-      base-url: http://localhost:11434
+      base-url: http://219.248.153.178:11434
       chat:
-        model: llama3.2
+        model: gpt-oss:20b    # 현재 설치된 모델
         options:
-          temperature: 0.7
-          top-p: 0.9
-    vectorstore:
-      chroma:
-        client:
-          host: localhost
-          port: 8000
-        collection-name: sr-wiki-documents
+          temperature: 0.7    # 창의성 (0~1, 낮을수록 보수적)
+          top-p: 0.9          # 확률 임계값
+          num-ctx: 4096       # 컨텍스트 윈도우 크기
+          stream: false       # 스트리밍 비활성화 (안정성)
+      embedding:
+        model: gpt-oss:20b    # Chat 모델로 Embedding도 생성 (또는 전용 모델)
+        options:
+          dimensions: 768     # 임베딩 차원 (모델에 따라 조정)
 
+    # JDBC Vector Store 설정
+    vectorstore:
+      jdbc:
+        initialize-schema: true
+        table-name: vector_store
+        distance-type: COSINE_SIMILARITY
+        # schema-name: PUBLIC  # H2의 기본 스키마
+
+# 위키 기능 설정
 wiki:
   upload:
     base-path: ./data/wiki-uploads
-    max-file-size: 20971520  # 20MB
+    max-file-size: 20971520        # 20MB
+    allowed-extensions:
+      - pdf
+      - docx
+      - png
+      - jpg
+      - gif
   pdf:
     conversion:
       enabled: true
-      use-pandoc: false  # Pandoc 사용 여부 (optional)
+      use-pandoc: false              # Pandoc 사용 여부 (optional)
+  fulltext:
+    enabled: true                    # H2 Full-text Index 사용
+  ai:
+    search:
+      top-k: 3                       # 상위 K개 문서 검색
+      similarity-threshold: 0.7       # 유사도 임계값 (0~1)
+      cache-ttl: 3600                # 답변 캐시 TTL (초)
+```
+
+**프로덕션 환경 (application-prod.yml)**
+```yaml
+spring:
+  ai:
+    ollama:
+      base-url: ${OLLAMA_URL:http://219.248.153.178:11434}
+      chat:
+        model: ${OLLAMA_CHAT_MODEL:gpt-oss:20b}
+      embedding:
+        model: ${OLLAMA_EMBEDDING_MODEL:gpt-oss:20b}
+    vectorstore:
+      jdbc:
+        initialize-schema: false  # 프로덕션에서는 수동 관리
+```
+
+**환경 변수 설정 (Optional)**
+```bash
+# Ollama 서버 URL 커스터마이징
+export OLLAMA_URL=http://219.248.153.178:11434
+
+# 모델 변경 (다른 모델 설치 시)
+export OLLAMA_CHAT_MODEL=llama3.2
+export OLLAMA_EMBEDDING_MODEL=nomic-embed-text
 ```
 
 ---
@@ -657,13 +809,14 @@ wiki:
 * 변환 실패 시 원본 PDF 첨부 유지
 * 사용자가 수동으로 편집 가능
 
-### 위험 3: Vector DB 메모리 부족
-**영향**: MEDIUM | **확률**: LOW
+### 위험 3: H2 Vector Store 성능 저하 (문서 증가 시)
+**영향**: MEDIUM | **확률**: MEDIUM
 
 **대응 방안**
-* Chroma 대신 Qdrant (더 경량)
-* 임베딩 차원 축소 (1536 → 768)
-* 오래된 문서 임베딩 아카이빙
+* 임베딩 차원 축소 (1536 → 768 또는 384)
+* 벡터 검색 전 Full-text 필터링으로 후보 축소
+* 오래된 문서 임베딩 아카이빙 (별도 테이블로 이동)
+* 필요 시 PostgreSQL의 pgvector 확장 또는 전용 Vector DB로 마이그레이션
 
 ---
 
@@ -685,15 +838,20 @@ wiki:
 ## 🎯 10. 다음 단계
 
 ### 즉시 착수 가능한 작업
-1. **Spike**: Spring AI + Ollama 연동 PoC (2일)
+1. **Spike**: Spring AI + Ollama 연동 PoC (1일)
+   - 폐쇄망 Ollama 서버 (`http://219.248.153.178:11434`) 연결 테스트
+   - `gpt-oss:20b` 모델로 Chat API 호출 검증
+   - Embedding 생성 가능 여부 확인
 2. **Spike**: Apache Tika PDF 변환 테스트 (1일)
 3. **Story**: Wiki 엔티티 설계 및 JPA 구현 (3일)
 4. **Story**: Toast UI Editor 컴포넌트 연동 (2일)
 
 ### 기술 검토 필요
-* Chroma vs Qdrant 벡터 DB 선택
-* Pandoc 도입 여부 결정
-* 폐쇄망 서버 스펙 확인 (CPU/메모리)
+* ✅ Vector DB: H2 JdbcVectorStore 사용 (결정 완료)
+* ✅ Ollama 서버: 폐쇄망 환경 설치 완료 (`219.248.153.178:11434`)
+* `gpt-oss:20b` 모델의 Embedding 지원 여부 확인
+* 필요 시 Embedding 전용 모델 추가 설치 검토
+* Pandoc 도입 여부 결정 (Phase 2에서)
 
 ---
 
