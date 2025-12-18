@@ -1,2 +1,0 @@
-기관명,부서,담당자명,연락처,이메일,수신파일명,수신일자,시스템명,운영상태,현행방식,희망방식,분산형희망사유,유지관리운영,유지관리장소,유지관리주소,유지관리비고,운영환경,서버위치,WEB서버OS,WEB서버OS종류,WEB서버OS버전,WEB서버종류,WEB서버종류기타,WEB서버버전,WAS서버OS,WAS서버OS종류,WAS서버OS버전,WAS서버종류,WAS서버종류기타,WAS서버버전,DB서버OS,DB서버OS종류,DB서버OS버전,DB서버종류,DB서버종류기타,DB서버버전,개발언어,개발언어기타,개발언어버전,개발프레임워크,개발프레임워크기타,개발프레임워크버전,기타요청사항,비고
-한국지능정보사회진흥원,디지털플랫폼정부본부,홍길동,010-1234-5678,test@example.com,공문.pdf,2025-01-01,통합관리시스템,OPERATING,CENTRAL,CENTRAL_IMPROVED,,직영,본원,대구광역시 동구 첨단로 53,,LINUX,IDC,Linux,RedHat,8.0,Apache,,2.4,Linux,RedHat,8.0,Tomcat,,9.0,Linux,RedHat,8.0,Oracle,,19c,Java,,17,Spring Boot,,3.0,없음,
