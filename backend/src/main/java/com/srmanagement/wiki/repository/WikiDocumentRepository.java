@@ -42,9 +42,24 @@ public interface WikiDocumentRepository extends JpaRepository<WikiDocument, Long
     Page<WikiDocument> findPopular(Pageable pageable);
 
     // ID로 문서 조회 (연관 엔티티 페치 조인)
-    @Query("SELECT wd FROM WikiDocument wd " +
+    // Note: 여러 컬렉션을 한번에 fetch할 수 없으므로 files만 fetch
+    @Query("SELECT DISTINCT wd FROM WikiDocument wd " +
            "LEFT JOIN FETCH wd.category " +
            "LEFT JOIN FETCH wd.createdBy " +
+           "LEFT JOIN FETCH wd.updatedBy " +
+           "LEFT JOIN FETCH wd.files " +
            "WHERE wd.id = :id")
     Optional<WikiDocument> findByIdWithDetails(@Param("id") Long id);
+
+    // SR 목록 별도 조회
+    @Query("SELECT DISTINCT wd FROM WikiDocument wd " +
+           "LEFT JOIN FETCH wd.srs " +
+           "WHERE wd.id = :id")
+    Optional<WikiDocument> findByIdWithSrs(@Param("id") Long id);
+
+    // 버전 목록 별도 조회
+    @Query("SELECT DISTINCT wd FROM WikiDocument wd " +
+           "LEFT JOIN FETCH wd.versions " +
+           "WHERE wd.id = :id")
+    Optional<WikiDocument> findByIdWithVersions(@Param("id") Long id);
 }

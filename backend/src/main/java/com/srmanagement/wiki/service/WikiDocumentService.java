@@ -169,6 +169,10 @@ public class WikiDocumentService {
         WikiDocument document = wikiDocumentRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new RuntimeException("문서를 찾을 수 없습니다"));
 
+        // SRs와 Versions는 별도로 fetch (MultipleBagFetchException 방지)
+        wikiDocumentRepository.findByIdWithSrs(id);
+        wikiDocumentRepository.findByIdWithVersions(id);
+
         return WikiDocumentResponse.fromEntity(document);
     }
 
@@ -176,6 +180,10 @@ public class WikiDocumentService {
     public WikiDocumentResponse getDocumentAndIncrementViewCount(Long id) {
         WikiDocument document = wikiDocumentRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new RuntimeException("문서를 찾을 수 없습니다"));
+
+        // SRs와 Versions는 별도로 fetch (MultipleBagFetchException 방지)
+        wikiDocumentRepository.findByIdWithSrs(id);
+        wikiDocumentRepository.findByIdWithVersions(id);
 
         document.incrementViewCount();
         wikiDocumentRepository.save(document);

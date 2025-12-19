@@ -31,6 +31,7 @@ public class WikiDocumentResponse {
     private LocalDateTime updatedAt;
     private Integer viewCount;
     private Integer currentVersion;
+    private List<WikiFileResponse> files;
 
     @Data
     @NoArgsConstructor
@@ -83,6 +84,16 @@ public class WikiDocumentResponse {
                     .mapToInt(v -> v.getVersion())
                     .max()
                     .orElse(0));
+        }
+
+        // 파일 목록 매핑
+        if (document.getFiles() != null && !document.getFiles().isEmpty()) {
+            List<WikiFileResponse> fileResponses = document.getFiles().stream()
+                    .map(WikiFileResponse::fromEntity)
+                    .collect(Collectors.toList());
+            builder.files(fileResponses);
+        } else {
+            builder.files(new ArrayList<>());
         }
 
         return builder.build();

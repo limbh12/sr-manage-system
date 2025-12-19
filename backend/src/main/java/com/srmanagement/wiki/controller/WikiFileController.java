@@ -46,8 +46,14 @@ public class WikiFileController {
         Resource resource = wikiFileService.downloadFile(fileId);
         WikiFileResponse fileInfo = wikiFileService.getFile(fileId);
 
+        // MIME 타입 설정 (null일 경우 기본값 사용)
+        String mimeType = fileInfo.getMimeType();
+        if (mimeType == null || mimeType.isEmpty()) {
+            mimeType = "application/octet-stream";
+        }
+
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(fileInfo.getMimeType()))
+                .contentType(MediaType.parseMediaType(mimeType))
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "inline; filename=\"" + fileInfo.getOriginalFileName() + "\"")
                 .body(resource);

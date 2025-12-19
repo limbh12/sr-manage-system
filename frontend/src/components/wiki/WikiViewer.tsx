@@ -6,14 +6,33 @@ import rehypeRaw from 'rehype-raw';
 import rehypeSlug from 'rehype-slug';
 import 'highlight.js/styles/github.css';
 import './WikiViewer.css';
+import type { WikiFile } from '../../types/wiki';
+import PdfViewer from './PdfViewer';
 
 interface WikiViewerProps {
   content: string;
+  files?: WikiFile[];
 }
 
-const WikiViewer: React.FC<WikiViewerProps> = ({ content }) => {
+const WikiViewer: React.FC<WikiViewerProps> = ({ content, files }) => {
+  // PDF 파일 찾기 (원본 PDF)
+  const pdfFile = files?.find(file =>
+    file.type === 'DOCUMENT' &&
+    (file.originalFileName.toLowerCase().endsWith('.pdf') ||
+     file.fileType === 'application/pdf')
+  );
+
   return (
     <div className="wiki-viewer markdown-body">
+      {/* PDF 원본 뷰어 */}
+      {pdfFile && (
+        <PdfViewer
+          fileId={pdfFile.id}
+          fileName={pdfFile.originalFileName}
+        />
+      )}
+
+      {/* 마크다운 콘텐츠 */}
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeSlug, rehypeHighlight, rehypeRaw]}

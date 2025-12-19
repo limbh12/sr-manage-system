@@ -94,3 +94,4 @@ backend/data/
 # Upload files
 backend/uploads/
 
+frontend/public/pdf-worker/

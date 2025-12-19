@@ -21,6 +21,7 @@ export interface WikiDocument {
   updatedAt: string;
   viewCount: number;
   currentVersion?: number;
+  files?: WikiFile[]; // 첨부 파일 목록
 }
 
 // Wiki 문서 생성/수정 요청
@@ -73,6 +74,7 @@ export interface WikiFile {
   fileSize: number;
   fileType: string;
   type: 'IMAGE' | 'DOCUMENT' | 'ATTACHMENT';
+  mimeType?: string;
   uploadedById: number;
   uploadedByName: string;
   uploadedAt: string;

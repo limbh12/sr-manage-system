@@ -474,7 +474,7 @@ const WikiPage: React.FC = () => {
               </div>
             )}
 
-            <WikiViewer content={currentDocument.content} />
+            <WikiViewer content={currentDocument.content} files={currentDocument.files} />
           </div>
         ) : (
           <div className="wiki-empty">

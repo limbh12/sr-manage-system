@@ -98,7 +98,7 @@ public class SecurityConfig {
                             "/favicon.ico"
                         ).permitAll()
                         .requestMatchers("/static/**", "/assets/**").permitAll()
-                        .requestMatchers("/*.js", "/*.css", "/*.png", "/*.svg", "/*.ico").permitAll()
+                        .requestMatchers("/*.js", "/*.mjs", "/*.css", "/*.png", "/*.svg", "/*.ico").permitAll()
                         // ADMIN 전용 API
                         .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
                         // .requestMatchers(HttpMethod.DELETE, "/api/sr/**").hasRole("ADMIN") // 서비스 계층에서 권한 체크
