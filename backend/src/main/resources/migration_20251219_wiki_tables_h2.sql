@@ -1,7 +1,7 @@
 -- =====================================================
 -- Wiki 테이블 마이그레이션 스크립트 (H2)
 -- 작성일: 2025-12-19
--- 설명: Wiki 기능 Phase 1 - 기본 Wiki 시스템 테이블 생성
+-- 설명: Wiki 기능 (Phase 1 + Phase 2 PDF 변환)
 -- =====================================================
 
 -- 1. Wiki 카테고리 테이블
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS wiki_version (
 CREATE INDEX IF NOT EXISTS idx_wiki_version_document ON wiki_version(document_id);
 CREATE INDEX IF NOT EXISTS idx_wiki_version_created_at ON wiki_version(created_at DESC);
 
--- 4. Wiki 파일 테이블
+-- 4. Wiki 파일 테이블 (Phase 2: PDF 변환 기능 포함)
 CREATE TABLE IF NOT EXISTS wiki_file (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     document_id BIGINT,
@@ -65,6 +65,10 @@ CREATE TABLE IF NOT EXISTS wiki_file (
     file_size BIGINT NOT NULL,
     file_type VARCHAR(50),
     type VARCHAR(20) NOT NULL CHECK (type IN ('IMAGE', 'DOCUMENT', 'ATTACHMENT')),
+    mime_type VARCHAR(50),
+    conversion_status VARCHAR(20) NOT NULL DEFAULT 'NOT_APPLICABLE',
+    conversion_error_message VARCHAR(1000),
+    converted_at TIMESTAMP,
     uploaded_by BIGINT NOT NULL,
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_wiki_file_document FOREIGN KEY (document_id) REFERENCES wiki_document(id) ON DELETE CASCADE,
@@ -73,6 +77,7 @@ CREATE TABLE IF NOT EXISTS wiki_file (
 
 CREATE INDEX IF NOT EXISTS idx_wiki_file_document ON wiki_file(document_id);
 CREATE INDEX IF NOT EXISTS idx_wiki_file_type ON wiki_file(type);
+CREATE INDEX IF NOT EXISTS idx_wiki_file_conversion_status ON wiki_file(conversion_status);
 CREATE INDEX IF NOT EXISTS idx_wiki_file_uploaded_at ON wiki_file(uploaded_at DESC);
 
 -- 5. SR-Wiki 연계 테이블 (Many-to-Many)

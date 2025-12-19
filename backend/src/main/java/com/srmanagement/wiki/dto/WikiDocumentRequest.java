@@ -27,4 +27,9 @@ public class WikiDocumentRequest {
 
     @Size(max = 200, message = "변경 요약은 200자를 초과할 수 없습니다")
     private String changeSummary;
+
+    /**
+     * 목차 자동 생성 여부 (기본값: false)
+     */
+    private Boolean generateToc;
 }

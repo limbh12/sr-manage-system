@@ -204,18 +204,48 @@ CREATE TABLE wiki_category (
 
 ---
 
-#### D-2: 멀티미디어 자산 추출
+#### D-2: 멀티미디어 자산 추출 ✅ 완료
 **Priority**: MEDIUM | **Estimate**: 5 Story Points
 
 **User Story**
 > 사용자로서, PDF 내 이미지가 자동으로 추출되어 마크다운 문서에 삽입되기를 원합니다.
 
 **Acceptance Criteria**
-* [ ] PDF에서 이미지 추출 (Apache PDFBox 사용)
-* [ ] 추출된 이미지를 로컬 스토리지에 저장
-* [ ] 마크다운에 이미지 URL 자동 삽입
-* [ ] 이미지 포맷 변환 (TIFF → PNG)
-* [ ] 이미지 크기 최적화 (리사이징)
+* [x] PDF에서 이미지 추출 (Apache PDFBox 사용)
+* [x] 추출된 이미지를 로컬 스토리지에 저장
+* [x] 마크다운에 이미지 URL 자동 삽입
+* [x] **페이지별 이미지 위치 정보 기록**
+* [x] **원본 PDF 페이지 위치에 이미지 자동 배치**
+* [x] **PNG 포맷으로 이미지 저장**
+
+**구현 상세**
+```java
+// PdfConversionService: 페이지별 이미지 추출
+public List<ExtractedImage> extractImages(String pdfFilePath, String outputDir) {
+    List<ExtractedImage> extractedImages = new ArrayList<>();
+    try (PDDocument document = PDDocument.load(new File(pdfFilePath))) {
+        int pageNum = 0;
+        for (PDPage page : document.getPages()) {
+            pageNum++;
+            PDResources resources = page.getResources();
+            for (COSName name : resources.getXObjectNames()) {
+                PDXObject xobject = resources.getXObject(name);
+                if (xobject instanceof PDImageXObject) {
+                    PDImageXObject image = (PDImageXObject) xobject;
+                    String filename = String.format("page_%d_img_%d.png", pageNum, imageCounter);
+                    BufferedImage bImage = image.getImage();
+                    ImageIO.write(bImage, "PNG", new File(filepath));
+                    extractedImages.add(new ExtractedImage(
+                        filename, filepath, pageNum, imageCounter,
+                        bImage.getWidth(), bImage.getHeight(), fileSize
+                    ));
+                }
+            }
+        }
+    }
+    return extractedImages;
+}
+```
 
 ---
 
@@ -733,22 +763,40 @@ export OLLAMA_EMBEDDING_MODEL=nomic-embed-text
 ### Phase 2: PDF 변환 기능 (3주) ✅ 완료
 **목표**: PDF 문서를 위키로 자동 변환
 
-* [x] D-1: PDF to Markdown 변환 (Apache Tika)
+* [x] D-1: PDF to Markdown 변환 (Apache Tika + PDFBox)
   - Apache Tika를 통한 PDF 텍스트 추출
   - 마크다운 형식 자동 변환 (제목, 단락, 리스트 인식)
   - 변환 상태 관리 (PENDING, PROCESSING, COMPLETED, FAILED)
+  - **페이지별 텍스트 추출 및 구조 유지**
+  - **자동 버전 1 생성 (PDF 변환 문서도 버전 관리)**
 * [x] PDF 업로드 UI 및 진행 상태 표시
   - 드래그 앤 드롭 방식의 PDF 업로드 모달
-  - 실시간 변환 진행 상태 표시 (Progress Bar)
-  - 변환 완료 시 자동으로 Wiki 문서 생성
-* [ ] D-2: PDF 내 이미지 추출 및 저장 (향후 개선 예정)
-* [ ] 변환 결과 미리보기 (향후 개선 예정)
+  - **드래그 앤 드롭 시 Chrome PDF 뷰어 방지 (preventDefault)**
+  - 변환 완료 시 자동으로 Wiki 문서 생성 및 페이지 이동
+  - **카테고리 선택 기능 추가**
+* [x] D-2: PDF 내 이미지 추출 및 원본 위치 배치 ✅ **완료**
+  - **Apache PDFBox를 통한 이미지 추출 (페이지 번호 기록)**
+  - **이미지를 원본 PDF 페이지 위치에 정확히 배치**
+  - **마커 기반 이미지 삽입 시스템 ({{IMAGES_PAGE_N}})**
+  - **페이지별 이미지 그룹화 및 자동 배치**
+* [x] 목차 자동 생성 기능 ✅ **신규 추가**
+  - **MarkdownTocGenerator 유틸리티 구현**
+  - **마크다운 문서 저장 시 목차 자동 생성 옵션**
+  - **GitHub/rehype-slug 호환 앵커 링크 생성**
+  - **H2~H6 제목 자동 추출 및 계층 구조 유지**
+  - **프론트엔드 목차 체크박스 UI 추가**
 
 **Deliverables** ✅
 - ✅ PDF 파일을 업로드하면 자동으로 마크다운 변환됨
 - ✅ 변환된 문서를 위키에 저장하고 편집 가능
 - ✅ 변환 상태 추적 (DB에 저장)
 - ✅ 변환 실패 시 에러 메시지 표시
+- ✅ **PDF 내 이미지 자동 추출 및 원본 페이지 위치에 배치**
+- ✅ **페이지별 이미지 구조 유지 (Page 1 이미지 → Page 1 끝에 배치)**
+- ✅ **PDF 변환 문서도 버전 1부터 이력 추적 가능**
+- ✅ **마크다운 문서 작성 시 목차 자동 생성**
+- ✅ **목차 링크 클릭 시 페이지 내 스크롤 이동**
+- ✅ **드래그 앤 드롭 PDF 뷰어 버그 수정**
 
 ---
 

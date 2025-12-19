@@ -6,9 +6,11 @@ import com.srmanagement.wiki.dto.WikiFileResponse;
 import com.srmanagement.wiki.entity.WikiDocument;
 import com.srmanagement.wiki.entity.WikiFile;
 import com.srmanagement.wiki.entity.WikiCategory;
+import com.srmanagement.wiki.entity.WikiVersion;
 import com.srmanagement.wiki.repository.WikiDocumentRepository;
 import com.srmanagement.wiki.repository.WikiFileRepository;
 import com.srmanagement.wiki.repository.WikiCategoryRepository;
+import com.srmanagement.wiki.repository.WikiVersionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,11 +20,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -37,6 +41,7 @@ public class WikiFileService {
     private final WikiCategoryRepository wikiCategoryRepository;
     private final UserRepository userRepository;
     private final PdfConversionService pdfConversionService;
+    private final WikiVersionRepository wikiVersionRepository;
 
     @Value("${wiki.upload.base-path:./uploads}")
     private String uploadBasePath;
@@ -133,15 +138,35 @@ public class WikiFileService {
         wikiFileRepository.save(wikiFile);
 
         try {
-            // PDF를 마크다운으로 변환
-            String markdown = pdfConversionService.convertPdfToMarkdown(
-                    wikiFile.getFilePath(),
-                    wikiFile.getOriginalFileName()
-            );
+            // PDF를 마크다운으로 변환 (페이지별 이미지 마커 포함)
+            PdfConversionService.PdfConversionResult conversionResult =
+                    pdfConversionService.convertPdfToMarkdownWithImages(
+                            wikiFile.getFilePath(),
+                            wikiFile.getOriginalFileName()
+                    );
 
-            // Wiki 문서 생성
+            String markdown = conversionResult.getMarkdown();
+
+            // PDF에서 이미지 추출
+            List<PdfConversionService.ExtractedImage> extractedImages = new ArrayList<>();
+            java.util.Map<Integer, List<String>> pageImageLinks = new java.util.HashMap<>();
+
+            try {
+                // 이미지 저장 디렉토리 생성
+                Path pdfPath = Paths.get(wikiFile.getFilePath());
+                String imageDir = pdfPath.getParent().toString() + File.separator + "images_" + wikiFile.getId();
+
+                extractedImages = pdfConversionService.extractImages(wikiFile.getFilePath(), imageDir);
+                log.info("PDF에서 {} 개의 이미지 추출됨", extractedImages.size());
+            } catch (Exception e) {
+                log.warn("PDF 이미지 추출 실패 (계속 진행): {}", e.getMessage());
+            }
+
+            // Wiki 문서 생성 또는 업데이트
             WikiDocument document;
-            if (wikiFile.getDocument() != null) {
+            boolean isNewDocument = (wikiFile.getDocument() == null);
+
+            if (!isNewDocument) {
                 // 기존 문서 업데이트
                 document = wikiFile.getDocument();
                 document.setContent(markdown);
@@ -167,6 +192,70 @@ public class WikiFileService {
             }
 
             WikiDocument savedDocument = wikiDocumentRepository.save(document);
+
+            // 추출된 이미지를 WikiFile로 등록하고 페이지별로 그룹화
+            for (PdfConversionService.ExtractedImage extractedImage : extractedImages) {
+                try {
+                    WikiFile imageFile = WikiFile.builder()
+                            .document(savedDocument)
+                            .originalFileName(extractedImage.getFilename())
+                            .storedFileName(extractedImage.getFilename())
+                            .filePath(extractedImage.getFilepath())
+                            .fileSize(extractedImage.getFileSize())
+                            .mimeType("image/png")
+                            .type(WikiFile.FileType.IMAGE)
+                            .conversionStatus(WikiFile.ConversionStatus.NOT_APPLICABLE)
+                            .uploadedBy(wikiFile.getUploadedBy())
+                            .build();
+
+                    WikiFile savedImageFile = wikiFileRepository.save(imageFile);
+                    log.info("이미지 파일 등록 완료: {}", extractedImage.getFilename());
+
+                    // 페이지별로 이미지 링크 그룹화
+                    int pageNum = extractedImage.getPageNumber();
+                    pageImageLinks.putIfAbsent(pageNum, new ArrayList<>());
+
+                    String imageMarkdown = String.format("![%s - Page %d](%s)",
+                            extractedImage.getFilename(),
+                            pageNum,
+                            "/api/wiki/files/" + savedImageFile.getId());
+                    pageImageLinks.get(pageNum).add(imageMarkdown);
+
+                } catch (Exception e) {
+                    log.error("이미지 파일 등록 실패: {}", extractedImage.getFilename(), e);
+                }
+            }
+
+            // 마커를 실제 이미지 링크로 대체
+            for (int pageNum = 1; pageNum <= conversionResult.getTotalPages(); pageNum++) {
+                String marker = "{{IMAGES_PAGE_" + pageNum + "}}";
+                List<String> images = pageImageLinks.get(pageNum);
+
+                if (images != null && !images.isEmpty()) {
+                    String imageSection = "\n\n### 📷 이미지\n\n" + String.join("\n\n", images) + "\n";
+                    markdown = markdown.replace(marker, imageSection);
+                } else {
+                    // 이미지가 없으면 마커 제거
+                    markdown = markdown.replace(marker, "");
+                }
+            }
+
+            // 최종 마크다운으로 문서 업데이트
+            savedDocument.setContent(markdown);
+            savedDocument = wikiDocumentRepository.save(savedDocument);
+
+            // 새 문서인 경우 버전 1 생성
+            if (isNewDocument) {
+                WikiVersion firstVersion = WikiVersion.builder()
+                        .document(savedDocument)
+                        .version(1)
+                        .content(markdown)
+                        .changeSummary("PDF 변환으로 생성")
+                        .createdBy(wikiFile.getUploadedBy())
+                        .build();
+                wikiVersionRepository.save(firstVersion);
+                log.info("버전 1 생성 완료: document={}", savedDocument.getId());
+            }
 
             // 파일과 문서 연결
             wikiFile.setDocument(savedDocument);

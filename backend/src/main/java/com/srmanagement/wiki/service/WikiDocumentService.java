@@ -12,6 +12,7 @@ import com.srmanagement.wiki.entity.WikiVersion;
 import com.srmanagement.wiki.repository.WikiCategoryRepository;
 import com.srmanagement.wiki.repository.WikiDocumentRepository;
 import com.srmanagement.wiki.repository.WikiVersionRepository;
+import com.srmanagement.wiki.util.MarkdownTocGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -40,9 +41,17 @@ public class WikiDocumentService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
 
+        // 목차 자동 생성 (옵션)
+        String content = request.getContent();
+        boolean shouldGenerateToc = request.getGenerateToc() != null && request.getGenerateToc();
+        if (shouldGenerateToc) {
+            content = MarkdownTocGenerator.generateTableOfContents(content, true);
+            log.info("목차 자동 생성 완료");
+        }
+
         WikiDocument document = WikiDocument.builder()
                 .title(request.getTitle())
-                .content(request.getContent())
+                .content(content)
                 .createdBy(user)
                 .build();
 
@@ -69,7 +78,7 @@ public class WikiDocumentService {
         WikiVersion firstVersion = WikiVersion.builder()
                 .document(savedDocument)
                 .version(1)
-                .content(request.getContent())
+                .content(content)  // 목차가 포함된 content 사용
                 .changeSummary("최초 생성")
                 .createdBy(user)
                 .build();
@@ -89,11 +98,19 @@ public class WikiDocumentService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
 
+        // 목차 자동 생성 (옵션)
+        String content = request.getContent();
+        boolean shouldGenerateToc = request.getGenerateToc() != null && request.getGenerateToc();
+        if (shouldGenerateToc) {
+            content = MarkdownTocGenerator.generateTableOfContents(content, true);
+            log.info("목차 자동 생성 완료");
+        }
+
         // 내용이 변경되었는지 확인
-        boolean contentChanged = !document.getContent().equals(request.getContent());
+        boolean contentChanged = !document.getContent().equals(content);
 
         document.setTitle(request.getTitle());
-        document.setContent(request.getContent());
+        document.setContent(content);
         document.setUpdatedBy(user);
 
         // 카테고리 변경
@@ -123,7 +140,7 @@ public class WikiDocumentService {
             WikiVersion newVersion = WikiVersion.builder()
                     .document(savedDocument)
                     .version(latestVersion + 1)
-                    .content(request.getContent())
+                    .content(content)  // 목차가 포함된 content 사용
                     .changeSummary(request.getChangeSummary() != null ? request.getChangeSummary() : "내용 수정")
                     .createdBy(user)
                     .build();

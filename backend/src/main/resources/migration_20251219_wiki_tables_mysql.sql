@@ -1,7 +1,7 @@
 -- =====================================================
 -- Wiki 테이블 마이그레이션 스크립트 (MySQL 8.x)
 -- 작성일: 2025-12-19
--- 설명: Wiki 기능 Phase 1 - 기본 Wiki 시스템 테이블 생성
+-- 설명: Wiki 기능 (Phase 1 + Phase 2 PDF 변환)
 -- =====================================================
 
 -- 1. Wiki 카테고리 테이블
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS wiki_version (
     CONSTRAINT fk_wiki_version_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 4. Wiki 파일 테이블
+-- 4. Wiki 파일 테이블 (Phase 2: PDF 변환 기능 포함)
 CREATE TABLE IF NOT EXISTS wiki_file (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     document_id BIGINT,
@@ -65,10 +65,15 @@ CREATE TABLE IF NOT EXISTS wiki_file (
     file_size BIGINT NOT NULL,
     file_type VARCHAR(50),
     type ENUM('IMAGE', 'DOCUMENT', 'ATTACHMENT') NOT NULL,
+    mime_type VARCHAR(50) COMMENT 'MIME 타입 (application/pdf, image/png 등)',
+    conversion_status VARCHAR(20) NOT NULL DEFAULT 'NOT_APPLICABLE' COMMENT '변환 상태: NOT_APPLICABLE, PENDING, PROCESSING, COMPLETED, FAILED',
+    conversion_error_message VARCHAR(1000) COMMENT 'PDF 변환 실패 시 에러 메시지',
+    converted_at TIMESTAMP COMMENT 'PDF 변환 완료 시각',
     uploaded_by BIGINT NOT NULL,
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_wiki_file_document (document_id),
     INDEX idx_wiki_file_type (type),
+    INDEX idx_wiki_file_conversion_status (conversion_status),
     INDEX idx_wiki_file_uploaded_at (uploaded_at DESC),
     CONSTRAINT fk_wiki_file_document FOREIGN KEY (document_id) REFERENCES wiki_document(id) ON DELETE CASCADE,
     CONSTRAINT fk_wiki_file_uploaded_by FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE

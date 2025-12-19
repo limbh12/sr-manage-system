@@ -1,7 +1,14 @@
 package com.srmanagement.wiki.service;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDResources;
+import org.apache.pdfbox.pdmodel.graphics.PDXObject;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.AutoDetectParser;
@@ -11,9 +18,14 @@ import org.apache.tika.sax.BodyContentHandler;
 import org.springframework.stereotype.Service;
 import org.xml.sax.SAXException;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -144,6 +156,82 @@ public class PdfConversionService {
     }
 
     /**
+     * PDF를 마크다운으로 변환하고 이미지 위치 정보 반환
+     *
+     * @param filePath PDF 파일 경로
+     * @param originalFileName 원본 파일명
+     * @return 마크다운 텍스트와 페이지별 이미지 맵
+     * @throws IOException PDF 읽기 실패
+     * @throws TikaException Tika 파싱 실패
+     * @throws SAXException XML 파싱 실패
+     */
+    public PdfConversionResult convertPdfToMarkdownWithImages(String filePath, String originalFileName)
+            throws IOException, TikaException, SAXException {
+        log.info("PDF 변환 시작 (이미지 포함): {}", filePath);
+
+        // 페이지별 텍스트 추출
+        List<String> pageTexts = extractTextByPages(filePath);
+
+        // 마크다운 생성
+        StringBuilder markdown = new StringBuilder();
+        String title = originalFileName.replaceAll("\\.pdf$", "");
+        markdown.append("# ").append(title).append("\n\n");
+
+        // 페이지별 텍스트 추가 (이미지 삽입 위치 마커 포함)
+        for (int i = 0; i < pageTexts.size(); i++) {
+            int pageNum = i + 1;
+            String pageText = pageTexts.get(i);
+
+            // 페이지 구분자 추가 (2페이지부터)
+            if (pageNum > 1) {
+                markdown.append("\n\n---\n\n");
+                markdown.append("## Page ").append(pageNum).append("\n\n");
+            }
+
+            // 페이지 텍스트 추가
+            markdown.append(convertToMarkdown(pageText, ""));
+
+            // 이미지 삽입 위치 마커 (WikiFileService에서 대체됨)
+            markdown.append("\n\n{{IMAGES_PAGE_").append(pageNum).append("}}\n\n");
+        }
+
+        return new PdfConversionResult(markdown.toString(), pageTexts.size());
+    }
+
+    /**
+     * PDF를 페이지별로 텍스트 추출
+     */
+    private List<String> extractTextByPages(String filePath) throws IOException {
+        List<String> pageTexts = new ArrayList<>();
+
+        try (PDDocument document = PDDocument.load(new File(filePath))) {
+            for (PDPage page : document.getPages()) {
+                try {
+                    // 각 페이지를 별도 파일처럼 처리
+                    PDDocument singlePageDoc = new PDDocument();
+                    singlePageDoc.addPage(page);
+
+                    // 임시 파일로 저장 후 Tika로 텍스트 추출
+                    File tempFile = File.createTempFile("page_", ".pdf");
+                    singlePageDoc.save(tempFile);
+                    singlePageDoc.close();
+
+                    String pageText = extractTextFromPdf(tempFile.getAbsolutePath());
+                    pageTexts.add(pageText);
+
+                    tempFile.delete();
+                } catch (Exception e) {
+                    log.warn("페이지 텍스트 추출 실패, 빈 텍스트로 대체: {}", e.getMessage());
+                    pageTexts.add("");
+                }
+            }
+        }
+
+        log.info("페이지별 텍스트 추출 완료: {} 페이지", pageTexts.size());
+        return pageTexts;
+    }
+
+    /**
      * 제목처럼 보이는 줄인지 판단
      */
     private boolean isLikelyHeading(String line) {
@@ -185,5 +273,99 @@ public class PdfConversionService {
 
             return metadata;
         }
+    }
+
+    /**
+     * PDF에서 이미지 추출
+     *
+     * @param pdfFilePath PDF 파일 경로
+     * @param outputDir 이미지 저장 디렉토리
+     * @return 추출된 이미지 정보 리스트
+     * @throws IOException 이미지 추출 실패
+     */
+    public List<ExtractedImage> extractImages(String pdfFilePath, String outputDir) throws IOException {
+        log.info("PDF 이미지 추출 시작: {}", pdfFilePath);
+
+        List<ExtractedImage> extractedImages = new ArrayList<>();
+        File outputDirectory = new File(outputDir);
+
+        if (!outputDirectory.exists()) {
+            outputDirectory.mkdirs();
+        }
+
+        try (PDDocument document = PDDocument.load(new File(pdfFilePath))) {
+            int pageNum = 0;
+            int imageCounter = 0;
+
+            for (PDPage page : document.getPages()) {
+                pageNum++;
+                PDResources resources = page.getResources();
+
+                if (resources == null) {
+                    continue;
+                }
+
+                for (org.apache.pdfbox.cos.COSName name : resources.getXObjectNames()) {
+                    PDXObject xobject = resources.getXObject(name);
+
+                    if (xobject instanceof PDImageXObject) {
+                        PDImageXObject image = (PDImageXObject) xobject;
+                        imageCounter++;
+
+                        // 이미지 파일명 생성
+                        String filename = String.format("page_%d_img_%d.png", pageNum, imageCounter);
+                        String filepath = outputDir + File.separator + filename;
+
+                        // 이미지 저장
+                        BufferedImage bImage = image.getImage();
+                        ImageIO.write(bImage, "PNG", new File(filepath));
+
+                        log.info("이미지 추출 완료: {} ({}x{})", filename, bImage.getWidth(), bImage.getHeight());
+
+                        extractedImages.add(new ExtractedImage(
+                                filename,
+                                filepath,
+                                pageNum,
+                                imageCounter,
+                                bImage.getWidth(),
+                                bImage.getHeight(),
+                                (long) new File(filepath).length()
+                        ));
+                    }
+                }
+            }
+
+            log.info("PDF 이미지 추출 완료: 총 {} 개", extractedImages.size());
+            return extractedImages;
+
+        } catch (Exception e) {
+            log.error("PDF 이미지 추출 실패: {}", pdfFilePath, e);
+            throw new IOException("PDF 이미지 추출 실패: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 추출된 이미지 정보
+     */
+    @Data
+    @AllArgsConstructor
+    public static class ExtractedImage {
+        private String filename;
+        private String filepath;
+        private int pageNumber;
+        private int imageNumber;
+        private int width;
+        private int height;
+        private Long fileSize;
+    }
+
+    /**
+     * PDF 변환 결과 (마크다운 + 페이지 수)
+     */
+    @Data
+    @AllArgsConstructor
+    public static class PdfConversionResult {
+        private String markdown;
+        private int totalPages;
     }
 }

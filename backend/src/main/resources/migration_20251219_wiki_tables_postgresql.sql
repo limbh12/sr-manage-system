@@ -1,7 +1,7 @@
 -- =====================================================
 -- Wiki 테이블 마이그레이션 스크립트 (PostgreSQL)
 -- 작성일: 2025-12-19
--- 설명: Wiki 기능 Phase 1 - 기본 Wiki 시스템 테이블 생성
+-- 설명: Wiki 기능 (Phase 1 + Phase 2 PDF 변환)
 -- =====================================================
 
 -- 1. Wiki 카테고리 테이블
@@ -74,8 +74,9 @@ CREATE TABLE IF NOT EXISTS wiki_version (
 CREATE INDEX IF NOT EXISTS idx_wiki_version_document ON wiki_version(document_id);
 CREATE INDEX IF NOT EXISTS idx_wiki_version_created_at ON wiki_version(created_at DESC);
 
--- 4. Wiki 파일 테이블
-CREATE TYPE wiki_file_type AS ENUM ('IMAGE', 'DOCUMENT', 'ATTACHMENT');
+-- 4. Wiki 파일 테이블 (Phase 2: PDF 변환 기능 포함)
+CREATE TYPE IF NOT EXISTS wiki_file_type AS ENUM ('IMAGE', 'DOCUMENT', 'ATTACHMENT');
+CREATE TYPE IF NOT EXISTS wiki_conversion_status AS ENUM ('NOT_APPLICABLE', 'PENDING', 'PROCESSING', 'COMPLETED', 'FAILED');
 
 CREATE TABLE IF NOT EXISTS wiki_file (
     id BIGSERIAL PRIMARY KEY,
@@ -86,6 +87,10 @@ CREATE TABLE IF NOT EXISTS wiki_file (
     file_size BIGINT NOT NULL,
     file_type VARCHAR(50),
     type wiki_file_type NOT NULL,
+    mime_type VARCHAR(50),
+    conversion_status wiki_conversion_status NOT NULL DEFAULT 'NOT_APPLICABLE',
+    conversion_error_message VARCHAR(1000),
+    converted_at TIMESTAMP,
     uploaded_by BIGINT NOT NULL,
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_wiki_file_document FOREIGN KEY (document_id) REFERENCES wiki_document(id) ON DELETE CASCADE,
@@ -94,7 +99,14 @@ CREATE TABLE IF NOT EXISTS wiki_file (
 
 CREATE INDEX IF NOT EXISTS idx_wiki_file_document ON wiki_file(document_id);
 CREATE INDEX IF NOT EXISTS idx_wiki_file_type ON wiki_file(type);
+CREATE INDEX IF NOT EXISTS idx_wiki_file_conversion_status ON wiki_file(conversion_status);
 CREATE INDEX IF NOT EXISTS idx_wiki_file_uploaded_at ON wiki_file(uploaded_at DESC);
+
+-- 컬럼 설명 추가
+COMMENT ON COLUMN wiki_file.mime_type IS 'MIME 타입 (application/pdf, image/png 등)';
+COMMENT ON COLUMN wiki_file.conversion_status IS '변환 상태: NOT_APPLICABLE, PENDING, PROCESSING, COMPLETED, FAILED';
+COMMENT ON COLUMN wiki_file.conversion_error_message IS 'PDF 변환 실패 시 에러 메시지';
+COMMENT ON COLUMN wiki_file.converted_at IS 'PDF 변환 완료 시각';
 
 -- 5. SR-Wiki 연계 테이블 (Many-to-Many)
 CREATE TABLE IF NOT EXISTS sr_wiki_document (

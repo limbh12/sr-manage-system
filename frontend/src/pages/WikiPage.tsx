@@ -41,6 +41,7 @@ const WikiPage: React.FC = () => {
   const [selectedSrId, setSelectedSrId] = useState<number | null>(null);
   const [showPdfUpload, setShowPdfUpload] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [generateToc, setGenerateToc] = useState(false); // 목차 자동 생성 옵션
 
   // 카테고리 로드
   useEffect(() => {
@@ -176,6 +177,7 @@ const WikiPage: React.FC = () => {
       content: editContent,
       categoryId: editCategoryId,
       srIds: editSrs.map(sr => sr.id),
+      generateToc: generateToc, // 목차 자동 생성 옵션 추가
     };
 
     try {
@@ -374,6 +376,15 @@ const WikiPage: React.FC = () => {
 
           {(isEditing || isCreating) && (
             <>
+              <label className="toc-checkbox-label" style={{ marginRight: '16px' }}>
+                <input
+                  type="checkbox"
+                  checked={generateToc}
+                  onChange={(e) => setGenerateToc(e.target.checked)}
+                  style={{ marginRight: '6px' }}
+                />
+                📑 목차 자동 생성
+              </label>
               <button className="btn-primary" onClick={handleSaveDocument} disabled={loading}>
                 {loading ? '저장 중...' : '저장'}
               </button>
@@ -382,6 +393,7 @@ const WikiPage: React.FC = () => {
                 onClick={() => {
                   setIsEditing(false);
                   setIsCreating(false);
+                  setGenerateToc(false); // 취소 시 목차 옵션 초기화
                   if (currentDocument) {
                     setEditTitle(currentDocument.title);
                     setEditContent(currentDocument.content);

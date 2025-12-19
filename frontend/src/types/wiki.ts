@@ -30,6 +30,7 @@ export interface WikiDocumentRequest {
   categoryId?: number;
   srIds?: number[];
   changeSummary?: string;
+  generateToc?: boolean; // 목차 자동 생성 옵션
 }
 
 // Wiki 카테고리
