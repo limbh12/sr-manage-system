@@ -17,11 +17,16 @@ const WikiEditor: React.FC<WikiEditorProps> = ({
   documentId,
 }) => {
   const editorRef = useRef<Editor>(null);
+  const isInitializedRef = useRef(false);
 
+  // 초기 값 설정 (최초 1회만)
   useEffect(() => {
-    if (editorRef.current && initialValue) {
+    if (editorRef.current && !isInitializedRef.current) {
       const editorInstance = editorRef.current.getInstance();
-      editorInstance.setMarkdown(initialValue);
+      if (initialValue) {
+        editorInstance.setMarkdown(initialValue);
+      }
+      isInitializedRef.current = true;
     }
   }, [initialValue]);
 
