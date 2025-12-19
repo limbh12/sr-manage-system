@@ -5,8 +5,10 @@ import com.srmanagement.repository.UserRepository;
 import com.srmanagement.wiki.dto.WikiFileResponse;
 import com.srmanagement.wiki.entity.WikiDocument;
 import com.srmanagement.wiki.entity.WikiFile;
+import com.srmanagement.wiki.entity.WikiCategory;
 import com.srmanagement.wiki.repository.WikiDocumentRepository;
 import com.srmanagement.wiki.repository.WikiFileRepository;
+import com.srmanagement.wiki.repository.WikiCategoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,6 +34,7 @@ public class WikiFileService {
 
     private final WikiFileRepository wikiFileRepository;
     private final WikiDocumentRepository wikiDocumentRepository;
+    private final WikiCategoryRepository wikiCategoryRepository;
     private final UserRepository userRepository;
     private final PdfConversionService pdfConversionService;
 
@@ -113,8 +116,8 @@ public class WikiFileService {
      * PDF를 마크다운으로 변환하고 Wiki 문서 생성
      */
     @Transactional
-    public WikiDocument convertPdfToWikiDocument(Long fileId, Long userId) {
-        log.info("Starting PDF conversion for file: {}", fileId);
+    public WikiDocument convertPdfToWikiDocument(Long fileId, Long userId, Long categoryId) {
+        log.info("Starting PDF conversion for file: {}, categoryId: {}", fileId, categoryId);
 
         // 파일 조회
         WikiFile wikiFile = wikiFileRepository.findById(fileId)
@@ -146,9 +149,18 @@ public class WikiFileService {
             } else {
                 // 새 문서 생성
                 String title = wikiFile.getOriginalFileName().replaceAll("\\.pdf$", "");
+
+                // 카테고리 조회
+                WikiCategory category = null;
+                if (categoryId != null) {
+                    category = wikiCategoryRepository.findById(categoryId)
+                            .orElse(null);
+                }
+
                 document = WikiDocument.builder()
                         .title(title)
                         .content(markdown)
+                        .category(category)
                         .createdBy(wikiFile.getUploadedBy())
                         .updatedBy(wikiFile.getUploadedBy())
                         .build();
@@ -182,13 +194,13 @@ public class WikiFileService {
      */
     @Transactional
     public WikiDocument uploadAndConvertPdf(MultipartFile file, Long categoryId, Long userId) throws IOException {
-        log.info("Uploading and converting PDF: {}", file.getOriginalFilename());
+        log.info("Uploading and converting PDF: {}, categoryId: {}", file.getOriginalFilename(), categoryId);
 
         // 파일 업로드
         WikiFileResponse uploadedFile = uploadFile(file, null, userId);
 
         // PDF 변환 및 Wiki 문서 생성
-        return convertPdfToWikiDocument(uploadedFile.getId(), userId);
+        return convertPdfToWikiDocument(uploadedFile.getId(), userId, categoryId);
     }
 
     /**
@@ -201,7 +213,8 @@ public class WikiFileService {
 
         for (WikiFile file : pendingFiles) {
             try {
-                convertPdfToWikiDocument(file.getId(), file.getUploadedBy().getId());
+                // 대기 중인 변환은 카테고리 없이 처리
+                convertPdfToWikiDocument(file.getId(), file.getUploadedBy().getId(), null);
             } catch (Exception e) {
                 log.error("Failed to convert PDF: {}", file.getId(), e);
             }

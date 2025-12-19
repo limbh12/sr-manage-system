@@ -112,12 +112,13 @@ public class WikiFileController {
     @PostMapping("/{fileId}/convert")
     public ResponseEntity<WikiDocumentResponse> convertPdfToMarkdown(
             @PathVariable Long fileId,
+            @RequestParam(value = "categoryId", required = false) Long categoryId,
             Authentication authentication) {
 
         User user = userRepository.findByUsername(authentication.getName())
                 .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
 
-        WikiDocument document = wikiFileService.convertPdfToWikiDocument(fileId, user.getId());
+        WikiDocument document = wikiFileService.convertPdfToWikiDocument(fileId, user.getId(), categoryId);
         WikiDocumentResponse response = WikiDocumentResponse.fromEntity(document);
 
         return ResponseEntity.ok(response);

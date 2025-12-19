@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { wikiFileApi } from '../../services/wikiService';
+import React, { useState, useEffect } from 'react';
+import { wikiFileApi, wikiCategoryApi } from '../../services/wikiService';
+import type { WikiCategory } from '../../types/wiki';
 import './PdfUploadModal.css';
 
 interface PdfUploadModalProps {
@@ -14,24 +15,70 @@ const PdfUploadModal: React.FC<PdfUploadModalProps> = ({
   onUploadSuccess
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(undefined);
+  const [categories, setCategories] = useState<WikiCategory[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [conversionStatus, setConversionStatus] = useState<string>('');
+  const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadCategories();
+    }
+  }, [isOpen]);
+
+  const loadCategories = async () => {
+    try {
+      const response = await wikiCategoryApi.getAll();
+      setCategories(response.data);
+    } catch (err) {
+      console.error('카테고리 로딩 실패:', err);
+    }
+  };
+
+  const validateAndSetFile = (file: File) => {
+    if (file.type !== 'application/pdf') {
+      setError('PDF 파일만 업로드 가능합니다.');
+      return false;
+    }
+    if (file.size > 20 * 1024 * 1024) { // 20MB
+      setError('파일 크기는 20MB를 초과할 수 없습니다.');
+      return false;
+    }
+    setSelectedFile(file);
+    setError(null);
+    return true;
+  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.type !== 'application/pdf') {
-        setError('PDF 파일만 업로드 가능합니다.');
-        return;
-      }
-      if (file.size > 20 * 1024 * 1024) { // 20MB
-        setError('파일 크기는 20MB를 초과할 수 없습니다.');
-        return;
-      }
-      setSelectedFile(file);
-      setError(null);
+      validateAndSetFile(file);
+    }
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(false);
+
+    const file = event.dataTransfer.files?.[0];
+    if (file) {
+      validateAndSetFile(file);
     }
   };
 
@@ -51,7 +98,7 @@ const PdfUploadModal: React.FC<PdfUploadModalProps> = ({
       setUploadProgress(30);
       setConversionStatus('PDF 업로드 중...');
 
-      const response = await wikiFileApi.uploadPdf(selectedFile);
+      const response = await wikiFileApi.uploadPdf(selectedFile, selectedCategoryId);
 
       setUploadProgress(60);
       setConversionStatus('PDF 텍스트 추출 중...');
@@ -74,6 +121,7 @@ const PdfUploadModal: React.FC<PdfUploadModalProps> = ({
 
   const handleClose = () => {
     setSelectedFile(null);
+    setSelectedCategoryId(undefined);
     setUploading(false);
     setUploadProgress(0);
     setError(null);
@@ -94,7 +142,33 @@ const PdfUploadModal: React.FC<PdfUploadModalProps> = ({
         <div className="pdf-upload-modal-body">
           {!uploading ? (
             <>
-              <div className="pdf-upload-dropzone">
+              {/* 카테고리 선택 */}
+              <div className="pdf-category-selector">
+                <label htmlFor="category-select" className="pdf-category-label">
+                  카테고리 선택 (선택사항)
+                </label>
+                <select
+                  id="category-select"
+                  className="pdf-category-select"
+                  value={selectedCategoryId || ''}
+                  onChange={(e) => setSelectedCategoryId(e.target.value ? Number(e.target.value) : undefined)}
+                >
+                  <option value="">카테고리 없음</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.parentId ? `└ ${category.name}` : category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 파일 드롭존 */}
+              <div
+                className={`pdf-upload-dropzone ${isDragging ? 'dragging' : ''}`}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
                 <input
                   type="file"
                   id="pdf-file-input"
