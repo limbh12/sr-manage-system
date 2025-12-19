@@ -7,6 +7,7 @@ import WikiViewer from '../components/wiki/WikiViewer';
 import SrSelector from '../components/wiki/SrSelector';
 import SrDetailPanel from '../components/sr/SrDetailPanel';
 import PdfUploadModal from '../components/wiki/PdfUploadModal';
+import VersionHistoryModal from '../components/wiki/VersionHistoryModal';
 import {
   wikiDocumentApi,
   wikiCategoryApi,
@@ -39,6 +40,7 @@ const WikiPage: React.FC = () => {
   const [editSrs, setEditSrs] = useState<SrInfo[]>([]);
   const [selectedSrId, setSelectedSrId] = useState<number | null>(null);
   const [showPdfUpload, setShowPdfUpload] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
 
   // 카테고리 로드
   useEffect(() => {
@@ -359,6 +361,9 @@ const WikiPage: React.FC = () => {
                   <button className="btn-secondary" onClick={() => setIsEditing(true)}>
                     편집
                   </button>
+                  <button className="btn-secondary" onClick={() => setShowVersionHistory(true)}>
+                    📜 버전 이력
+                  </button>
                   <button className="btn-danger" onClick={handleDeleteDocument}>
                     삭제
                   </button>
@@ -489,6 +494,21 @@ const WikiPage: React.FC = () => {
           navigate(`/wiki/${documentId}`);
         }}
       />
+
+      {/* 버전 이력 모달 */}
+      {currentDocument && (
+        <VersionHistoryModal
+          isOpen={showVersionHistory}
+          onClose={() => setShowVersionHistory(false)}
+          documentId={currentDocument.id}
+          onRollback={() => {
+            // 롤백 후 문서 다시 로드
+            if (currentDocument) {
+              loadDocument(currentDocument.id);
+            }
+          }}
+        />
+      )}
     </div>
   );
 };
