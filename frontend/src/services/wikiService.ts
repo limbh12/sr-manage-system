@@ -159,4 +159,22 @@ export const wikiFileApi = {
   // 파일 삭제
   delete: (fileId: number) =>
     api.delete(`/wiki/files/${fileId}`),
+
+  // PDF 업로드 및 자동 변환
+  uploadPdf: (file: File, categoryId?: number) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (categoryId) {
+      formData.append('categoryId', categoryId.toString());
+    }
+    return api.post<WikiDocument>('/wiki/files/upload-pdf', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  // PDF 변환 (파일 ID로)
+  convertPdf: (fileId: number) =>
+    api.post<WikiDocument>(`/wiki/files/${fileId}/convert`),
 };

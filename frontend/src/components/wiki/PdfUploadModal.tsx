@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { wikiFileApi } from '../../services/wikiService';
 import './PdfUploadModal.css';
 
 interface PdfUploadModalProps {
@@ -46,38 +47,21 @@ const PdfUploadModal: React.FC<PdfUploadModalProps> = ({
     setError(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-
-      const token = localStorage.getItem('token');
-
       // 업로드 및 변환 API 호출
       setUploadProgress(30);
       setConversionStatus('PDF 업로드 중...');
 
-      const response = await fetch('/api/wiki/files/upload-pdf', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      if (!response.ok) {
-        throw new Error('업로드 실패');
-      }
+      const response = await wikiFileApi.uploadPdf(selectedFile);
 
       setUploadProgress(60);
       setConversionStatus('PDF 텍스트 추출 중...');
-
-      const result = await response.json();
 
       setUploadProgress(90);
       setConversionStatus('마크다운 변환 완료!');
 
       setTimeout(() => {
         setUploadProgress(100);
-        onUploadSuccess(result.id);
+        onUploadSuccess(response.data.id);
         handleClose();
       }, 500);
 
