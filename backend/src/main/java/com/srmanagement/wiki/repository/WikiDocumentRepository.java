@@ -4,6 +4,7 @@ import com.srmanagement.wiki.entity.WikiDocument;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -62,4 +63,9 @@ public interface WikiDocumentRepository extends JpaRepository<WikiDocument, Long
            "LEFT JOIN FETCH wd.versions " +
            "WHERE wd.id = :id")
     Optional<WikiDocument> findByIdWithVersions(@Param("id") Long id);
+
+    // 조회수 증가 (updatedAt을 변경하지 않음)
+    @Modifying
+    @Query("UPDATE WikiDocument wd SET wd.viewCount = wd.viewCount + 1 WHERE wd.id = :id")
+    void incrementViewCount(@Param("id") Long id);
 }

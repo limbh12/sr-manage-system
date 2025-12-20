@@ -52,6 +52,17 @@ spring:
         dialect: org.hibernate.dialect.H2Dialect
     open-in-view: false
 
+  # Spring AI - Ollama 설정
+  ai:
+    ollama:
+      base-url: http://219.248.153.178:11434
+      chat:
+        options:
+          model: gpt-oss:20b
+      embedding:
+        options:
+          model: snowflake-arctic-embed:latest
+
 # JWT 설정
 # NOTE: 프로덕션 환경에서는 환경 변수로 설정하세요: JWT_SECRET
 jwt:
@@ -74,6 +85,7 @@ logging:
     org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.ai: DEBUG
 
 ---
 # MySQL 프로필

@@ -800,20 +800,44 @@ export OLLAMA_EMBEDDING_MODEL=nomic-embed-text
 
 ---
 
-### Phase 3: AI 검색 기능 (5주)
+### Phase 3: AI 검색 기능 (5주) ✅ 완료
 **목표**: RAG 기반 자연어 검색 및 AI 답변
 
-* [ ] Ollama 서버 연동 및 테스트
-* [ ] Spring AI 통합
-* [ ] A-1: RAG 기반 자연어 검색
-* [ ] A-2: 근거 문서 하이라이팅
-* [ ] Vector DB 임베딩 자동 생성
-* [ ] AI 검색 UI (챗봇 스타일)
+* [x] Ollama 서버 연동 및 테스트
+  - `http://219.248.153.178:11434` 서버 연동
+  - Chat 모델: `gpt-oss:20b`
+  - Embedding 모델: `snowflake-arctic-embed:110m`
+* [x] Spring AI 통합
+  - `spring-ai-ollama-spring-boot-starter` 의존성 추가
+  - OllamaChatModel, OllamaEmbeddingModel 연동
+* [x] A-1: RAG 기반 자연어 검색
+  - 문서 청킹 (2000자 단위, 200자 오버랩)
+  - 코사인 유사도 기반 Top-K 검색
+  - 프롬프트 템플릿 기반 컨텍스트 생성
+* [x] A-2: 근거 문서 하이라이팅
+  - 참고 문서 목록 반환 (제목, 링크, 관련도 점수)
+  - 문서 내 관련 단락 snippet 표시
+* [x] Vector DB 임베딩 자동 생성
+  - 문서 저장 시 비동기 임베딩 생성
+  - 진행률 폴링 UI (실시간 상태 표시)
+  - 수동 임베딩 재생성 버튼
+* [x] AI 검색 UI
+  - AiSearchBox 컴포넌트 구현
+  - 임베딩 상태 표시 (최신/재생성 필요)
+  - 검색 결과 및 참고 문서 표시
 
-**Deliverables**
-- 사용자가 자연어로 질문하면 AI가 답변 생성
-- 답변 생성 시 참고한 문서 링크 제공
-- 위키 문서가 자동으로 벡터 DB에 임베딩됨
+**Deliverables** ✅
+- ✅ 사용자가 자연어로 질문하면 AI가 답변 생성
+- ✅ 답변 생성 시 참고한 문서 링크 제공
+- ✅ 위키 문서가 자동으로 벡터 DB에 임베딩됨
+- ✅ 임베딩 진행률 실시간 표시
+- ✅ 임베딩 상태 동기화 (조회수 증가 시 updatedAt 미변경)
+
+**주요 트러블슈팅**
+- 조회수 증가 시 `@UpdateTimestamp` 트리거 방지 (네이티브 쿼리 사용)
+- 비동기 임베딩 시 트랜잭션 타이밍 이슈 해결 (500ms 대기)
+- `sourceDocumentUpdatedAt` 필드로 정확한 최신 여부 비교
+- 상세 내용: [HISTORY_20251220_WIKI_PHASE3.md](HISTORY_20251220_WIKI_PHASE3.md)
 
 ---
 

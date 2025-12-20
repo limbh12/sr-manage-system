@@ -8,11 +8,14 @@ import SrSelector from '../components/wiki/SrSelector';
 import SrDetailPanel from '../components/sr/SrDetailPanel';
 import PdfUploadModal from '../components/wiki/PdfUploadModal';
 import VersionHistoryModal from '../components/wiki/VersionHistoryModal';
+import AiSearchBox from '../components/wiki/AiSearchBox';
+import aiSearchService from '../services/aiSearchService';
 import {
   wikiDocumentApi,
   wikiCategoryApi,
 } from '../services/wikiService';
 import type { WikiDocument, WikiCategory, WikiDocumentRequest, WikiCategoryRequest, SrInfo } from '../types/wiki';
+import type { EmbeddingStatusResponse, EmbeddingProgressEvent } from '../types/aiSearch';
 import './WikiPage.css';
 
 const WikiPage: React.FC = () => {
@@ -42,6 +45,9 @@ const WikiPage: React.FC = () => {
   const [showPdfUpload, setShowPdfUpload] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [generateToc, setGenerateToc] = useState(false); // 목차 자동 생성 옵션
+  const [embeddingStatus, setEmbeddingStatus] = useState<EmbeddingStatusResponse | null>(null);
+  const [isGeneratingEmbedding, setIsGeneratingEmbedding] = useState(false);
+  const [embeddingProgress, setEmbeddingProgress] = useState<EmbeddingProgressEvent | null>(null);
 
   // 카테고리 로드
   useEffect(() => {
@@ -80,6 +86,18 @@ const WikiPage: React.FC = () => {
       loadAllDocuments();
     }
   }, [showAllDocuments]);
+
+  // 문서 변경 시 임베딩 상태 조회 및 진행률 구독
+  useEffect(() => {
+    if (currentDocument && !isEditing) {
+      loadEmbeddingStatus(currentDocument.id);
+      // 진행 중인 임베딩이 있는지 확인하고 구독
+      checkAndSubscribeProgress(currentDocument.id);
+    } else {
+      setEmbeddingStatus(null);
+      setEmbeddingProgress(null);
+    }
+  }, [currentDocument, isEditing]);
 
   // 카테고리 트리를 평면 리스트로 변환 (드롭다운용)
   const flattenCategories = (cats: WikiCategory[], level = 0, isLast: boolean[] = []): WikiCategory[] => {
@@ -153,6 +171,92 @@ const WikiPage: React.FC = () => {
       console.error('전체 문서 로드 실패:', error);
       alert('문서 목록을 불러오는데 실패했습니다.');
     }
+  };
+
+  const loadEmbeddingStatus = async (documentId: number) => {
+    try {
+      const status = await aiSearchService.getEmbeddingStatus(documentId);
+      setEmbeddingStatus(status);
+    } catch (error) {
+      console.error('임베딩 상태 조회 실패:', error);
+      setEmbeddingStatus(null);
+    }
+  };
+
+  // 진행 중인 임베딩이 있는지 확인하고 SSE 구독
+  const checkAndSubscribeProgress = async (documentId: number) => {
+    try {
+      const progress = await aiSearchService.getCurrentProgress(documentId);
+      if (progress && (progress.status === 'STARTED' || progress.status === 'IN_PROGRESS')) {
+        setEmbeddingProgress(progress);
+        setIsGeneratingEmbedding(true);
+        subscribeToProgress(documentId);
+      } else {
+        setEmbeddingProgress(null);
+        setIsGeneratingEmbedding(false);
+      }
+    } catch (error) {
+      console.error('진행률 조회 실패:', error);
+    }
+  };
+
+  // 폴링으로 진행률 구독
+  const subscribeToProgress = (documentId: number) => {
+    const unsubscribe = aiSearchService.subscribeProgress(
+      documentId,
+      (event) => {
+        setEmbeddingProgress(event);
+        if (event.status === 'COMPLETED') {
+          setIsGeneratingEmbedding(false);
+          loadEmbeddingStatus(documentId);
+        } else if (event.status === 'FAILED') {
+          setIsGeneratingEmbedding(false);
+          alert(`임베딩 생성 실패: ${event.message}`);
+        }
+      },
+      () => {
+        // 완료 시 진행률 상태 초기화 (약간의 딜레이 후)
+        setTimeout(() => setEmbeddingProgress(null), 3000);
+      },
+      (error) => {
+        // 에러 발생 시
+        console.error('임베딩 생성 오류:', error);
+        setIsGeneratingEmbedding(false);
+        alert(error.message || '임베딩 생성 중 오류가 발생했습니다.');
+      }
+    );
+    return unsubscribe;
+  };
+
+  const handleGenerateEmbedding = async () => {
+    if (!currentDocument) return;
+
+    if (!confirm('이 문서의 AI 검색용 임베딩을 생성하시겠습니까?\n(문서 길이에 따라 시간이 소요될 수 있습니다)')) {
+      return;
+    }
+
+    try {
+      setIsGeneratingEmbedding(true);
+      // 비동기 임베딩 생성 시작
+      await aiSearchService.generateEmbeddingsAsync(currentDocument.id);
+      // SSE 구독 시작
+      subscribeToProgress(currentDocument.id);
+    } catch (error: any) {
+      console.error('임베딩 생성 시작 실패:', error);
+      alert(error.response?.data || '임베딩 생성 시작에 실패했습니다.');
+      setIsGeneratingEmbedding(false);
+    }
+  };
+
+  // 진행률 표시 포맷팅
+  const formatTime = (ms?: number) => {
+    if (!ms || ms <= 0) return '-';
+    if (ms < 1000) return `${ms}ms`;
+    const seconds = Math.floor(ms / 1000);
+    if (seconds < 60) return `${seconds}초`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}분 ${remainingSeconds}초`;
   };
 
   const handleCreateDocument = () => {
@@ -366,6 +470,107 @@ const WikiPage: React.FC = () => {
                   <button className="btn-secondary" onClick={() => setShowVersionHistory(true)}>
                     📜 버전 이력
                   </button>
+                  <button
+                    className="btn-secondary"
+                    onClick={handleGenerateEmbedding}
+                    disabled={isGeneratingEmbedding}
+                  >
+                    {isGeneratingEmbedding ? '⏳ 생성 중...' : '🤖 AI 임베딩 생성'}
+                  </button>
+
+                  {/* 진행률 표시 */}
+                  {embeddingProgress && (embeddingProgress.status === 'STARTED' || embeddingProgress.status === 'IN_PROGRESS' || embeddingProgress.status === 'COMPLETED') && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        marginLeft: '12px',
+                        padding: '8px 16px',
+                        backgroundColor: embeddingProgress.status === 'COMPLETED' ? '#d4edda' : '#e3f2fd',
+                        borderRadius: '8px',
+                        border: `1px solid ${embeddingProgress.status === 'COMPLETED' ? '#28a745' : '#2196f3'}`,
+                      }}
+                    >
+                      {embeddingProgress.status !== 'COMPLETED' && (
+                        <div
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            border: '3px solid #e0e0e0',
+                            borderTop: '3px solid #2196f3',
+                            borderRadius: '50%',
+                            animation: 'spin 1s linear infinite',
+                          }}
+                        />
+                      )}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontWeight: '600', fontSize: '13px' }}>
+                            {embeddingProgress.status === 'COMPLETED'
+                              ? '✅ 임베딩 생성 완료'
+                              : `⏳ ${embeddingProgress.currentChunk}/${embeddingProgress.totalChunks} 청크 처리 중`}
+                          </span>
+                          <span style={{
+                            padding: '2px 8px',
+                            backgroundColor: embeddingProgress.status === 'COMPLETED' ? '#28a745' : '#2196f3',
+                            color: 'white',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                          }}>
+                            {embeddingProgress.progressPercent}%
+                          </span>
+                        </div>
+                        {embeddingProgress.status !== 'COMPLETED' && (
+                          <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: '#666' }}>
+                            <span>경과: {formatTime(embeddingProgress.elapsedTimeMs)}</span>
+                            <span>예상 남은 시간: {formatTime(embeddingProgress.estimatedRemainingMs)}</span>
+                          </div>
+                        )}
+                        {/* 진행률 바 */}
+                        <div style={{
+                          width: '200px',
+                          height: '6px',
+                          backgroundColor: '#e0e0e0',
+                          borderRadius: '3px',
+                          overflow: 'hidden',
+                        }}>
+                          <div style={{
+                            width: `${embeddingProgress.progressPercent}%`,
+                            height: '100%',
+                            backgroundColor: embeddingProgress.status === 'COMPLETED' ? '#28a745' : '#2196f3',
+                            transition: 'width 0.3s ease',
+                          }} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 임베딩 상태 배지 (진행 중이 아닐 때만 표시) */}
+                  {!embeddingProgress && embeddingStatus && (
+                    <span
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '4px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        marginLeft: '8px',
+                        backgroundColor: embeddingStatus.hasEmbedding
+                          ? (embeddingStatus.isUpToDate ? '#d4edda' : '#fff3cd')
+                          : '#f8d7da',
+                        color: embeddingStatus.hasEmbedding
+                          ? (embeddingStatus.isUpToDate ? '#155724' : '#856404')
+                          : '#721c24',
+                      }}
+                    >
+                      {embeddingStatus.hasEmbedding
+                        ? (embeddingStatus.isUpToDate
+                          ? `✅ AI 검색 준비됨 (${embeddingStatus.chunkCount}개 청크)`
+                          : '⚠️ 임베딩 재생성 필요')
+                        : '❌ 임베딩 없음'}
+                    </span>
+                  )}
                   <button className="btn-danger" onClick={handleDeleteDocument}>
                     삭제
                   </button>
@@ -478,7 +683,10 @@ const WikiPage: React.FC = () => {
           </div>
         ) : (
           <div className="wiki-empty">
-            <p>문서를 선택하거나 새 문서를 작성해주세요.</p>
+            <AiSearchBox onDocumentClick={(documentId) => navigate(`/wiki/${documentId}`)} />
+            <p style={{ marginTop: '20px', color: 'var(--text-secondary)' }}>
+              또는 문서를 선택하거나 새 문서를 작성해주세요.
+            </p>
           </div>
         )}
       </div>

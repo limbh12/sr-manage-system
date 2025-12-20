@@ -109,7 +109,7 @@ fi
 echo "Logs will be written to: $LOG_FILE"
 
 # 백엔드 실행 (nohup 사용, 로그 리다이렉션)
-nohup java -jar "$JAR_FILE" > "$LOG_FILE" 2>&1 &
+nohup java -Xmx2g -Xms1g -jar "$JAR_FILE" > "$LOG_FILE" 2>&1 &
 
 NEW_PID=$!
 echo ""

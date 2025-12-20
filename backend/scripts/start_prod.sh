@@ -36,7 +36,7 @@ cd "$BACKEND_DIR"
 # 서버 실행
 # -Dspring.profiles.active=prod: 운영 프로필 사용
 # 표준 출력은 버리고(/dev/null), 애플리케이션 내부 로깅 설정(application.yml)에 따라 logs/server.log에 기록
-nohup java -jar -Dspring.profiles.active=prod "$JAR_FILE" > /dev/null 2>&1 &
+nohup java -Xmx2g -Xms1g -jar -Dspring.profiles.active=prod "$JAR_FILE" > /dev/null 2>&1 &
 
 NEW_PID=$!
 echo "Server started successfully with PID: $NEW_PID"

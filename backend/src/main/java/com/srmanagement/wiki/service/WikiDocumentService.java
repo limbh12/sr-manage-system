@@ -33,6 +33,7 @@ public class WikiDocumentService {
     private final WikiCategoryRepository wikiCategoryRepository;
     private final UserRepository userRepository;
     private final SrRepository srRepository;
+    private final AiSearchService aiSearchService;
 
     @Transactional
     public WikiDocumentResponse createDocument(WikiDocumentRequest request, Long userId) {
@@ -84,7 +85,10 @@ public class WikiDocumentService {
                 .build();
         wikiVersionRepository.save(firstVersion);
 
-        log.info("Wiki document created with ID: {}", savedDocument.getId());
+        // 비동기로 임베딩 자동 생성
+        log.info("Wiki document created with ID: {}, 비동기 임베딩 생성 시작", savedDocument.getId());
+        aiSearchService.generateEmbeddingsAsync(savedDocument.getId());
+
         return WikiDocumentResponse.fromEntity(savedDocument);
     }
 
@@ -146,6 +150,10 @@ public class WikiDocumentService {
                     .build();
             wikiVersionRepository.save(newVersion);
             log.info("Created new version {} for document {}", newVersion.getVersion(), id);
+
+            // 비동기로 임베딩 재생성
+            log.info("문서 내용 변경됨: documentId={}, 비동기 임베딩 재생성 시작", savedDocument.getId());
+            aiSearchService.generateEmbeddingsAsync(savedDocument.getId());
         }
 
         log.info("Wiki document updated: {}", id);
@@ -185,8 +193,8 @@ public class WikiDocumentService {
         wikiDocumentRepository.findByIdWithSrs(id);
         wikiDocumentRepository.findByIdWithVersions(id);
 
-        document.incrementViewCount();
-        wikiDocumentRepository.save(document);
+        // 조회수 증가 (updatedAt을 변경하지 않도록 네이티브 쿼리 사용)
+        wikiDocumentRepository.incrementViewCount(id);
 
         return WikiDocumentResponse.fromEntity(document);
     }
