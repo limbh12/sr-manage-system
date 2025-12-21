@@ -6,8 +6,11 @@ import com.srmanagement.wiki.dto.AiSearchRequest;
 import com.srmanagement.wiki.dto.AiSearchResponse;
 import com.srmanagement.wiki.dto.EmbeddingProgressEvent;
 import com.srmanagement.wiki.dto.SummaryResponse;
+import com.srmanagement.wiki.entity.ContentEmbedding;
+import com.srmanagement.wiki.entity.ContentEmbedding.ResourceType;
 import com.srmanagement.wiki.entity.WikiDocument;
 import com.srmanagement.wiki.entity.WikiDocumentEmbedding;
+import com.srmanagement.wiki.repository.ContentEmbeddingRepository;
 import com.srmanagement.wiki.repository.WikiDocumentEmbeddingRepository;
 import com.srmanagement.wiki.repository.WikiDocumentRepository;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +45,7 @@ public class AiSearchService {
 
     private final WikiDocumentRepository documentRepository;
     private final WikiDocumentEmbeddingRepository embeddingRepository;
+    private final ContentEmbeddingRepository contentEmbeddingRepository;
     private final OllamaChatModel chatModel;
     private final OllamaEmbeddingModel embeddingModel;
     private final ObjectMapper objectMapper;
@@ -347,12 +351,143 @@ public class AiSearchService {
 
     /**
      * RAG 기반 자연어 검색
+     * - useUnifiedSearch=true: Wiki, SR, Survey 통합 검색
+     * - useUnifiedSearch=false: Wiki만 검색 (기존 호환)
      *
      * @param request 검색 요청
      * @return AI 답변 및 참고 문서
      */
     @Transactional(readOnly = true)
     public AiSearchResponse search(AiSearchRequest request) {
+        // 통합 검색 사용 여부에 따라 분기
+        if (Boolean.TRUE.equals(request.getUseUnifiedSearch())) {
+            return searchUnified(request);
+        } else {
+            return searchWikiOnly(request);
+        }
+    }
+
+    /**
+     * 통합 검색 (Wiki, SR, Survey)
+     */
+    private AiSearchResponse searchUnified(AiSearchRequest request) {
+        long startTime = System.currentTimeMillis();
+
+        try {
+            // 1. 사용자 질문 임베딩 생성
+            EmbeddingResponse queryEmbeddingResponse = embeddingModel.embedForResponse(List.of(request.getQuestion()));
+            float[] queryEmbeddingArray = queryEmbeddingResponse.getResults().get(0).getOutput();
+
+            List<Double> queryEmbedding = new ArrayList<>();
+            for (float value : queryEmbeddingArray) {
+                queryEmbedding.add((double) value);
+            }
+
+            log.debug("질문 임베딩 생성 완료: {}차원", queryEmbedding.size());
+
+            // 2. 콘텐츠 임베딩 조회
+            List<ContentEmbedding> allEmbeddings;
+
+            // 리소스 타입 필터링
+            if (request.getResourceTypes() != null && !request.getResourceTypes().isEmpty()) {
+                List<ResourceType> resourceTypes = request.getResourceTypes().stream()
+                        .map(ResourceType::valueOf)
+                        .collect(Collectors.toList());
+                allEmbeddings = contentEmbeddingRepository.findByResourceTypeIn(resourceTypes);
+            } else {
+                allEmbeddings = contentEmbeddingRepository.findAllForSearch();
+            }
+
+            log.debug("전체 임베딩 개수: {}", allEmbeddings.size());
+
+            // 3. 코사인 유사도 계산 및 정렬
+            List<ScoredContentEmbedding> scoredEmbeddings = allEmbeddings.stream()
+                    .map(embedding -> {
+                        try {
+                            List<Double> docEmbedding = objectMapper.readValue(
+                                    embedding.getEmbeddingVector(),
+                                    objectMapper.getTypeFactory().constructCollectionType(List.class, Double.class)
+                            );
+                            double similarity = cosineSimilarity(queryEmbedding, docEmbedding);
+                            return new ScoredContentEmbedding(embedding, similarity);
+                        } catch (JsonProcessingException e) {
+                            log.error("임베딩 역직렬화 실패", e);
+                            return null;
+                        }
+                    })
+                    .filter(Objects::nonNull)
+                    .filter(se -> se.score >= request.getSimilarityThreshold())
+                    .sorted(Comparator.comparingDouble(ScoredContentEmbedding::getScore).reversed())
+                    .limit(request.getTopK())
+                    .collect(Collectors.toList());
+
+            log.info("유사도 Top-{}: {}", request.getTopK(), scoredEmbeddings.stream()
+                    .map(se -> String.format("[%s] %.3f", se.embedding.getResourceType(), se.score))
+                    .collect(Collectors.joining(", ")));
+
+            // 4. 참고 문서 컨텍스트 생성
+            StringBuilder contextBuilder = new StringBuilder();
+            List<AiSearchResponse.SourceDocument> sources = new ArrayList<>();
+
+            for (ScoredContentEmbedding scored : scoredEmbeddings) {
+                ContentEmbedding embedding = scored.embedding;
+
+                // 리소스 타입별 컨텍스트 라벨 생성
+                String typeLabel = switch (embedding.getResourceType()) {
+                    case WIKI -> "Wiki 문서";
+                    case SR -> "SR (Service Request)";
+                    case SURVEY -> "OPEN API 현황조사";
+                };
+
+                contextBuilder.append("## [").append(typeLabel).append("] ")
+                        .append(embedding.getTitle()).append("\n");
+                contextBuilder.append(embedding.getContent()).append("\n\n");
+
+                // 중복 제거 (같은 리소스의 다른 청크)
+                String uniqueKey = embedding.getResourceType() + "-" + embedding.getResourceId();
+                boolean exists = sources.stream()
+                        .anyMatch(s -> (s.getResourceType() + "-" + s.getResourceId()).equals(uniqueKey));
+
+                if (!exists) {
+                    sources.add(AiSearchResponse.SourceDocument.builder()
+                            .resourceType(embedding.getResourceType().name())
+                            .resourceId(embedding.getResourceId())
+                            .resourceIdentifier(embedding.getResourceIdentifier())
+                            .documentId(embedding.getResourceType() == ResourceType.WIKI ? embedding.getResourceId() : null)
+                            .title(embedding.getTitle())
+                            .categoryName(embedding.getCategory())
+                            .status(embedding.getStatus())
+                            .snippet(truncate(embedding.getContent(), 200))
+                            .relevanceScore(scored.score)
+                            .build());
+                }
+            }
+
+            // 5. LLM에 프롬프트 전송
+            String promptText = buildUnifiedPrompt(request.getQuestion(), contextBuilder.toString());
+            Prompt prompt = new Prompt(promptText);
+            ChatResponse chatResponse = chatModel.call(prompt);
+            String answer = chatResponse.getResult().getOutput().getContent();
+
+            long elapsedTime = System.currentTimeMillis() - startTime;
+            log.info("통합 검색 완료: {}ms, {} sources", elapsedTime, sources.size());
+
+            return AiSearchResponse.builder()
+                    .answer(answer)
+                    .sources(sources)
+                    .processingTimeMs(elapsedTime)
+                    .build();
+
+        } catch (Exception e) {
+            log.error("통합 AI 검색 실패", e);
+            throw new RuntimeException("AI 검색 중 오류가 발생했습니다: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Wiki만 검색 (기존 호환)
+     */
+    private AiSearchResponse searchWikiOnly(AiSearchRequest request) {
         long startTime = System.currentTimeMillis();
 
         try {
@@ -420,6 +555,8 @@ public class AiSearchService {
 
                 if (!exists) {
                     sources.add(AiSearchResponse.SourceDocument.builder()
+                            .resourceType("WIKI")
+                            .resourceId(embedding.getDocumentId())
                             .documentId(embedding.getDocumentId())
                             .title(embedding.getDocumentTitle())
                             .categoryName(embedding.getCategoryName())
@@ -451,7 +588,7 @@ public class AiSearchService {
     }
 
     /**
-     * Prompt Template 생성
+     * Prompt Template 생성 (Wiki 전용)
      */
     private String buildPrompt(String question, String context) {
         return String.format("""
@@ -470,6 +607,37 @@ public class AiSearchService {
                 3. 마크다운 형식으로 답변하세요 (제목, 리스트, 코드 블록 등 활용)
                 4. 답변은 한국어로 작성하세요
                 5. 가능한 구체적으로 답변하세요
+
+                답변:
+                """, context, question);
+    }
+
+    /**
+     * 통합 Prompt Template 생성 (Wiki + SR + Survey)
+     */
+    private String buildUnifiedPrompt(String question, String context) {
+        return String.format("""
+                당신은 SR 관리 시스템의 통합 도우미입니다.
+                아래 자료들을 참고하여 사용자의 질문에 정확하고 친절하게 답변해주세요.
+
+                **참고 자료 유형:**
+                - Wiki 문서: 기술 문서, 가이드, 매뉴얼
+                - SR (Service Request): 서비스 요청 기록, 처리 이력
+                - OPEN API 현황조사: 시스템 운영 환경, 서버 구성 정보
+
+                **참고 자료:**
+                %s
+
+                **사용자 질문:**
+                %s
+
+                **답변 작성 지침:**
+                1. 참고 자료의 내용을 기반으로 답변하세요
+                2. 자료에 없는 내용은 추측하지 마세요
+                3. 마크다운 형식으로 답변하세요 (제목, 리스트, 코드 블록 등 활용)
+                4. 답변은 한국어로 작성하세요
+                5. 어떤 유형의 자료를 참고했는지 명시하면 좋습니다
+                6. SR이나 현황조사 정보를 참고한 경우, 해당 정보의 맥락을 설명해주세요
 
                 답변:
                 """, context, question);
@@ -731,13 +899,30 @@ public class AiSearchService {
     }
 
     /**
-     * 임베딩과 유사도 점수를 함께 저장하는 내부 클래스
+     * WikiDocumentEmbedding과 유사도 점수를 함께 저장하는 내부 클래스
      */
     private static class ScoredEmbedding {
         WikiDocumentEmbedding embedding;
         double score;
 
         ScoredEmbedding(WikiDocumentEmbedding embedding, double score) {
+            this.embedding = embedding;
+            this.score = score;
+        }
+
+        public double getScore() {
+            return score;
+        }
+    }
+
+    /**
+     * ContentEmbedding과 유사도 점수를 함께 저장하는 내부 클래스
+     */
+    private static class ScoredContentEmbedding {
+        ContentEmbedding embedding;
+        double score;
+
+        ScoredContentEmbedding(ContentEmbedding embedding, double score) {
             this.embedding = embedding;
             this.score = score;
         }

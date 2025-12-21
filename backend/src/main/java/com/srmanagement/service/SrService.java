@@ -11,6 +11,7 @@ import com.srmanagement.exception.CustomException;
 import com.srmanagement.repository.SrHistoryRepository;
 import com.srmanagement.repository.SrRepository;
 import com.srmanagement.repository.UserRepository;
+import com.srmanagement.wiki.service.ContentEmbeddingService;
 import com.srmanagement.wiki.service.WikiNotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -18,6 +19,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -43,6 +46,9 @@ public class SrService {
 
     @Autowired
     private WikiNotificationService notificationService;
+
+    @Autowired(required = false)
+    private ContentEmbeddingService contentEmbeddingService;
 
     /**
      * SR ID 생성 (SR-YYMM-XXXX)
@@ -150,6 +156,18 @@ public class SrService {
      */
     @Transactional
     public SrResponse createSr(SrCreateRequest request, String username) {
+        return createSr(request, username, true);
+    }
+
+    /**
+     * SR 생성 (임베딩 생성 여부 지정 가능)
+     * @param request SR 생성 요청 DTO
+     * @param username 요청자 사용자명
+     * @param generateEmbedding 임베딩 생성 여부 (일괄 등록 시 false)
+     * @return SrResponse
+     */
+    @Transactional
+    public SrResponse createSr(SrCreateRequest request, String username, boolean generateEmbedding) {
         User requester = userRepository.findByUsername(username)
                 .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
 
@@ -180,6 +198,18 @@ public class SrService {
         // SR 생성 알림 발송 (담당자에게)
         if (assignee != null) {
             notificationService.notifySrCreated(savedSr.getId(), savedSr.getTitle(), assignee, requester);
+        }
+
+        // SR 임베딩 비동기 생성 (AI 검색용) - 트랜잭션 커밋 후 실행
+        // 일괄 등록 시에는 generateEmbedding=false로 호출하여 임베딩 생성 생략
+        if (generateEmbedding && contentEmbeddingService != null) {
+            final Long srId = savedSr.getId();
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    contentEmbeddingService.generateSrEmbeddingAsync(srId);
+                }
+            });
         }
 
         return SrResponse.from(savedSr);
@@ -298,6 +328,17 @@ public class SrService {
                 modifier
         );
 
+        // SR 임베딩 비동기 재생성 (AI 검색용) - 트랜잭션 커밋 후 실행
+        if (contentEmbeddingService != null) {
+            final Long srId = updatedSr.getId();
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    contentEmbeddingService.generateSrEmbeddingAsync(srId);
+                }
+            });
+        }
+
         return SrResponse.from(updatedSr);
     }
 
@@ -326,6 +367,17 @@ public class SrService {
 
         // 삭제 이력 기록
         createHistory(sr, "SR이 삭제되었습니다.", SrHistoryType.INFO_CHANGE, user);
+
+        // SR 임베딩 제거 (삭제된 SR은 검색에서 제외) - 트랜잭션 커밋 후 실행
+        if (contentEmbeddingService != null) {
+            final Long srId = sr.getId();
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    contentEmbeddingService.generateSrEmbeddingAsync(srId);
+                }
+            });
+        }
     }
 
     /**

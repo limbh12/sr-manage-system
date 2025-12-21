@@ -4,9 +4,9 @@
 
 | 항목 | 내용 |
 |------|------|
-| **문서 버전** | 1.0 |
-| **작성일** | 2024-12-20 |
-| **상태** | Phase 1-3 완료, Phase 4 예정 |
+| **문서 버전** | 1.1 |
+| **작성일** | 2024-12-21 |
+| **상태** | Phase 1-5 완료 |
 | **관련 문서** | [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md), [API.md](API.md), [DATABASE.md](DATABASE.md) |
 
 ---
@@ -276,7 +276,7 @@ SR 관리 시스템에 AI 기반 지능형 위키 기능을 추가하여, **폐�
 
 ---
 
-#### FR-3.3: 자동 요약 기능 [⏳ 예정]
+#### FR-3.3: 자동 요약 기능 [✅ 완료]
 
 | 항목 | 내용 |
 |------|------|
@@ -287,10 +287,96 @@ SR 관리 시스템에 AI 기반 지능형 위키 기능을 추가하여, **폐�
 > 사용자로서, 긴 위키 문서를 열었을 때 상단에 AI가 생성한 3줄 요약을 보고 싶습니다.
 
 **Acceptance Criteria**
-- [ ] 문서 조회 시 요약 자동 생성 (캐싱)
-- [ ] 3줄 이내의 간결한 요약
-- [ ] 문서 상단에 "AI 요약" 섹션 표시
-- [ ] 요약 생성 중 로딩 인디케이터
+- [x] 문서 조회 시 요약 자동 생성 (캐싱)
+- [x] 3줄 이내의 간결한 요약
+- [x] 문서 상단에 "AI 요약" 섹션 표시
+- [x] 요약 생성 중 로딩 인디케이터
+
+---
+
+#### FR-3.4: SR/Survey 통합 AI 검색 [✅ 완료]
+
+| 항목 | 내용 |
+|------|------|
+| **Priority** | HIGH |
+| **Story Points** | 8 |
+
+**User Story**
+> 사용자로서, AI 검색 시 Wiki뿐만 아니라 SR과 OPEN API 현황조사 데이터도 함께 검색하여 통합된 답변을 받고 싶습니다.
+
+**Acceptance Criteria**
+- [x] SR 데이터 임베딩 (SR ID, 제목, 요청사항, 처리내용, 분류)
+- [x] 현황조사 데이터 임베딩 (시스템명, 기관, 운영환경, 서버정보)
+- [x] SR/Survey 생성/수정 시 자동 임베딩 트리거
+- [x] 리소스 타입별 필터링 (Wiki, SR, Survey)
+- [x] 검색 결과에서 리소스 타입 구분 표시 (아이콘/뱃지)
+- [x] 참고 자료 클릭 시 해당 페이지로 이동
+- [x] 일괄 임베딩 API 제공
+
+**API Response Format**
+```json
+{
+  "answer": "국민건강보험공단 시스템은 Spring Framework를 사용하며...",
+  "sources": [
+    {
+      "resourceType": "SR",
+      "resourceId": 123,
+      "resourceIdentifier": "SR-2412-0001",
+      "title": "API 연동 오류 문의",
+      "status": "RESOLVED",
+      "snippet": "...",
+      "relevanceScore": 0.85
+    },
+    {
+      "resourceType": "SURVEY",
+      "resourceId": 45,
+      "title": "국민건강보험공단 (복지부)",
+      "categoryName": "복지부",
+      "snippet": "...",
+      "relevanceScore": 0.78
+    }
+  ],
+  "processingTimeMs": 3200
+}
+```
+
+---
+
+#### FR-3.5: AI 검색 이력 관리 [✅ 완료]
+
+| 항목 | 내용 |
+|------|------|
+| **Priority** | MEDIUM |
+| **Story Points** | 5 |
+
+**User Story**
+> 사용자로서, 이전에 검색했던 질문들을 다시 확인하고 빠르게 재검색하고 싶습니다.
+
+**Acceptance Criteria**
+- [x] AI 검색 시 이력 자동 저장 (비동기 처리)
+- [x] 최근 검색 이력 조회 (기본 5개)
+- [x] 검색창 포커스 시 최근 검색 드롭다운 표시
+- [x] 이력 클릭 시 해당 질문으로 자동 입력
+- [x] 개별 이력 삭제 기능
+- [x] 검색 이력 키워드 검색
+
+**Database Schema**
+```sql
+CREATE TABLE ai_search_history (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    question VARCHAR(1000) NOT NULL,
+    answer TEXT,
+    source_count INT,
+    resource_types VARCHAR(100),
+    processing_time_ms BIGINT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE INDEX idx_search_history_user ON ai_search_history(user_id);
+CREATE INDEX idx_search_history_created ON ai_search_history(created_at DESC);
+```
 
 ---
 
@@ -513,16 +599,40 @@ wiki:
 
 ---
 
-### Phase 4: 고급 기능 및 최적화 ⏳ 예정
+### Phase 4: 고급 기능 및 최적화 ✅ 완료
 
 **목표**: 시스템 안정화 및 추가 기능
 
 | 기능 | 상태 |
 |------|------|
-| 자동 요약 기능 | ⏳ 예정 |
-| 검색 성능 최적화 | ⏳ 예정 |
-| 사용자 권한 관리 | ⏳ 예정 |
-| 알림 기능 | ⏳ 예정 |
+| 자동 요약 기능 | ✅ 완료 |
+| 검색 성능 최적화 (Caffeine 캐싱) | ✅ 완료 |
+| 사용자 권한 관리 (WIKI_EDITOR) | ✅ 완료 |
+| 알림 기능 | ✅ 완료 |
+| 백업/복원 스크립트 | ✅ 완료 |
+
+---
+
+### Phase 5: SR/Survey 통합 AI 검색 ✅ 완료
+
+**목표**: SR 및 OPEN API 현황조사 데이터를 AI 검색에 통합
+
+| 기능 | 상태 |
+|------|------|
+| 통합 콘텐츠 임베딩 시스템 | ✅ 완료 |
+| SR/Survey 자동 임베딩 | ✅ 완료 |
+| 통합 AI 검색 (Wiki + SR + Survey) | ✅ 완료 |
+| 리소스 타입별 필터링 | ✅ 완료 |
+| 일괄 임베딩 API | ✅ 완료 |
+| 프론트엔드 통합 검색 UI | ✅ 완료 |
+| AI 검색 이력 관리 | ✅ 완료 |
+
+**주요 구현 내용**
+- ContentEmbedding 엔티티: Wiki, SR, Survey 통합 임베딩 테이블
+- 자동 임베딩: SR/Survey 생성/수정 시 비동기 임베딩 트리거
+- 통합 검색: 리소스 타입별 필터링 및 코사인 유사도 검색
+- UI: 리소스 타입 아이콘(📄/📋/📊), 필터 체크박스, 상태 뱃지
+- 검색 이력: 사용자별 검색 이력 자동 저장, 최근 검색 드롭다운 UI
 
 ---
 
@@ -586,8 +696,21 @@ PUT    /api/wiki/categories/{id}     # 카테고리 수정
 DELETE /api/wiki/categories/{id}     # 카테고리 삭제
 
 # AI Search
-POST   /api/wiki/search/ai           # AI 검색
+POST   /api/wiki/search/ai           # AI 검색 (통합)
 GET    /api/wiki/search/embedding/status  # 임베딩 상태 조회
+
+# 통합 임베딩 (SR/Survey)
+POST   /api/wiki/search/embeddings/sr/all       # 전체 SR 임베딩
+POST   /api/wiki/search/embeddings/survey/all   # 전체 현황조사 임베딩
+POST   /api/wiki/search/embeddings/sr/{srId}    # 개별 SR 임베딩
+POST   /api/wiki/search/embeddings/survey/{id}  # 개별 현황조사 임베딩
+GET    /api/wiki/search/embeddings/stats        # 임베딩 통계
+
+# 검색 이력
+GET    /api/wiki/search/history/recent          # 최근 검색 이력 조회
+GET    /api/wiki/search/history                 # 검색 이력 페이징 조회
+GET    /api/wiki/search/history/search          # 검색 이력 키워드 검색
+DELETE /api/wiki/search/history/{historyId}     # 검색 이력 삭제
 ```
 
 ### B. 관련 문서

@@ -724,6 +724,7 @@ const WikiPage: React.FC = () => {
                 setShowAiSearchResult(false);
                 navigate(`/wiki/${documentId}`);
               }}
+              isAdmin={isAdmin}
             />
           </div>
         ) : (

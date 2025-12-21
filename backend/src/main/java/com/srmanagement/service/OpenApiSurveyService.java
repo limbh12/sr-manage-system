@@ -21,6 +21,7 @@ import com.srmanagement.dto.response.UserResponse;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 import com.srmanagement.util.CryptoUtil;
+import com.srmanagement.wiki.service.ContentEmbeddingService;
 import com.srmanagement.wiki.service.WikiNotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -30,6 +31,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -67,6 +70,9 @@ public class OpenApiSurveyService {
 
     @Autowired
     private WikiNotificationService notificationService;
+
+    @Autowired(required = false)
+    private ContentEmbeddingService contentEmbeddingService;
 
     @Transactional(readOnly = true)
     public Page<OpenApiSurveyResponse> getSurveys(String keyword, String currentMethod, String desiredMethod, Pageable pageable) {
@@ -166,6 +172,16 @@ public class OpenApiSurveyService {
 
     @Transactional
     public OpenApiSurveyResponse createSurvey(OpenApiSurveyCreateRequest request) {
+        return createSurvey(request, true);
+    }
+
+    /**
+     * 현황조사 생성 (임베딩 생성 여부 선택)
+     * @param request 생성 요청
+     * @param generateEmbedding 임베딩 생성 여부 (일괄 등록 시 false)
+     */
+    @Transactional
+    public OpenApiSurveyResponse createSurvey(OpenApiSurveyCreateRequest request, boolean generateEmbedding) {
         Organization organization = organizationRepository.findById(request.getOrganizationCode())
                 .orElseThrow(() -> new CustomException("Organization not found with code: " + request.getOrganizationCode(), HttpStatus.NOT_FOUND));
 
@@ -227,10 +243,10 @@ public class OpenApiSurveyService {
 
         OpenApiSurvey savedSurvey = openApiSurveyRepository.save(survey);
 
-        // SR 자동 생성
+        // SR 자동 생성 (generateEmbedding 플래그에 따라 SR 임베딩도 생성 여부 결정)
         User currentUser = getCurrentUser();
         if (currentUser != null) {
-            createSrForNewSurvey(savedSurvey, currentUser);
+            createSrForNewSurvey(savedSurvey, currentUser, generateEmbedding);
 
             // 알림 발송 (모든 사용자에게)
             notificationService.notifySurveyCreated(
@@ -239,6 +255,19 @@ public class OpenApiSurveyService {
                     savedSurvey.getSystemName(),
                     currentUser
             );
+        }
+
+        // 현황조사 임베딩 비동기 생성 (AI 검색용) - 트랜잭션 커밋 후 실행
+        // 일괄 등록 시에는 generateEmbedding=false로 호출하여 임베딩 생성 생략
+        // (나중에 관리자 패널에서 일괄 생성)
+        if (generateEmbedding && contentEmbeddingService != null) {
+            final Long surveyId = savedSurvey.getId();
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    contentEmbeddingService.generateSurveyEmbeddingAsync(surveyId);
+                }
+            });
         }
 
         return convertToResponse(savedSurvey);
@@ -323,6 +352,17 @@ public class OpenApiSurveyService {
                     survey.getSystemName(),
                     currentUser
             );
+        }
+
+        // 현황조사 임베딩 비동기 재생성 (AI 검색용) - 트랜잭션 커밋 후 실행
+        if (contentEmbeddingService != null) {
+            final Long surveyId = survey.getId();
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    contentEmbeddingService.generateSurveyEmbeddingAsync(surveyId);
+                }
+            });
         }
 
         return convertToResponse(survey);
@@ -416,7 +456,8 @@ public class OpenApiSurveyService {
                             .build();
 
                     validateRequest(request);
-                    createSurvey(request);
+                    // 일괄 등록 시 임베딩 생성 생략 (나중에 관리자 패널에서 일괄 생성)
+                    createSurvey(request, false);
                     successCount++;
 
                 } catch (Exception e) {
@@ -661,10 +702,13 @@ public class OpenApiSurveyService {
 
     /**
      * 현황조사 생성 시 SR 자동 생성
+     * @param survey 현황조사
+     * @param requester 요청자
+     * @param generateEmbedding SR 임베딩 생성 여부 (일괄 등록 시 false)
      */
-    private void createSrForNewSurvey(OpenApiSurvey survey, User requester) {
+    private void createSrForNewSurvey(OpenApiSurvey survey, User requester, boolean generateEmbedding) {
         try {
-            // 1. SR 생성
+            // 1. SR 생성 (generateEmbedding 플래그 전달)
             SrCreateRequest srRequest = new SrCreateRequest();
             srRequest.setTitle(String.format("[OPEN API 현황조사] %s - %s",
                     survey.getOrganization().getName(), survey.getSystemName()));
@@ -677,7 +721,7 @@ public class OpenApiSurveyService {
             srRequest.setApplicantName(survey.getContactName());
             srRequest.setApplicantPhone(survey.getContactPhone());
 
-            SrResponse createdSr = srService.createSr(srRequest, requester.getUsername());
+            SrResponse createdSr = srService.createSr(srRequest, requester.getUsername(), generateEmbedding);
 
             // 2. SR을 CLOSED 상태로 변경하고 처리내용 설정
             Sr sr = srRepository.findById(createdSr.getId())

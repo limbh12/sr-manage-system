@@ -7,9 +7,11 @@ import * as surveyService from '../../services/surveyService';
 import { commonCodeService } from '../../services/commonCodeService';
 import { wikiDocumentApi } from '../../services/wikiService';
 import type { WikiDocument } from '../../types/wiki';
+import type { SrEmbeddingStatusResponse } from '../../types/aiSearch';
 import OpenApiSurveyInfoCard from './OpenApiSurveyInfoCard';
 import SrHistoryList from './SrHistoryList';
 import { formatPhoneNumber } from '../../utils/formatUtils';
+import aiSearchService from '../../services/aiSearchService';
 
 interface SrDetailProps {
   sr: Sr;
@@ -100,6 +102,11 @@ function SrDetail({ sr, onClose, onEdit, onStatusChange, onWikiClick, isModal = 
   const [categoryName, setCategoryName] = useState('');
   const [requestTypeName, setRequestTypeName] = useState('');
 
+  // 임베딩 상태
+  const [embeddingStatus, setEmbeddingStatus] = useState<SrEmbeddingStatusResponse | null>(null);
+  const [embeddingLoading, setEmbeddingLoading] = useState(false);
+  const [isGeneratingEmbedding, setIsGeneratingEmbedding] = useState(false);
+
   useEffect(() => {
     if (sr.openApiSurveyId) {
       surveyService.getSurveyById(sr.openApiSurveyId)
@@ -116,6 +123,38 @@ function SrDetail({ sr, onClose, onEdit, onStatusChange, onWikiClick, isModal = 
       .then(response => setLinkedWikiDocs(response.data))
       .catch(err => console.error('Failed to load linked wiki documents', err));
   }, [sr.id]);
+
+  // 임베딩 상태 로드
+  useEffect(() => {
+    const loadEmbeddingStatus = async () => {
+      try {
+        setEmbeddingLoading(true);
+        const status = await aiSearchService.getSrEmbeddingStatus(sr.id);
+        setEmbeddingStatus(status);
+      } catch (err) {
+        console.error('Failed to load SR embedding status', err);
+      } finally {
+        setEmbeddingLoading(false);
+      }
+    };
+    loadEmbeddingStatus();
+  }, [sr.id]);
+
+  // 임베딩 생성 핸들러
+  const handleGenerateEmbedding = async () => {
+    try {
+      setIsGeneratingEmbedding(true);
+      await aiSearchService.generateSrEmbedding(sr.id);
+      // 상태 새로고침
+      const status = await aiSearchService.getSrEmbeddingStatus(sr.id);
+      setEmbeddingStatus(status);
+    } catch (err) {
+      console.error('Failed to generate SR embedding', err);
+      alert('임베딩 생성에 실패했습니다.');
+    } finally {
+      setIsGeneratingEmbedding(false);
+    }
+  };
 
   useEffect(() => {
     if (sr.category) {
@@ -325,6 +364,55 @@ function SrDetail({ sr, onClose, onEdit, onStatusChange, onWikiClick, isModal = 
               <div>
                 <strong>수정일:</strong> {new Date(sr.updatedAt).toLocaleString()}
               </div>
+            </div>
+
+            {/* AI 검색 임베딩 상태 */}
+            <div style={{
+              marginBottom: '16px',
+              padding: '12px',
+              borderRadius: '4px',
+              background: 'var(--bg-info-light, #e8f4fd)',
+              border: '1px solid var(--border-info, #b3d7f5)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <strong style={{ fontSize: '14px' }}>AI 검색 임베딩</strong>
+                <button
+                  className="btn btn-sm btn-secondary"
+                  onClick={handleGenerateEmbedding}
+                  disabled={isGeneratingEmbedding || embeddingLoading}
+                  style={{ fontSize: '12px', padding: '4px 10px' }}
+                >
+                  {isGeneratingEmbedding ? '생성 중...' : (embeddingStatus?.hasEmbedding ? '재생성' : '임베딩 생성')}
+                </button>
+              </div>
+              {embeddingLoading ? (
+                <div style={{ color: '#666', fontSize: '13px' }}>로딩 중...</div>
+              ) : embeddingStatus ? (
+                <div style={{ fontSize: '13px', color: '#444' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span>상태:</span>
+                    {embeddingStatus.hasEmbedding ? (
+                      embeddingStatus.isUpToDate ? (
+                        <span style={{ color: '#28a745', fontWeight: 500 }}>최신 ✓</span>
+                      ) : (
+                        <span style={{ color: '#e36209', fontWeight: 500 }}>업데이트 필요</span>
+                      )
+                    ) : (
+                      <span style={{ color: '#999' }}>임베딩 없음</span>
+                    )}
+                  </div>
+                  {embeddingStatus.hasEmbedding && (
+                    <div style={{ color: '#666', fontSize: '12px' }}>
+                      청크 수: {embeddingStatus.chunkCount}개
+                      {embeddingStatus.lastEmbeddingDate && (
+                        <> | 생성일: {new Date(embeddingStatus.lastEmbeddingDate).toLocaleString()}</>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ color: '#999', fontSize: '13px' }}>상태를 불러올 수 없습니다</div>
+              )}
             </div>
           </div>
 

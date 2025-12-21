@@ -9,6 +9,8 @@ import * as surveyService from '../../services/surveyService';
 import * as userService from '../../services/userService';
 import OrganizationSearchModal from './OrganizationSearchModal';
 import { formatPhoneNumber } from '../../utils/formatUtils';
+import aiSearchService from '../../services/aiSearchService';
+import type { SurveyEmbeddingStatusResponse } from '../../types/aiSearch';
 
 function SurveyForm() {
   const { id } = useParams<{ id: string }>();
@@ -74,10 +76,41 @@ function SurveyForm() {
   useEffect(() => {
     if (id) {
       loadSurvey(Number(id));
+      loadEmbeddingStatus(Number(id));
     }
     loadUsers();
     window.scrollTo(0, 0);
   }, [id]);
+
+  // 임베딩 상태 로드
+  const loadEmbeddingStatus = async (surveyId: number) => {
+    try {
+      setEmbeddingLoading(true);
+      const status = await aiSearchService.getSurveyEmbeddingStatus(surveyId);
+      setEmbeddingStatus(status);
+    } catch (err) {
+      console.error('Failed to load survey embedding status', err);
+    } finally {
+      setEmbeddingLoading(false);
+    }
+  };
+
+  // 임베딩 생성 핸들러
+  const handleGenerateEmbedding = async () => {
+    if (!id) return;
+    try {
+      setIsGeneratingEmbedding(true);
+      await aiSearchService.generateSurveyEmbedding(Number(id));
+      // 상태 새로고침
+      const status = await aiSearchService.getSurveyEmbeddingStatus(Number(id));
+      setEmbeddingStatus(status);
+    } catch (err) {
+      console.error('Failed to generate survey embedding', err);
+      alert('임베딩 생성에 실패했습니다.');
+    } finally {
+      setIsGeneratingEmbedding(false);
+    }
+  };
 
   const loadUsers = async () => {
     try {
@@ -119,6 +152,11 @@ function SurveyForm() {
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 임베딩 상태
+  const [embeddingStatus, setEmbeddingStatus] = useState<SurveyEmbeddingStatusResponse | null>(null);
+  const [embeddingLoading, setEmbeddingLoading] = useState(false);
+  const [isGeneratingEmbedding, setIsGeneratingEmbedding] = useState(false);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -733,6 +771,60 @@ function SurveyForm() {
             </div>
           </div>
         </section>
+
+        {/* 수정 모드에서만 임베딩 상태 표시 */}
+        {id && (
+          <section className="mb-4">
+            <h3 className="section-title">7. AI 검색 임베딩</h3>
+            <div style={{
+              padding: '16px',
+              borderRadius: '4px',
+              background: 'var(--bg-info-light, #e8f4fd)',
+              border: '1px solid var(--border-info, #b3d7f5)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <strong style={{ fontSize: '14px' }}>AI 검색을 위한 임베딩 상태</strong>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-secondary"
+                  onClick={handleGenerateEmbedding}
+                  disabled={isGeneratingEmbedding || embeddingLoading}
+                  style={{ fontSize: '12px', padding: '4px 12px' }}
+                >
+                  {isGeneratingEmbedding ? '생성 중...' : (embeddingStatus?.hasEmbedding ? '재생성' : '임베딩 생성')}
+                </button>
+              </div>
+              {embeddingLoading ? (
+                <div style={{ color: '#666', fontSize: '13px' }}>로딩 중...</div>
+              ) : embeddingStatus ? (
+                <div style={{ fontSize: '13px', color: '#444' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span>상태:</span>
+                    {embeddingStatus.hasEmbedding ? (
+                      embeddingStatus.isUpToDate ? (
+                        <span style={{ color: '#28a745', fontWeight: 500 }}>최신 ✓</span>
+                      ) : (
+                        <span style={{ color: '#e36209', fontWeight: 500 }}>업데이트 필요</span>
+                      )
+                    ) : (
+                      <span style={{ color: '#999' }}>임베딩 없음</span>
+                    )}
+                  </div>
+                  {embeddingStatus.hasEmbedding && (
+                    <div style={{ color: '#666', fontSize: '12px' }}>
+                      청크 수: {embeddingStatus.chunkCount}개
+                      {embeddingStatus.lastEmbeddingDate && (
+                        <> | 생성일: {new Date(embeddingStatus.lastEmbeddingDate).toLocaleString()}</>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ color: '#999', fontSize: '13px' }}>상태를 불러올 수 없습니다</div>
+              )}
+            </div>
+          </section>
+        )}
 
         <div className="flex-end pt-4">
           <button type="button" onClick={() => navigate('/survey')} className="btn btn-secondary">취소</button>

@@ -42,7 +42,22 @@ public class AiSearchResponse {
     @Builder
     public static class SourceDocument {
         /**
-         * 문서 ID
+         * 리소스 타입 (WIKI, SR, SURVEY)
+         */
+        private String resourceType;
+
+        /**
+         * 리소스 ID (Wiki 문서 ID, SR PK, Survey PK)
+         */
+        private Long resourceId;
+
+        /**
+         * 리소스 식별자 (예: SR-2512-0001, SURVEY-123)
+         */
+        private String resourceIdentifier;
+
+        /**
+         * 문서 ID (기존 호환용 - Wiki일 경우 resourceId와 동일)
          */
         private Long documentId;
 
@@ -52,9 +67,14 @@ public class AiSearchResponse {
         private String title;
 
         /**
-         * 카테고리 이름
+         * 카테고리/분류 이름
          */
         private String categoryName;
+
+        /**
+         * 상태 (SR: OPEN/CLOSED, Survey: PENDING/COMPLETED 등)
+         */
+        private String status;
 
         /**
          * 관련 내용 스니펫

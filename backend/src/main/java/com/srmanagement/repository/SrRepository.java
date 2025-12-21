@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 /**
  * SR 레포지토리
  */
@@ -147,6 +149,11 @@ public interface SrRepository extends JpaRepository<Sr, Long> {
 
     long countByCategory(String category);
     long countByRequestType(String requestType);
+
+    /**
+     * 삭제되지 않은 모든 SR 목록 조회 (임베딩 일괄 생성용)
+     */
+    List<Sr> findByDeletedFalse();
 
     /**
      * 다중 조건으로 SR 목록 조회 (복합 필터)

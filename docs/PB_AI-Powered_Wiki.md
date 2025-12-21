@@ -887,6 +887,89 @@ export OLLAMA_EMBEDDING_MODEL=nomic-embed-text
 
 ---
 
+### Phase 5: SR/Survey 통합 AI 검색 (1주) ✅ 완료
+**목표**: SR 및 OPEN API 현황조사 데이터를 AI 검색에 통합
+
+* [x] A-5: 통합 콘텐츠 임베딩 시스템
+  - ContentEmbedding 엔티티 (Wiki, SR, Survey 통합)
+  - ResourceType enum (WIKI, SR, SURVEY)
+  - ContentEmbeddingRepository (리소스 타입별 조회/통계)
+  - ContentEmbeddingService (SR/Survey 임베딩 생성)
+* [x] SR/Survey 자동 임베딩
+  - SR 생성/수정/삭제 시 자동 임베딩 트리거
+  - Survey 생성/수정 시 자동 임베딩 트리거
+  - 비동기 처리 (embeddingTaskExecutor)
+* [x] 통합 AI 검색 기능
+  - AiSearchService.searchUnified() 메서드
+  - 리소스 타입별 필터링 지원
+  - 통합 프롬프트 템플릿 (Wiki, SR, Survey 컨텍스트)
+* [x] 일괄 임베딩 API
+  - POST `/embeddings/sr/all` - 전체 SR 임베딩
+  - POST `/embeddings/survey/all` - 전체 현황조사 임베딩
+  - GET `/embeddings/stats` - 임베딩 통계 조회
+* [x] 프론트엔드 통합 검색 UI
+  - 리소스 타입 필터 체크박스 (Wiki, SR, Survey)
+  - 리소스 타입별 아이콘/뱃지 표시 (📄/📋/📊)
+  - SR/Survey 클릭 시 해당 페이지로 이동
+  - 상태(status) 뱃지 표시
+* [x] A-6: AI 검색 이력 관리 기능 ✅ **신규 추가**
+  - AiSearchHistory 엔티티 (사용자별 검색 이력 저장)
+  - 검색 시 자동 이력 저장 (비동기 처리)
+  - 최근 검색 이력 조회/삭제 기능
+  - 검색창 포커스 시 최근 검색 드롭다운 UI
+
+**Deliverables** ✅
+- ✅ SR, 현황조사 데이터가 벡터 DB에 자동 임베딩
+- ✅ AI 검색 시 Wiki, SR, Survey 통합 검색 가능
+- ✅ 검색 범위 필터링 (원하는 리소스만 검색)
+- ✅ 검색 결과에서 리소스 타입별 구분 표시
+- ✅ 참고 자료 클릭 시 해당 페이지로 이동
+- ✅ **AI 검색 이력 자동 저장 및 최근 검색 조회**
+- ✅ **검색 이력에서 질문 클릭으로 재검색**
+
+**주요 구현 내용**
+```java
+// ContentEmbedding 엔티티
+public enum ResourceType {
+    WIKI, SR, SURVEY
+}
+
+// 임베딩 텍스트 구성
+// - SR: SR ID + 제목 + 요청사항 + 처리내용 + 분류 + 요청구분
+// - Survey: 시스템명 + 기관 + 부서 + 운영환경 + 서버정보 + 기타요청
+
+// AiSearchHistory 엔티티 (검색 이력)
+@Entity
+public class AiSearchHistory {
+    private Long id;
+    private User user;           // 검색한 사용자
+    private String question;     // 검색 질문
+    private String answer;       // AI 답변 (5000자 제한)
+    private Integer sourceCount; // 참고 자료 개수
+    private String resourceTypes; // 검색 범위 (WIKI,SR,SURVEY)
+    private Long processingTimeMs; // 처리 시간
+    private LocalDateTime createdAt;
+}
+```
+
+**API 엔드포인트 (신규)**
+```
+# 통합 임베딩
+POST   /api/wiki/search/embeddings/sr/all       # 전체 SR 임베딩
+POST   /api/wiki/search/embeddings/survey/all   # 전체 현황조사 임베딩
+POST   /api/wiki/search/embeddings/sr/{srId}    # 개별 SR 임베딩
+POST   /api/wiki/search/embeddings/survey/{id}  # 개별 현황조사 임베딩
+GET    /api/wiki/search/embeddings/stats        # 임베딩 통계
+
+# 검색 이력
+GET    /api/wiki/search/history/recent          # 최근 검색 이력 조회
+GET    /api/wiki/search/history                 # 검색 이력 페이징 조회
+GET    /api/wiki/search/history/search          # 검색 이력 키워드 검색
+DELETE /api/wiki/search/history/{historyId}     # 검색 이력 삭제
+```
+
+---
+
 ## 📊 7. 성공 지표 (Success Metrics)
 
 ### 정량적 지표

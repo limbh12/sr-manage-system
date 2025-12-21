@@ -19,6 +19,11 @@ AI 기반 지능형 위키 시스템 개발 중 발생한 주요 이슈와 해�
    - [TS-P3-2: JSON 필드명 불일치 (upToDate vs isUpToDate)](#ts-p3-2-json-필드명-불일치-uptodate-vs-isuptodate)
    - [TS-P3-3: SSE 인증 문제로 폴링 전환](#ts-p3-3-sse-인증-문제로-폴링-전환)
 
+3. [Wiki Phase 5: 통합 임베딩 시스템 관련](#wiki-phase-5-통합-임베딩-시스템-관련)
+   - [TS-P5-1: 현황조사 일괄등록 시 LazyInitializationException](#ts-p5-1-현황조사-일괄등록-시-lazyinitializationexception)
+   - [TS-P5-2: 임베딩 통계에 잘못된 데이터 표시](#ts-p5-2-임베딩-통계에-잘못된-데이터-표시)
+   - [TS-P5-3: 현황조사 일괄등록 시 SR 임베딩 자동 생성](#ts-p5-3-현황조사-일괄등록-시-sr-임베딩-자동-생성)
+
 ---
 
 ## Wiki Phase 2: PDF 뷰어 관련
@@ -611,6 +616,246 @@ subscribeProgress(
 
 ---
 
+## Wiki Phase 5: 통합 임베딩 시스템 관련
+
+### TS-P5-1: 현황조사 일괄등록 시 LazyInitializationException
+
+**발생일**: 2025-12-21
+**심각도**: HIGH
+**영향 범위**: 현황조사/SR 일괄 임베딩 생성
+
+#### 증상
+
+```
+org.hibernate.LazyInitializationException: could not initialize proxy
+[com.srmanagement.entity.Organization#B552519] - no Session
+```
+
+- 현황조사 전체 임베딩 생성 시 0%에서 멈춤
+- 서버 로그에 LazyInitializationException 발생
+
+#### 원인
+
+- `@Async` 메서드에서 Lazy Loading 엔티티 접근
+- 비동기 스레드는 호출자의 Hibernate 세션을 공유하지 않음
+- `survey.getOrganization().getName()` 호출 시 프록시 초기화 실패
+
+```java
+// 문제가 된 코드
+@Async("embeddingTaskExecutor")
+public void generateAllSurveyEmbeddingsAsync(...) {
+    List<OpenApiSurvey> allSurveys = surveyRepository.findAll();
+    for (OpenApiSurvey survey : allSurveys) {
+        // survey.getOrganization()은 프록시 객체
+        // 다른 스레드에서 getName() 호출 시 세션 없음
+        String orgName = survey.getOrganization().getName(); // LazyInitializationException!
+    }
+}
+```
+
+#### 해결책
+
+**ID만 먼저 조회 후, 개별 트랜잭션에서 처리**
+
+```java
+// ContentEmbeddingService.java
+@Async("embeddingTaskExecutor")
+public void generateAllSurveyEmbeddingsAsync(BulkEmbeddingProgressService progressService) {
+    // 1. ID만 가져오기 (Lazy Loading 방지)
+    List<Long> surveyIds = surveyRepository.findAll().stream()
+            .map(OpenApiSurvey::getId)
+            .toList();
+
+    progressService.startProgress("SURVEY", surveyIds.size());
+
+    for (int i = 0; i < surveyIds.size(); i++) {
+        Long surveyId = surveyIds.get(i);
+        try {
+            // 2. self-injection을 통해 새 트랜잭션에서 처리
+            self.generateSurveyEmbedding(surveyId);
+            // ...
+        } catch (Exception e) {
+            // ...
+        }
+    }
+}
+
+// Self-injection 설정
+@Autowired
+@Lazy
+private ContentEmbeddingService self;
+```
+
+#### 교훈
+
+1. **@Async와 JPA Lazy Loading**: 비동기 메서드에서 Lazy 프록시 접근 시 세션 문제 발생
+2. **ID-first 패턴**: ID 목록만 먼저 조회하고, 개별 항목은 별도 트랜잭션에서 처리
+3. **Self-injection**: `@Transactional` AOP가 동작하려면 self-injection 필요
+
+#### 관련 파일
+
+- [ContentEmbeddingService.java](../backend/src/main/java/com/srmanagement/wiki/service/ContentEmbeddingService.java)
+
+---
+
+### TS-P5-2: 임베딩 통계에 잘못된 데이터 표시
+
+**발생일**: 2025-12-21
+**심각도**: MEDIUM
+**영향 범위**: AI 검색 관리 패널 통계 표시
+
+#### 증상
+
+- 임베딩을 생성한 적이 없는데 SR이 14건으로 표시됨
+- API 응답: `{"total":14,"survey":0,"wiki":0,"sr":14}`
+
+#### 원인
+
+- 이전 테스트/개발 과정에서 생성된 임베딩 데이터가 `content_embedding` 테이블에 잔존
+- H2 파일 모드 사용 시 서버 재시작해도 데이터 유지
+- 임베딩 삭제 API가 없어서 잘못된 데이터 정리 불가
+
+#### 해결책
+
+**리소스 타입별 임베딩 삭제 API 추가**
+
+```java
+// WikiSearchController.java
+@DeleteMapping("/embeddings/{resourceType}/all")
+public ResponseEntity<Map<String, Object>> deleteAllEmbeddingsByType(
+        @PathVariable String resourceType) {
+    log.info("리소스 타입별 임베딩 전체 삭제 요청: {}", resourceType);
+    int deletedCount = contentEmbeddingService.deleteAllByResourceType(
+            resourceType.toUpperCase());
+    return ResponseEntity.ok(Map.of(
+            "message", resourceType + " 임베딩이 삭제되었습니다",
+            "deletedCount", deletedCount
+    ));
+}
+
+// ContentEmbeddingService.java
+@Transactional
+public int deleteAllByResourceType(String resourceTypeStr) {
+    ResourceType resourceType = ResourceType.valueOf(resourceTypeStr);
+    List<ContentEmbedding> embeddings = embeddingRepository.findByResourceType(resourceType);
+    int count = embeddings.size();
+    embeddingRepository.deleteAll(embeddings);
+    log.info("🗑️ {} 타입 임베딩 전체 삭제: {}개", resourceType, count);
+    return count;
+}
+```
+
+**사용 예시**:
+```bash
+# SR 임베딩 전체 삭제
+curl -X DELETE http://localhost:8080/api/wiki/search/embeddings/SR/all \
+  -H "Authorization: Bearer $TOKEN"
+
+# 결과: {"message":"SR 임베딩이 삭제되었습니다","deletedCount":14}
+```
+
+#### 교훈
+
+1. **데이터 정리 API 필요**: 개발/테스트 중 생성된 데이터 정리 도구 필수
+2. **H2 파일 모드 주의**: `ddl-auto: create`여도 테이블만 재생성, 별도 파일 데이터는 유지될 수 있음
+3. **통계 검증**: 통계 API 결과가 예상과 다르면 실제 데이터 확인 필요
+
+#### 관련 파일
+
+- [WikiSearchController.java](../backend/src/main/java/com/srmanagement/wiki/controller/WikiSearchController.java)
+- [ContentEmbeddingService.java](../backend/src/main/java/com/srmanagement/wiki/service/ContentEmbeddingService.java)
+
+---
+
+### TS-P5-3: 현황조사 일괄등록 시 SR 임베딩 자동 생성
+
+**발생일**: 2025-12-21
+**심각도**: HIGH
+**영향 범위**: 현황조사 일괄등록 성능
+
+#### 증상
+
+- 현황조사 일괄등록(CSV) 시 SR 임베딩이 자동으로 생성됨
+- 14건 등록 시 SR 임베딩도 14건 생성 → Ollama 서버 과부하
+- 일괄등록에서 Survey 임베딩은 건너뛰도록 설정했으나 SR 임베딩은 계속 생성
+
+#### 원인
+
+- 현황조사 생성 시 연결된 SR이 자동 생성되는 로직 존재
+- SR 생성 시 임베딩 자동 생성 로직이 동작
+- Survey의 `generateEmbedding=false` 플래그가 SR 생성까지 전달되지 않음
+
+```java
+// OpenApiSurveyService.java - createSurvey()
+User currentUser = getCurrentUser();
+if (currentUser != null) {
+    createSrForNewSurvey(savedSurvey, currentUser); // SR 생성 시 임베딩도 생성됨!
+}
+
+// SrService.java - createSr()
+// 항상 임베딩 생성
+if (contentEmbeddingService != null) {
+    contentEmbeddingService.generateSrEmbeddingAsync(srId);
+}
+```
+
+#### 해결책
+
+**SR 생성 메서드에 임베딩 생성 여부 플래그 추가**
+
+```java
+// SrService.java
+// 기존 메서드는 기본값 true로 호출
+@Transactional
+public SrResponse createSr(SrCreateRequest request, String username) {
+    return createSr(request, username, true);
+}
+
+// 새 오버로드 메서드
+@Transactional
+public SrResponse createSr(SrCreateRequest request, String username,
+        boolean generateEmbedding) {
+    // ... SR 생성 로직 ...
+
+    // 임베딩 생성 여부에 따라 분기
+    if (generateEmbedding && contentEmbeddingService != null) {
+        final Long srId = savedSr.getId();
+        TransactionSynchronizationManager.registerSynchronization(
+            new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    contentEmbeddingService.generateSrEmbeddingAsync(srId);
+                }
+            });
+    }
+    return SrResponse.from(savedSr);
+}
+
+// OpenApiSurveyService.java
+private void createSrForNewSurvey(OpenApiSurvey survey, User requester,
+        boolean generateEmbedding) {
+    // generateEmbedding 플래그를 SR 생성에 전달
+    SrResponse createdSr = srService.createSr(srRequest, requester.getUsername(),
+            generateEmbedding);
+}
+
+// bulkCreateSurveys에서 호출
+createSurvey(request, false); // Survey, SR 모두 임베딩 생성 안 함
+```
+
+#### 교훈
+
+1. **플래그 전파**: 옵션 플래그는 호출 체인 전체에 전달되어야 함
+2. **일괄 처리 최적화**: 대량 데이터 처리 시 개별 항목의 부가 작업(임베딩, 알림 등) 건너뛰기
+3. **메서드 오버로딩 활용**: 기존 API 호환성 유지하면서 새 옵션 추가
+
+#### 관련 파일
+
+- [SrService.java](../backend/src/main/java/com/srmanagement/service/SrService.java)
+- [OpenApiSurveyService.java](../backend/src/main/java/com/srmanagement/service/OpenApiSurveyService.java)
+
+---
+
 ## 문서 관리
 
 ### 이 문서에 새 이슈 추가하기
@@ -648,6 +893,7 @@ subscribeProgress(
 - `TS-P2-N`: Phase 2 (PDF 변환/뷰어) 관련
 - `TS-P3-N`: Phase 3 (AI 검색) 관련
 - `TS-P4-N`: Phase 4 (고급 기능) 관련
+- `TS-P5-N`: Phase 5 (통합 임베딩 시스템) 관련
 
 ---
 
