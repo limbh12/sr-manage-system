@@ -21,6 +21,21 @@ const WikiCategoryTree: React.FC<WikiCategoryTreeProps> = ({
 }) => {
   const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
 
+  // 하위 카테고리가 있는 카테고리 ID만 수집 (펼칠 수 있는 카테고리)
+  const collectExpandableCategoryIds = (cats: WikiCategory[]): number[] => {
+    const ids: number[] = [];
+    const collect = (categoryList: WikiCategory[]) => {
+      for (const cat of categoryList) {
+        if (cat.children && cat.children.length > 0) {
+          ids.push(cat.id);
+          collect(cat.children);
+        }
+      }
+    };
+    collect(cats);
+    return ids;
+  };
+
   const toggleExpand = (categoryId: number) => {
     setExpandedCategories((prev) => {
       const newSet = new Set(prev);
@@ -32,6 +47,20 @@ const WikiCategoryTree: React.FC<WikiCategoryTreeProps> = ({
       return newSet;
     });
   };
+
+  // 전체 펼치기
+  const expandAll = () => {
+    const allExpandableIds = collectExpandableCategoryIds(categories);
+    setExpandedCategories(new Set(allExpandableIds));
+  };
+
+  // 전체 접기
+  const collapseAll = () => {
+    setExpandedCategories(new Set());
+  };
+
+  // 펼칠 수 있는 카테고리가 있는지 확인
+  const hasExpandableCategories = collectExpandableCategoryIds(categories).length > 0;
 
   const renderCategory = (category: WikiCategory, level: number = 0) => {
     const hasChildren = category.children && category.children.length > 0;
@@ -114,15 +143,35 @@ const WikiCategoryTree: React.FC<WikiCategoryTreeProps> = ({
     <div className="wiki-category-tree">
       <div className="category-tree-header">
         <h3>카테고리</h3>
-        {onCategoryCreate && (
-          <button
-            className="btn-create-category"
-            onClick={() => onCategoryCreate()}
-            title="최상위 카테고리 추가"
-          >
-            + 새 카테고리
-          </button>
-        )}
+        <div className="category-header-actions">
+          {hasExpandableCategories && (
+            <div className="expand-collapse-buttons">
+              <button
+                className="btn-expand-all"
+                onClick={expandAll}
+                title="전체 펼치기"
+              >
+                ⊞
+              </button>
+              <button
+                className="btn-collapse-all"
+                onClick={collapseAll}
+                title="전체 접기"
+              >
+                ⊟
+              </button>
+            </div>
+          )}
+          {onCategoryCreate && (
+            <button
+              className="btn-create-category"
+              onClick={() => onCategoryCreate()}
+              title="최상위 카테고리 추가"
+            >
+              + 새 카테고리
+            </button>
+          )}
+        </div>
       </div>
       <div className="category-tree-content">
         {categories.length === 0 ? (

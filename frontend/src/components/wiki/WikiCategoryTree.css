@@ -19,6 +19,41 @@
   font-weight: 600;
 }
 
+.category-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.expand-collapse-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-expand-all,
+.btn-collapse-all {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 16px;
+  color: #586069;
+  background: #f6f8fa;
+  border: 1px solid #d1d5da;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-expand-all:hover,
+.btn-collapse-all:hover {
+  color: #0366d6;
+  background: #e1f0ff;
+  border-color: #0366d6;
+}
+
 .btn-create-category {
   padding: 6px 12px;
   font-size: 14px;
