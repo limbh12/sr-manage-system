@@ -147,10 +147,12 @@ const AiSearchBox: React.FC<AiSearchBoxProps> = ({ onDocumentClick }) => {
 
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
-    padding: '20px',
-    backgroundColor: 'var(--bg-secondary)',
-    borderRadius: '8px',
-    marginBottom: '20px',
+    padding: '24px',
+    backgroundColor: 'var(--bg-primary, white)',
+    borderRadius: '12px',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+    maxWidth: '900px',
+    margin: '0 auto',
   },
   header: {
     marginBottom: '16px',

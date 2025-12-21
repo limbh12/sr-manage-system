@@ -51,6 +51,7 @@ const WikiPage: React.FC = () => {
   const [embeddingStatus, setEmbeddingStatus] = useState<EmbeddingStatusResponse | null>(null);
   const [isGeneratingEmbedding, setIsGeneratingEmbedding] = useState(false);
   const [embeddingProgress, setEmbeddingProgress] = useState<EmbeddingProgressEvent | null>(null);
+  const [showAiSearchResult, setShowAiSearchResult] = useState(false); // AI 검색 결과 표시
 
   // 카테고리 로드
   useEffect(() => {
@@ -453,6 +454,22 @@ const WikiPage: React.FC = () => {
             ))}
           </div>
         )}
+
+        {/* AI 검색 버튼 - 사이드바 하단 */}
+        <div className="ai-search-trigger">
+          <button
+            className={`btn-ai-search ${showAiSearchResult ? 'active' : ''}`}
+            onClick={() => {
+              setShowAiSearchResult(!showAiSearchResult);
+              if (!showAiSearchResult) {
+                setCurrentDocument(null);
+                navigate('/wiki');
+              }
+            }}
+          >
+            🤖 AI 검색
+          </button>
+        </div>
       </div>
 
       <div className="wiki-content">
@@ -700,12 +717,35 @@ const WikiPage: React.FC = () => {
 
             <WikiViewer content={currentDocument.content} files={currentDocument.files} />
           </div>
+        ) : showAiSearchResult ? (
+          <div className="wiki-ai-search-container">
+            <AiSearchBox
+              onDocumentClick={(documentId) => {
+                setShowAiSearchResult(false);
+                navigate(`/wiki/${documentId}`);
+              }}
+            />
+          </div>
         ) : (
           <div className="wiki-empty">
-            <AiSearchBox onDocumentClick={(documentId) => navigate(`/wiki/${documentId}`)} />
-            <p style={{ marginTop: '20px', color: 'var(--text-secondary)' }}>
-              또는 문서를 선택하거나 새 문서를 작성해주세요.
-            </p>
+            <div className="wiki-empty-content">
+              <div className="wiki-empty-icon">📚</div>
+              <h2>Wiki 문서를 선택해주세요</h2>
+              <p>좌측 카테고리에서 문서를 선택하거나 새 문서를 작성해주세요.</p>
+              <div className="wiki-empty-actions">
+                {canEditWiki && (
+                  <button className="btn-primary" onClick={handleCreateDocument}>
+                    + 새 문서 작성
+                  </button>
+                )}
+                <button
+                  className="btn-ai-search-large"
+                  onClick={() => setShowAiSearchResult(true)}
+                >
+                  🤖 AI로 문서 검색하기
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
