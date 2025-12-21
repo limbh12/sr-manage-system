@@ -1,5 +1,7 @@
 # 데이터베이스 설계 문서
 
+> **최종 업데이트**: 2025-12-22 | Wiki 테이블 스키마 추가
+
 ## 개요
 
 SR Management System의 데이터베이스 스키마 설계 문서입니다.
@@ -13,6 +15,8 @@ SR Management System의 데이터베이스 스키마 설계 문서입니다.
 ---
 
 ## ERD (Entity Relationship Diagram)
+
+### 핵심 테이블
 
 ```
 ┌──────────────────┐          ┌──────────────────┐
@@ -43,6 +47,55 @@ SR Management System의 데이터베이스 스키마 설계 문서입니다.
 │ id (PK)          │
 │ user_id (FK)     │
 │ token            │
+└──────────────────┘
+```
+
+### Wiki 테이블
+
+```
+┌──────────────────┐
+│  wiki_category   │◄───┐ (self-reference)
+├──────────────────┤    │
+│ id (PK)          │    │
+│ name             │    │
+│ parent_id (FK)───┼────┘
+│ order_index      │
+└──────────────────┘
+         ▲
+         │
+┌────────┴─────────┐          ┌──────────────────┐          ┌──────────────────┐
+│  wiki_document   │◄─────────│ wiki_document_sr │─────────►│        sr        │
+├──────────────────┤          ├──────────────────┤          ├──────────────────┤
+│ id (PK)          │          │ document_id (FK) │          │ id (PK)          │
+│ title            │          │ sr_id (FK)       │          │ ...              │
+│ content          │          └──────────────────┘          └──────────────────┘
+│ category_id (FK) │
+│ created_by (FK)──┼──────────────────────────────────────────┐
+└──────────────────┘                                          │
+         │                                                    │
+         ├───────────────────────┐                            │
+         ▼                       ▼                            ▼
+┌──────────────────┐    ┌──────────────────┐          ┌──────────────────┐
+│   wiki_version   │    │    wiki_file     │          │      users       │
+├──────────────────┤    ├──────────────────┤          ├──────────────────┤
+│ id (PK)          │    │ id (PK)          │          │ id (PK)          │
+│ document_id (FK) │    │ document_id (FK) │          │ username         │
+│ version_number   │    │ original_filename│          │ name             │
+│ title            │    │ stored_filename  │          │ ...              │
+│ content          │    │ file_size        │          └──────────────────┘
+│ created_by (FK)──┼────┼───uploaded_by(FK)┼──────────────────┘
+└──────────────────┘    └──────────────────┘
+
+┌──────────────────┐          ┌──────────────────┐
+│content_embedding │          │ai_search_history │
+├──────────────────┤          ├──────────────────┤
+│ id (PK)          │          │ id (PK)          │
+│ source_type      │          │ user_id (FK)─────┼────► users
+│ source_id        │          │ query            │
+│ chunk_index      │          │ result_count     │
+│ content          │          │ searched_at      │
+│ embedding (JSON) │          └──────────────────┘
+│ embedding_model  │
 └──────────────────┘
 ```
 
@@ -380,6 +433,311 @@ CREATE TABLE organizations (
 ) COMMENT='행정기관 정보';
 
 CREATE INDEX idx_organizations_name ON organizations(name);
+```
+
+---
+
+### 7. wiki_category (Wiki 카테고리)
+
+Wiki 문서의 계층형 카테고리를 저장하는 테이블
+
+| 컬럼명 | 데이터 타입 | 제약조건 | 설명 |
+|--------|-------------|----------|------|
+| id | BIGINT | PK, AUTO_INCREMENT | 카테고리 고유 ID |
+| name | VARCHAR(100) | NOT NULL | 카테고리명 |
+| parent_id | BIGINT | FK (wiki_category.id), NULL | 상위 카테고리 ID (Self-reference) |
+| order_index | INT | NOT NULL, DEFAULT 0 | 정렬 순서 |
+| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성 일시 |
+| updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 수정 일시 |
+
+**인덱스**
+- PRIMARY KEY (id)
+- INDEX idx_wiki_category_parent (parent_id)
+- INDEX idx_wiki_category_order (order_index)
+
+**외래 키**
+- FK_wiki_category_parent: parent_id → wiki_category(id) ON DELETE SET NULL
+
+**DDL (H2/MySQL)**
+```sql
+CREATE TABLE wiki_category (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL COMMENT '카테고리명',
+    parent_id BIGINT COMMENT '상위 카테고리 ID',
+    order_index INT DEFAULT 0 NOT NULL COMMENT '정렬 순서',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
+    INDEX idx_wiki_category_parent (parent_id),
+    INDEX idx_wiki_category_order (order_index),
+
+    CONSTRAINT fk_wiki_category_parent FOREIGN KEY (parent_id)
+        REFERENCES wiki_category(id) ON DELETE SET NULL
+);
+```
+
+---
+
+### 8. wiki_document (Wiki 문서)
+
+Wiki 문서를 저장하는 테이블
+
+| 컬럼명 | 데이터 타입 | 제약조건 | 설명 |
+|--------|-------------|----------|------|
+| id | BIGINT | PK, AUTO_INCREMENT | 문서 고유 ID |
+| title | VARCHAR(200) | NOT NULL | 문서 제목 |
+| content | TEXT | NULL | 마크다운 내용 |
+| category_id | BIGINT | FK (wiki_category.id), NULL | 소속 카테고리 |
+| created_by | BIGINT | FK (users.id), NOT NULL | 작성자 ID |
+| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성 일시 |
+| updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 수정 일시 |
+
+**인덱스**
+- PRIMARY KEY (id)
+- INDEX idx_wiki_document_category (category_id)
+- INDEX idx_wiki_document_created_by (created_by)
+- INDEX idx_wiki_document_created_at (created_at)
+- FULLTEXT INDEX idx_wiki_document_content (title, content) - MySQL/H2
+
+**외래 키**
+- FK_wiki_document_category: category_id → wiki_category(id) ON DELETE SET NULL
+- FK_wiki_document_user: created_by → users(id)
+
+**DDL (H2/MySQL)**
+```sql
+CREATE TABLE wiki_document (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(200) NOT NULL COMMENT '문서 제목',
+    content TEXT COMMENT '마크다운 내용',
+    category_id BIGINT COMMENT '카테고리 ID',
+    created_by BIGINT NOT NULL COMMENT '작성자 ID',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
+    INDEX idx_wiki_document_category (category_id),
+    INDEX idx_wiki_document_created_by (created_by),
+    INDEX idx_wiki_document_created_at (created_at),
+
+    CONSTRAINT fk_wiki_document_category FOREIGN KEY (category_id)
+        REFERENCES wiki_category(id) ON DELETE SET NULL,
+    CONSTRAINT fk_wiki_document_user FOREIGN KEY (created_by)
+        REFERENCES users(id)
+);
+```
+
+---
+
+### 9. wiki_version (Wiki 문서 버전)
+
+Wiki 문서의 변경 이력(버전)을 저장하는 테이블
+
+| 컬럼명 | 데이터 타입 | 제약조건 | 설명 |
+|--------|-------------|----------|------|
+| id | BIGINT | PK, AUTO_INCREMENT | 버전 고유 ID |
+| document_id | BIGINT | FK (wiki_document.id), NOT NULL | 문서 ID |
+| version_number | INT | NOT NULL | 버전 번호 |
+| title | VARCHAR(200) | NOT NULL | 해당 버전의 제목 |
+| content | TEXT | NULL | 해당 버전의 내용 |
+| created_by | BIGINT | FK (users.id), NOT NULL | 수정자 ID |
+| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 버전 생성 일시 |
+
+**인덱스**
+- PRIMARY KEY (id)
+- INDEX idx_wiki_version_document (document_id)
+- INDEX idx_wiki_version_number (document_id, version_number)
+
+**외래 키**
+- FK_wiki_version_document: document_id → wiki_document(id) ON DELETE CASCADE
+- FK_wiki_version_user: created_by → users(id)
+
+**DDL (H2/MySQL)**
+```sql
+CREATE TABLE wiki_version (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    document_id BIGINT NOT NULL COMMENT '문서 ID',
+    version_number INT NOT NULL COMMENT '버전 번호',
+    title VARCHAR(200) NOT NULL COMMENT '버전 제목',
+    content TEXT COMMENT '버전 내용',
+    created_by BIGINT NOT NULL COMMENT '수정자 ID',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
+    INDEX idx_wiki_version_document (document_id),
+    INDEX idx_wiki_version_number (document_id, version_number),
+
+    CONSTRAINT fk_wiki_version_document FOREIGN KEY (document_id)
+        REFERENCES wiki_document(id) ON DELETE CASCADE,
+    CONSTRAINT fk_wiki_version_user FOREIGN KEY (created_by)
+        REFERENCES users(id)
+);
+```
+
+---
+
+### 10. wiki_file (Wiki 첨부 파일)
+
+Wiki 문서에 첨부된 파일을 저장하는 테이블
+
+| 컬럼명 | 데이터 타입 | 제약조건 | 설명 |
+|--------|-------------|----------|------|
+| id | BIGINT | PK, AUTO_INCREMENT | 파일 고유 ID |
+| document_id | BIGINT | FK (wiki_document.id), NULL | 연결된 문서 ID |
+| original_filename | VARCHAR(255) | NOT NULL | 원본 파일명 |
+| stored_filename | VARCHAR(255) | NOT NULL | 저장된 파일명 (UUID) |
+| file_path | VARCHAR(500) | NOT NULL | 파일 저장 경로 |
+| file_size | BIGINT | NOT NULL | 파일 크기 (bytes) |
+| mime_type | VARCHAR(100) | NULL | MIME 타입 |
+| uploaded_by | BIGINT | FK (users.id), NOT NULL | 업로더 ID |
+| uploaded_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 업로드 일시 |
+
+**인덱스**
+- PRIMARY KEY (id)
+- INDEX idx_wiki_file_document (document_id)
+- INDEX idx_wiki_file_stored (stored_filename)
+
+**외래 키**
+- FK_wiki_file_document: document_id → wiki_document(id) ON DELETE SET NULL
+- FK_wiki_file_user: uploaded_by → users(id)
+
+**DDL (H2/MySQL)**
+```sql
+CREATE TABLE wiki_file (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    document_id BIGINT COMMENT '문서 ID',
+    original_filename VARCHAR(255) NOT NULL COMMENT '원본 파일명',
+    stored_filename VARCHAR(255) NOT NULL COMMENT '저장된 파일명',
+    file_path VARCHAR(500) NOT NULL COMMENT '파일 경로',
+    file_size BIGINT NOT NULL COMMENT '파일 크기',
+    mime_type VARCHAR(100) COMMENT 'MIME 타입',
+    uploaded_by BIGINT NOT NULL COMMENT '업로더 ID',
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
+    INDEX idx_wiki_file_document (document_id),
+    INDEX idx_wiki_file_stored (stored_filename),
+
+    CONSTRAINT fk_wiki_file_document FOREIGN KEY (document_id)
+        REFERENCES wiki_document(id) ON DELETE SET NULL,
+    CONSTRAINT fk_wiki_file_user FOREIGN KEY (uploaded_by)
+        REFERENCES users(id)
+);
+```
+
+---
+
+### 11. wiki_document_sr (Wiki-SR 연결 테이블)
+
+Wiki 문서와 SR 간의 다대다 관계를 저장하는 연결 테이블
+
+| 컬럼명 | 데이터 타입 | 제약조건 | 설명 |
+|--------|-------------|----------|------|
+| document_id | BIGINT | PK, FK (wiki_document.id) | Wiki 문서 ID |
+| sr_id | BIGINT | PK, FK (sr.id) | SR ID |
+
+**인덱스**
+- PRIMARY KEY (document_id, sr_id)
+- INDEX idx_wiki_document_sr_sr (sr_id)
+
+**외래 키**
+- FK_wiki_doc_sr_document: document_id → wiki_document(id) ON DELETE CASCADE
+- FK_wiki_doc_sr_sr: sr_id → sr(id) ON DELETE CASCADE
+
+**DDL (H2/MySQL)**
+```sql
+CREATE TABLE wiki_document_sr (
+    document_id BIGINT NOT NULL,
+    sr_id BIGINT NOT NULL,
+
+    PRIMARY KEY (document_id, sr_id),
+    INDEX idx_wiki_document_sr_sr (sr_id),
+
+    CONSTRAINT fk_wiki_doc_sr_document FOREIGN KEY (document_id)
+        REFERENCES wiki_document(id) ON DELETE CASCADE,
+    CONSTRAINT fk_wiki_doc_sr_sr FOREIGN KEY (sr_id)
+        REFERENCES sr(id) ON DELETE CASCADE
+);
+```
+
+---
+
+### 12. content_embedding (AI 임베딩)
+
+AI 검색을 위한 콘텐츠 벡터 임베딩을 저장하는 테이블
+
+| 컬럼명 | 데이터 타입 | 제약조건 | 설명 |
+|--------|-------------|----------|------|
+| id | BIGINT | PK, AUTO_INCREMENT | 임베딩 고유 ID |
+| source_type | VARCHAR(20) | NOT NULL | 소스 유형 (WIKI, SR, SURVEY) |
+| source_id | BIGINT | NOT NULL | 소스 ID |
+| chunk_index | INT | NOT NULL, DEFAULT 0 | 청크 인덱스 |
+| content | TEXT | NOT NULL | 원본 텍스트 청크 |
+| embedding | TEXT | NOT NULL | 벡터 임베딩 (JSON 배열) |
+| embedding_model | VARCHAR(50) | NOT NULL | 사용된 모델 (nomic-embed-text) |
+| created_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 생성 일시 |
+| updated_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 수정 일시 |
+
+**인덱스**
+- PRIMARY KEY (id)
+- UNIQUE INDEX idx_content_embedding_source (source_type, source_id, chunk_index)
+- INDEX idx_content_embedding_type (source_type)
+
+**DDL (H2/MySQL)**
+```sql
+CREATE TABLE content_embedding (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    source_type VARCHAR(20) NOT NULL COMMENT '소스 유형',
+    source_id BIGINT NOT NULL COMMENT '소스 ID',
+    chunk_index INT DEFAULT 0 NOT NULL COMMENT '청크 인덱스',
+    content TEXT NOT NULL COMMENT '원본 텍스트',
+    embedding TEXT NOT NULL COMMENT '벡터 임베딩 (JSON)',
+    embedding_model VARCHAR(50) NOT NULL COMMENT '임베딩 모델',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
+    UNIQUE INDEX idx_content_embedding_source (source_type, source_id, chunk_index),
+    INDEX idx_content_embedding_type (source_type)
+);
+```
+
+**Note**: 임베딩 벡터는 `nomic-embed-text` 모델 사용 시 768차원입니다. JSON 배열 형태로 저장되며, 코사인 유사도 계산은 애플리케이션 레벨에서 수행됩니다.
+
+---
+
+### 13. ai_search_history (AI 검색 기록)
+
+사용자의 AI 검색 기록을 저장하는 테이블
+
+| 컬럼명 | 데이터 타입 | 제약조건 | 설명 |
+|--------|-------------|----------|------|
+| id | BIGINT | PK, AUTO_INCREMENT | 기록 고유 ID |
+| user_id | BIGINT | FK (users.id), NOT NULL | 검색 사용자 ID |
+| query | VARCHAR(500) | NOT NULL | 검색 쿼리 |
+| result_count | INT | NOT NULL, DEFAULT 0 | 검색 결과 수 |
+| search_time_ms | INT | NULL | 검색 소요 시간 (ms) |
+| searched_at | TIMESTAMP | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 검색 일시 |
+
+**인덱스**
+- PRIMARY KEY (id)
+- INDEX idx_ai_search_history_user (user_id)
+- INDEX idx_ai_search_history_date (searched_at)
+
+**외래 키**
+- FK_ai_search_history_user: user_id → users(id) ON DELETE CASCADE
+
+**DDL (H2/MySQL)**
+```sql
+CREATE TABLE ai_search_history (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL COMMENT '사용자 ID',
+    query VARCHAR(500) NOT NULL COMMENT '검색 쿼리',
+    result_count INT DEFAULT 0 NOT NULL COMMENT '결과 수',
+    search_time_ms INT COMMENT '검색 소요 시간',
+    searched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+
+    INDEX idx_ai_search_history_user (user_id),
+    INDEX idx_ai_search_history_date (searched_at),
+
+    CONSTRAINT fk_ai_search_history_user FOREIGN KEY (user_id)
+        REFERENCES users(id) ON DELETE CASCADE
+);
 ```
 
 ---

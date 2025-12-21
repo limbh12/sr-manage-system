@@ -63,6 +63,24 @@ spring:
         options:
           model: snowflake-arctic-embed:latest
 
+# Wiki 설정
+wiki:
+  upload:
+    base-path: ./uploads
+    max-file-size: 20971520  # 20MB
+  # AI 구조 보정 설정 (D-3)
+  structure-enhancement:
+    enabled: true            # AI 구조 보정 활성화 (표/수식 인식)
+    table-detection: true    # 표 구조 인식 및 변환
+    formula-detection: true  # 수식(LaTeX) 인식 및 변환
+    # Vision 기반 복잡한 표 처리 (D-3 고급 기능)
+    vision-enabled: false    # Vision 모델 사용 여부 (Llama Vision 필요)
+    vision-model: llama3.2-vision  # Vision 모델명 (llama3.2-vision, llava 등)
+  # Pandoc 통합 설정 (선택적)
+  pandoc:
+    enabled: false           # Pandoc 사용 여부 (설치 필요)
+    path: pandoc             # Pandoc 실행 경로
+
 # JWT 설정
 # NOTE: 프로덕션 환경에서는 환경 변수로 설정하세요: JWT_SECRET
 jwt:

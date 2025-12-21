@@ -9,6 +9,8 @@ PUBC 오픈API 전환 지원을 위한 SR(Service Request) 관리 시스템입�
 
 ## 🛠 1. 기술 스택 (Tech Stack)
 
+### 1.1 핵심 기술
+
 | 구분 | 상세 기술 | 버전 | 비고 |
 | --- | --- | --- | --- |
 | **Frontend** | React, TypeScript, Vite | 18.x | UI/UX 프레임워크 |
@@ -19,6 +21,19 @@ PUBC 오픈API 전환 지원을 위한 SR(Service Request) 관리 시스템입�
 | **Database** | H2 (기본), CUBRID, MySQL, PostgreSQL | - | 다중 DB 지원 |
 | **Authentication** | JWT (JSON Web Token) | - | Stateless 인증 |
 | **Security** | Spring Security, AES-256 | - | 인증/암호화 |
+
+### 1.2 AI/Wiki 기술 (Phase 5 완료)
+
+| 구분 | 상세 기술 | 버전 | 비고 |
+| --- | --- | --- | --- |
+| **AI Engine** | Ollama + gpt-oss | 20B | 폐쇄망 Local LLM |
+| **AI Framework** | Spring AI | 1.0.0-M1 | LLM/임베딩 연동 |
+| **Embedding** | snowflake-arctic-embed | 768차원 | 벡터 임베딩 |
+| **Vector Store** | H2 + ContentEmbedding | - | 코사인 유사도 검색 |
+| **PDF Parser** | Apache Tika, PDFBox | 2.9.1 | PDF 텍스트/이미지 추출 |
+| **Markdown Editor** | Toast UI Editor | - | 위키 편집기 |
+| **Markdown Renderer** | react-markdown | - | 마크다운 렌더링 |
+| **Caching** | Caffeine | - | 검색/요약 캐싱 |
 
 ---
 
@@ -93,6 +108,36 @@ PUBC 오픈API 전환 지원을 위한 SR(Service Request) 관리 시스템입�
 * [x] **CODE-2: 시스템 공통 코드**
   * SR 우선순위, 상태 코드 등
   * 카테고리별 코드 그룹 관리
+
+
+### Epic 5. AI 기반 Wiki 시스템
+
+* [x] **WIKI-1: 마크다운 에디터**
+  * Toast UI Editor 기반 실시간 편집
+  * 코드 블록 Syntax Highlighting
+  * 이미지 붙여넣기 및 업로드
+
+
+* [x] **WIKI-2: 문서 버전 관리**
+  * 자동 버전 생성 및 이력 추적
+  * Diff View, 롤백 기능
+
+
+* [x] **WIKI-3: PDF 자동 변환**
+  * PDF → 마크다운 자동 변환
+  * 이미지 추출 및 페이지별 배치
+  * AI 구조 보정 (표/수식 인식)
+
+
+* [x] **WIKI-4: AI 검색**
+  * RAG 기반 자연어 검색
+  * Wiki/SR/Survey 통합 검색
+  * 근거 문서 하이라이팅
+
+
+* [x] **WIKI-5: 알림 및 권한**
+  * 문서 변경 시 실시간 알림
+  * WIKI_EDITOR 역할 기반 편집 권한
 
 
 ---
@@ -187,8 +232,34 @@ backend/src/main/java/com/srmanagement/
 ├── exception/           # 예외 처리
 │   ├── GlobalExceptionHandler
 │   └── CustomException
-└── util/                # 유틸리티
-    └── EncryptionUtil
+├── util/                # 유틸리티
+│   └── EncryptionUtil
+└── wiki/                # AI Wiki 시스템 (신규)
+    ├── controller/
+    │   ├── WikiDocumentController
+    │   ├── WikiCategoryController
+    │   ├── WikiFileController
+    │   └── WikiSearchController
+    ├── service/
+    │   ├── WikiDocumentService
+    │   ├── PdfConversionService
+    │   ├── StructureEnhancementService  # AI 구조 보정
+    │   ├── AiSearchService              # RAG 검색
+    │   └── ContentEmbeddingService      # 임베딩 관리
+    ├── repository/
+    │   ├── WikiDocumentRepository
+    │   ├── WikiCategoryRepository
+    │   ├── WikiVersionRepository
+    │   └── ContentEmbeddingRepository
+    ├── entity/
+    │   ├── WikiDocument
+    │   ├── WikiCategory
+    │   ├── WikiVersion
+    │   ├── WikiFile
+    │   └── ContentEmbedding
+    └── dto/
+        ├── WikiDocumentRequest/Response
+        └── AiSearchRequest/Response
 ```
 
 ### 3.3 프론트엔드 구조
@@ -201,7 +272,15 @@ frontend/src/
 │   ├── survey/          # SurveyList, SurveyForm, CsvUploadModal
 │   ├── user/            # UserList, UserEditModal
 │   ├── admin/           # CommonCodeList, CommonCodeForm
-│   └── auth/            # LoginForm
+│   ├── auth/            # LoginForm
+│   └── wiki/            # Wiki 시스템 (신규)
+│       ├── WikiEditor.tsx        # Toast UI 마크다운 에디터
+│       ├── WikiViewer.tsx        # 마크다운 렌더링
+│       ├── WikiSidebar.tsx       # 카테고리 트리
+│       ├── WikiVersionHistory.tsx # 버전 이력/롤백
+│       ├── PdfUploadModal.tsx    # PDF 업로드/변환
+│       ├── AiSearchBox.tsx       # AI 검색
+│       └── AiSummaryBox.tsx      # AI 요약
 ├── pages/               # 페이지 컴포넌트
 │   ├── LoginPage
 │   ├── DashboardPage
@@ -209,14 +288,17 @@ frontend/src/
 │   ├── OpenApiSurveyPage
 │   ├── UserManagementPage
 │   ├── CommonCodePage
-│   └── ProfilePage
+│   ├── ProfilePage
+│   └── WikiPage          # Wiki 메인 페이지 (신규)
 ├── services/            # API 클라이언트
 │   ├── api.ts           # 중앙 axios 인스턴스 (JWT 자동 처리)
 │   ├── authService.ts
 │   ├── srService.ts
 │   ├── surveyService.ts
 │   ├── userService.ts
-│   └── commonCodeService.ts
+│   ├── commonCodeService.ts
+│   ├── wikiService.ts     # Wiki CRUD (신규)
+│   └── aiSearchService.ts # AI 검색 (신규)
 ├── store/               # Redux 스토어
 │   ├── index.ts
 │   ├── authSlice.ts
@@ -482,27 +564,56 @@ npm run dev
 
 ## 🎯 9. 현재 상태 및 향후 계획
 
+> **최종 업데이트**: 2025-12-22
+
+### 전체 진행 현황
+
+```
+SR 관리 시스템 (Core)    ████████████████████ 100% ✅ 완료
+OPEN API 현황조사        ████████████████████ 100% ✅ 완료
+AI Wiki 시스템           ████████████████████  95% ✅ 완료
+```
+
 ### Phase 1 - 완료 ✅ (2024.12)
-* SR 관리 핵심 기능 (등록, 수정, 상태 관리, 이력 추적)
-* OPEN API 현황조사 관리 (CSV 업로드, SR 자동 생성)
-* JWT 인증 및 권한 관리 (Access/Refresh Token)
-* 다중 DB 지원 (H2, CUBRID, MySQL, PostgreSQL)
-* 통합 배포 스크립트 (start.sh, stop.sh)
-* 다크모드 지원
-* Soft Delete 기능 (SR 삭제 시 복구 가능)
+* [x] SR 관리 핵심 기능 (등록, 수정, 상태 관리, 이력 추적)
+* [x] OPEN API 현황조사 관리 (CSV 업로드, SR 자동 생성)
+* [x] JWT 인증 및 권한 관리 (Access/Refresh Token)
+* [x] 다중 DB 지원 (H2, CUBRID, MySQL, PostgreSQL)
+* [x] 통합 배포 스크립트 (start.sh, stop.sh)
+* [x] 다크모드 지원
+* [x] Soft Delete 기능 (SR 삭제 시 복구 가능)
 
-### Phase 2 - 진행 중 🚧 (2025.01 예정)
+### Phase 2 - 완료 ✅ (2025.01)
+* [x] 파일 첨부 기능 강화 (Wiki 파일 업로드)
+* [x] 알림 기능 (문서/SR 상태 변경 시 알림)
+* [x] 검색 기능 개선 (AI 기반 시맨틱 검색)
+
+### Wiki Phase 1~5 - 완료 ✅ (2025.12)
+
+| Phase | 기능 | 상태 |
+|-------|------|------|
+| **Phase 1** | 코어 위키 (마크다운 에디터, 버전 관리, 카테고리) | ✅ 100% |
+| **Phase 2** | PDF 변환 (Apache Tika, 이미지 추출, 목차 생성) | ✅ 100% |
+| **Phase 3** | AI 검색 (RAG, 임베딩, 자연어 검색) | ✅ 100% |
+| **Phase 4** | 고급 기능 (캐싱, 권한, 알림, 요약) | ✅ 100% |
+| **Phase 5** | 통합 검색 (SR/Survey 임베딩, 검색 이력) | ✅ 100% |
+
+**상세 현황**: [PB_AI-Powered_Wiki.md](PB_AI-Powered_Wiki.md) 참조
+
+### 향후 계획 📋 (Backlog)
+
+**준비 완료 (코드 구현됨)**
+* [ ] **Vision 기반 복잡한 표 추출** - Ollama 서버에 `llava:7b` 모델 설치 필요 (~4.7GB)
+  * StructureEnhancementService에 Vision API 통합 완료
+  * 셀 병합, 중첩 표, 다중 헤더 지원
+
+**미래 검토**
 * [ ] 대시보드 고도화 (실시간 통계, 차트 개선)
-* [ ] 파일 첨부 기능 강화 (다중 파일 업로드, 미리보기)
-* [ ] 알림 기능 (SR 상태 변경 시 담당자 알림)
-* [ ] 검색 기능 개선 (전체 텍스트 검색)
-
-### Phase 3 - 계획 📋 (2025.Q2)
 * [ ] 이메일 알림 기능
-* [ ] 배치 작업 스케줄링 (통계 생성, 백업)
+* [ ] 배치 작업 스케줄링 (통계 생성)
 * [ ] 감사 로그(Audit Log) 시스템
-* [ ] 데이터 백업/복구 자동화
-* [ ] **AI 기반 지능형 위키 시스템** (별도 PB 문서 참조: [PB_AI-Powered_Wiki.md](PB_AI-Powered_Wiki.md))
+* [ ] Wiki 드래그 앤 드롭 문서 이동
+* [ ] OCR 기반 이미지 내 텍스트 검색 (Tesseract)
 
 ---
 

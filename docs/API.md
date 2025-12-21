@@ -4,6 +4,8 @@
 
 SR Management System의 RESTful API 명세서입니다.
 
+> **최종 업데이트**: 2025-12-22 | Wiki API 추가
+
 ### Base URL
 ```
 http://localhost:8080/api
@@ -992,6 +994,734 @@ Authorization: Bearer {access_token}
     "name": "서울특별시"
   }
 ]
+```
+
+---
+
+## Wiki API
+
+### 문서 관리
+
+#### 문서 목록 조회
+
+Wiki 문서 목록을 조회합니다.
+
+**Endpoint**
+```
+GET /api/wiki/documents
+```
+
+**Headers**
+```
+Authorization: Bearer {access_token}
+```
+
+**Query Parameters**
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| categoryId | long | No | - | 카테고리 ID로 필터링 |
+
+**Response (200 OK)**
+```json
+[
+  {
+    "id": 1,
+    "title": "API 가이드",
+    "content": "# API 가이드\n\n...",
+    "category": {
+      "id": 1,
+      "name": "기술문서"
+    },
+    "createdBy": {
+      "id": 1,
+      "username": "admin",
+      "name": "관리자"
+    },
+    "createdAt": "2024-12-20T10:00:00",
+    "updatedAt": "2024-12-20T12:00:00"
+  }
+]
+```
+
+---
+
+#### 문서 상세 조회
+
+특정 문서의 상세 정보를 조회합니다.
+
+**Endpoint**
+```
+GET /api/wiki/documents/{id}
+```
+
+**Headers**
+```
+Authorization: Bearer {access_token}
+```
+
+**Path Parameters**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| id | long | 문서 ID |
+
+**Response (200 OK)**
+```json
+{
+  "id": 1,
+  "title": "API 가이드",
+  "content": "# API 가이드\n\n마크다운 내용...",
+  "category": {
+    "id": 1,
+    "name": "기술문서"
+  },
+  "files": [
+    {
+      "id": 1,
+      "originalFilename": "diagram.png",
+      "fileSize": 102400,
+      "mimeType": "image/png"
+    }
+  ],
+  "linkedSrs": [
+    {
+      "id": 1,
+      "srId": "SR-2412-0001",
+      "title": "API 오류 수정"
+    }
+  ],
+  "createdBy": {
+    "id": 1,
+    "username": "admin",
+    "name": "관리자"
+  },
+  "createdAt": "2024-12-20T10:00:00",
+  "updatedAt": "2024-12-20T12:00:00"
+}
+```
+
+---
+
+#### 문서 생성
+
+새 Wiki 문서를 생성합니다.
+
+**Endpoint**
+```
+POST /api/wiki/documents
+```
+
+**Headers**
+```
+Authorization: Bearer {access_token}
+```
+
+**Request Body**
+```json
+{
+  "title": "새 문서 제목",
+  "content": "# 마크다운 내용",
+  "categoryId": 1,
+  "srIds": [1, 2]
+}
+```
+
+**Response (201 Created)**
+```json
+{
+  "id": 2,
+  "title": "새 문서 제목",
+  "createdAt": "2024-12-20T15:00:00"
+}
+```
+
+---
+
+#### 문서 수정
+
+기존 문서를 수정합니다. 수정 시 자동으로 버전이 생성됩니다.
+
+**Endpoint**
+```
+PUT /api/wiki/documents/{id}
+```
+
+**Headers**
+```
+Authorization: Bearer {access_token}
+```
+
+**Request Body**
+```json
+{
+  "title": "수정된 제목",
+  "content": "# 수정된 내용",
+  "categoryId": 2,
+  "srIds": [1]
+}
+```
+
+**Response (200 OK)**
+```json
+{
+  "id": 1,
+  "title": "수정된 제목",
+  "updatedAt": "2024-12-20T16:00:00"
+}
+```
+
+---
+
+#### 문서 삭제
+
+문서를 삭제합니다.
+
+**Endpoint**
+```
+DELETE /api/wiki/documents/{id}
+```
+
+**Headers**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (204 No Content)**
+
+---
+
+### 문서 버전 관리
+
+#### 버전 이력 조회
+
+문서의 버전 이력을 조회합니다.
+
+**Endpoint**
+```
+GET /api/wiki/documents/{id}/versions
+```
+
+**Headers**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (200 OK)**
+```json
+[
+  {
+    "id": 3,
+    "versionNumber": 3,
+    "title": "현재 제목",
+    "createdBy": {
+      "id": 1,
+      "username": "admin",
+      "name": "관리자"
+    },
+    "createdAt": "2024-12-20T16:00:00"
+  },
+  {
+    "id": 2,
+    "versionNumber": 2,
+    "title": "이전 제목",
+    "createdBy": {
+      "id": 1,
+      "username": "admin",
+      "name": "관리자"
+    },
+    "createdAt": "2024-12-20T14:00:00"
+  }
+]
+```
+
+---
+
+#### 특정 버전 조회
+
+특정 버전의 문서 내용을 조회합니다.
+
+**Endpoint**
+```
+GET /api/wiki/documents/{id}/versions/{versionId}
+```
+
+**Headers**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (200 OK)**
+```json
+{
+  "id": 2,
+  "versionNumber": 2,
+  "title": "이전 제목",
+  "content": "# 이전 내용",
+  "createdBy": {
+    "id": 1,
+    "username": "admin",
+    "name": "관리자"
+  },
+  "createdAt": "2024-12-20T14:00:00"
+}
+```
+
+---
+
+#### 버전 롤백
+
+특정 버전으로 문서를 롤백합니다.
+
+**Endpoint**
+```
+POST /api/wiki/documents/{id}/versions/{versionId}/rollback
+```
+
+**Headers**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (200 OK)**
+```json
+{
+  "id": 1,
+  "title": "롤백된 제목",
+  "message": "버전 2로 롤백되었습니다."
+}
+```
+
+---
+
+### 카테고리 관리
+
+#### 카테고리 트리 조회
+
+계층형 카테고리 트리를 조회합니다.
+
+**Endpoint**
+```
+GET /api/wiki/categories/tree
+```
+
+**Headers**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (200 OK)**
+```json
+[
+  {
+    "id": 1,
+    "name": "기술문서",
+    "parentId": null,
+    "orderIndex": 0,
+    "children": [
+      {
+        "id": 2,
+        "name": "API 문서",
+        "parentId": 1,
+        "orderIndex": 0,
+        "children": []
+      },
+      {
+        "id": 3,
+        "name": "설치 가이드",
+        "parentId": 1,
+        "orderIndex": 1,
+        "children": []
+      }
+    ]
+  }
+]
+```
+
+---
+
+#### 카테고리 생성
+
+**Endpoint**
+```
+POST /api/wiki/categories
+```
+
+**Headers**
+```
+Authorization: Bearer {access_token}
+```
+
+**Request Body**
+```json
+{
+  "name": "새 카테고리",
+  "parentId": 1,
+  "orderIndex": 2
+}
+```
+
+**Response (201 Created)**
+```json
+{
+  "id": 4,
+  "name": "새 카테고리",
+  "parentId": 1,
+  "orderIndex": 2
+}
+```
+
+---
+
+#### 카테고리 수정
+
+**Endpoint**
+```
+PUT /api/wiki/categories/{id}
+```
+
+**Headers**
+```
+Authorization: Bearer {access_token}
+```
+
+**Request Body**
+```json
+{
+  "name": "수정된 카테고리명",
+  "parentId": null,
+  "orderIndex": 0
+}
+```
+
+**Response (200 OK)**
+```json
+{
+  "id": 4,
+  "name": "수정된 카테고리명",
+  "parentId": null,
+  "orderIndex": 0
+}
+```
+
+---
+
+#### 카테고리 삭제
+
+**Endpoint**
+```
+DELETE /api/wiki/categories/{id}
+```
+
+**Headers**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (204 No Content)**
+
+---
+
+### 파일 관리
+
+#### 파일 업로드
+
+Wiki 문서에 첨부할 파일을 업로드합니다.
+
+**Endpoint**
+```
+POST /api/wiki/files/upload
+```
+
+**Headers**
+```
+Authorization: Bearer {access_token}
+Content-Type: multipart/form-data
+```
+
+**Request**
+- `file`: 업로드할 파일 (multipart)
+- `documentId`: 연결할 문서 ID (optional)
+
+**Response (201 Created)**
+```json
+{
+  "id": 1,
+  "originalFilename": "diagram.png",
+  "storedFilename": "a1b2c3d4-e5f6-7890-abcd-ef1234567890.png",
+  "fileSize": 102400,
+  "mimeType": "image/png",
+  "uploadedAt": "2024-12-20T10:00:00"
+}
+```
+
+---
+
+#### 파일 다운로드
+
+**Endpoint**
+```
+GET /api/wiki/files/{id}/download
+```
+
+**Headers**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response**
+- Content-Type: 파일의 MIME 타입
+- Content-Disposition: attachment; filename="원본파일명"
+
+---
+
+#### PDF 업로드 및 마크다운 변환
+
+PDF 파일을 업로드하고 마크다운으로 변환합니다.
+
+**Endpoint**
+```
+POST /api/wiki/files/upload-pdf
+```
+
+**Headers**
+```
+Authorization: Bearer {access_token}
+Content-Type: multipart/form-data
+```
+
+**Request**
+- `file`: PDF 파일 (multipart)
+
+**Response (200 OK)**
+```json
+{
+  "success": true,
+  "markdown": "# 추출된 제목\n\n추출된 본문 내용...",
+  "pageCount": 5,
+  "extractedAt": "2024-12-20T10:00:00"
+}
+```
+
+---
+
+#### PDF 업로드 (AI 구조 보정)
+
+PDF 파일을 업로드하고 AI를 사용하여 표/수식 구조를 보정합니다.
+
+**Endpoint**
+```
+POST /api/wiki/files/upload-pdf-enhanced
+```
+
+**Headers**
+```
+Authorization: Bearer {access_token}
+Content-Type: multipart/form-data
+```
+
+**Request**
+- `file`: PDF 파일 (multipart)
+
+**Response (200 OK)**
+```json
+{
+  "success": true,
+  "markdown": "# 제목\n\n| 컬럼1 | 컬럼2 |\n|-------|-------|\n| 값1 | 값2 |\n\n수식: $E = mc^2$",
+  "pageCount": 5,
+  "enhanced": true,
+  "tablesDetected": 3,
+  "formulasDetected": 2,
+  "extractedAt": "2024-12-20T10:00:00"
+}
+```
+
+---
+
+### AI 검색
+
+#### 시맨틱 검색
+
+자연어 질의로 Wiki 문서를 검색합니다 (임베딩 기반 유사도 검색).
+
+**Endpoint**
+```
+POST /api/wiki/search/semantic
+```
+
+**Headers**
+```
+Authorization: Bearer {access_token}
+```
+
+**Request Body**
+```json
+{
+  "query": "API 인증 방법은?",
+  "topK": 5
+}
+```
+
+**Response (200 OK)**
+```json
+{
+  "results": [
+    {
+      "documentId": 1,
+      "title": "API 가이드",
+      "content": "# API 가이드\n\nJWT 토큰을 사용하여...",
+      "similarity": 0.92,
+      "category": "기술문서"
+    },
+    {
+      "documentId": 3,
+      "title": "인증 시스템 설명",
+      "content": "# 인증 시스템\n\nAccess Token과 Refresh Token...",
+      "similarity": 0.85,
+      "category": "기술문서"
+    }
+  ],
+  "queryEmbeddingTime": 45,
+  "searchTime": 12
+}
+```
+
+---
+
+#### 통합 AI 검색
+
+Wiki, SR, 설문조사를 통합하여 검색합니다.
+
+**Endpoint**
+```
+POST /api/wiki/search/unified
+```
+
+**Headers**
+```
+Authorization: Bearer {access_token}
+```
+
+**Request Body**
+```json
+{
+  "query": "로그인 오류 해결 방법",
+  "topK": 10,
+  "sources": ["wiki", "sr", "survey"]
+}
+```
+
+**Response (200 OK)**
+```json
+{
+  "results": [
+    {
+      "source": "wiki",
+      "sourceId": 1,
+      "title": "로그인 문제 해결 가이드",
+      "content": "...",
+      "similarity": 0.89
+    },
+    {
+      "source": "sr",
+      "sourceId": 5,
+      "title": "SR-2412-0005: 로그인 오류",
+      "content": "...",
+      "similarity": 0.82
+    }
+  ],
+  "totalResults": 8
+}
+```
+
+---
+
+#### 임베딩 재생성
+
+문서의 임베딩을 수동으로 재생성합니다.
+
+**Endpoint**
+```
+POST /api/wiki/search/reindex/{documentId}
+```
+
+**Headers**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response (200 OK)**
+```json
+{
+  "success": true,
+  "documentId": 1,
+  "chunksCreated": 5,
+  "message": "임베딩이 성공적으로 재생성되었습니다."
+}
+```
+
+---
+
+#### 전체 임베딩 재생성
+
+모든 문서의 임베딩을 재생성합니다 (관리자 전용).
+
+**Endpoint**
+```
+POST /api/wiki/search/reindex-all
+```
+
+**Headers**
+```
+Authorization: Bearer {access_token}
+```
+
+**Required Role**: ADMIN
+
+**Response (200 OK)**
+```json
+{
+  "success": true,
+  "documentsProcessed": 45,
+  "totalChunksCreated": 230,
+  "processingTime": 12500
+}
+```
+
+---
+
+#### 검색 기록 조회
+
+사용자의 AI 검색 기록을 조회합니다.
+
+**Endpoint**
+```
+GET /api/wiki/search/history
+```
+
+**Headers**
+```
+Authorization: Bearer {access_token}
+```
+
+**Query Parameters**
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| page | integer | No | 0 | 페이지 번호 |
+| size | integer | No | 20 | 페이지 크기 |
+
+**Response (200 OK)**
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "query": "API 인증 방법",
+      "resultCount": 5,
+      "searchedAt": "2024-12-20T15:30:00"
+    }
+  ],
+  "totalElements": 50,
+  "totalPages": 3
+}
 ```
 
 ---

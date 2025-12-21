@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { wikiFileApi, wikiCategoryApi } from '../../services/wikiService';
-import type { WikiCategory } from '../../types/wiki';
+import { wikiFileApi, wikiCategoryApi, EnhancedPdfConversionResponse } from '../../services/wikiService';
+import type { WikiCategory, WikiDocument } from '../../types/wiki';
 import './PdfUploadModal.css';
 
 interface PdfUploadModalProps {
@@ -22,6 +22,13 @@ const PdfUploadModal: React.FC<PdfUploadModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [conversionStatus, setConversionStatus] = useState<string>('');
   const [isDragging, setIsDragging] = useState(false);
+  // AI 구조 보정 옵션 (D-3)
+  const [enableAiEnhancement, setEnableAiEnhancement] = useState(true);
+  const [aiEnhancementResult, setAiEnhancementResult] = useState<{
+    tablesFound?: number;
+    formulasFound?: number;
+    aiEnhanced?: boolean;
+  } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -92,23 +99,55 @@ const PdfUploadModal: React.FC<PdfUploadModalProps> = ({
     setUploadProgress(0);
     setConversionStatus('업로드 중...');
     setError(null);
+    setAiEnhancementResult(null);
 
     try {
       // 업로드 및 변환 API 호출
       setUploadProgress(30);
       setConversionStatus('PDF 업로드 중...');
 
-      const response = await wikiFileApi.uploadPdf(selectedFile, selectedCategoryId);
+      // AI 구조 보정 옵션에 따라 다른 API 호출
+      let documentId: number;
+      let statusMessage = '마크다운 변환 완료!';
 
-      setUploadProgress(60);
-      setConversionStatus('PDF 텍스트 추출 중...');
+      if (enableAiEnhancement) {
+        setUploadProgress(40);
+        setConversionStatus('PDF 텍스트 추출 중...');
+
+        const enhancedResponse = await wikiFileApi.uploadPdfWithAiEnhancement(
+          selectedFile,
+          selectedCategoryId,
+          enableAiEnhancement
+        );
+
+        setUploadProgress(70);
+        setConversionStatus('AI 구조 보정 적용 중 (표/수식 인식)...');
+
+        const enhancedData: EnhancedPdfConversionResponse = enhancedResponse.data;
+
+        // AI 보정 결과 저장
+        if (enhancedData.aiEnhanced) {
+          setAiEnhancementResult({
+            aiEnhanced: enhancedData.aiEnhanced,
+            tablesFound: enhancedData.tablesFound,
+            formulasFound: enhancedData.formulasFound
+          });
+          statusMessage = `마크다운 변환 완료! (표 ${enhancedData.tablesFound || 0}개, 수식 ${enhancedData.formulasFound || 0}개 인식)`;
+        }
+
+        documentId = enhancedData.document.id;
+      } else {
+        const basicResponse = await wikiFileApi.uploadPdf(selectedFile, selectedCategoryId);
+        const basicData: WikiDocument = basicResponse.data;
+        documentId = basicData.id;
+      }
 
       setUploadProgress(90);
-      setConversionStatus('마크다운 변환 완료!');
+      setConversionStatus(statusMessage);
 
       setTimeout(() => {
         setUploadProgress(100);
-        onUploadSuccess(response.data.id);
+        onUploadSuccess(documentId);
         handleClose();
       }, 500);
 
@@ -126,6 +165,8 @@ const PdfUploadModal: React.FC<PdfUploadModalProps> = ({
     setUploadProgress(0);
     setError(null);
     setConversionStatus('');
+    setEnableAiEnhancement(true);
+    setAiEnhancementResult(null);
     onClose();
   };
 
@@ -160,6 +201,23 @@ const PdfUploadModal: React.FC<PdfUploadModalProps> = ({
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* AI 구조 보정 옵션 */}
+              <div className="pdf-ai-enhancement-option">
+                <label className="pdf-ai-enhancement-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={enableAiEnhancement}
+                    onChange={(e) => setEnableAiEnhancement(e.target.checked)}
+                  />
+                  <span className="pdf-ai-enhancement-text">
+                    AI 구조 보정 적용
+                  </span>
+                </label>
+                <p className="pdf-ai-enhancement-hint">
+                  표(Table)와 수식(LaTeX)을 자동 인식하여 마크다운으로 변환합니다
+                </p>
               </div>
 
               {/* 파일 드롭존 */}
@@ -219,6 +277,22 @@ const PdfUploadModal: React.FC<PdfUploadModalProps> = ({
                 />
               </div>
               <div className="pdf-progress-percentage">{uploadProgress}%</div>
+
+              {/* AI 보정 결과 표시 */}
+              {aiEnhancementResult && aiEnhancementResult.aiEnhanced && (
+                <div className="pdf-ai-enhancement-result">
+                  <div className="pdf-ai-enhancement-result-title">AI 구조 보정 결과</div>
+                  <div>
+                    <span className="pdf-ai-enhancement-result-item">
+                      표(Table): <span className="pdf-ai-enhancement-result-badge">{aiEnhancementResult.tablesFound || 0}개</span>
+                    </span>
+                    <span className="pdf-ai-enhancement-result-item">
+                      수식(LaTeX): <span className="pdf-ai-enhancement-result-badge">{aiEnhancementResult.formulasFound || 0}개</span>
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <div className="pdf-conversion-info">
                 <p>PDF를 마크다운 형식으로 변환하고 있습니다.</p>
                 <p>변환이 완료되면 자동으로 Wiki 문서가 생성됩니다.</p>

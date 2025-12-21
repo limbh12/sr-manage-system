@@ -293,6 +293,192 @@ public class WikiFileService {
     }
 
     /**
+     * PDF 업로드 및 AI 구조 보정 적용 변환
+     *
+     * @param file PDF 파일
+     * @param categoryId 카테고리 ID
+     * @param userId 사용자 ID
+     * @param enableAiEnhancement AI 구조 보정 활성화 여부
+     * @return 생성된 Wiki 문서
+     */
+    @Transactional
+    public WikiDocument uploadAndConvertPdfWithAiEnhancement(
+            MultipartFile file, Long categoryId, Long userId, boolean enableAiEnhancement) throws IOException {
+        log.info("Uploading and converting PDF with AI enhancement: {}, categoryId: {}, AI: {}",
+                file.getOriginalFilename(), categoryId, enableAiEnhancement);
+
+        // 파일 업로드
+        WikiFileResponse uploadedFile = uploadFile(file, null, userId);
+
+        // PDF 변환 및 Wiki 문서 생성 (AI 보정 적용)
+        return convertPdfToWikiDocumentWithAiEnhancement(
+                uploadedFile.getId(), userId, categoryId, enableAiEnhancement);
+    }
+
+    /**
+     * PDF를 마크다운으로 변환하고 Wiki 문서 생성 (AI 구조 보정 적용)
+     */
+    @Transactional
+    public WikiDocument convertPdfToWikiDocumentWithAiEnhancement(
+            Long fileId, Long userId, Long categoryId, boolean enableAiEnhancement) {
+        log.info("Starting PDF conversion with AI enhancement for file: {}, categoryId: {}, AI: {}",
+                fileId, categoryId, enableAiEnhancement);
+
+        // 파일 조회
+        WikiFile wikiFile = wikiFileRepository.findById(fileId)
+                .orElseThrow(() -> new RuntimeException("파일을 찾을 수 없습니다"));
+
+        // PDF 파일인지 확인
+        if (!"application/pdf".equals(wikiFile.getMimeType())) {
+            throw new RuntimeException("PDF 파일만 변환할 수 있습니다");
+        }
+
+        // 변환 상태 업데이트
+        wikiFile.setConversionStatus(WikiFile.ConversionStatus.PROCESSING);
+        wikiFileRepository.save(wikiFile);
+
+        try {
+            // PDF를 마크다운으로 변환 (AI 구조 보정 적용)
+            PdfConversionService.PdfConversionResult conversionResult =
+                    pdfConversionService.convertPdfToMarkdownWithAiEnhancement(
+                            wikiFile.getFilePath(),
+                            wikiFile.getOriginalFileName(),
+                            enableAiEnhancement
+                    );
+
+            String markdown = conversionResult.getMarkdown();
+            log.info("PDF 변환 완료: AI 보정={}, 표={}개, 수식={}개",
+                    conversionResult.isAiEnhanced(),
+                    conversionResult.getTablesFound(),
+                    conversionResult.getFormulasFound());
+
+            // PDF에서 이미지 추출 (기존 로직 재사용)
+            List<PdfConversionService.ExtractedImage> extractedImages = new ArrayList<>();
+            java.util.Map<Integer, List<String>> pageImageLinks = new java.util.HashMap<>();
+
+            try {
+                Path pdfPath = Paths.get(wikiFile.getFilePath());
+                String imageDir = pdfPath.getParent().toString() + File.separator + "images_" + wikiFile.getId();
+                extractedImages = pdfConversionService.extractImages(wikiFile.getFilePath(), imageDir);
+                log.info("PDF에서 {} 개의 이미지 추출됨", extractedImages.size());
+            } catch (Exception e) {
+                log.warn("PDF 이미지 추출 실패 (계속 진행): {}", e.getMessage());
+            }
+
+            // Wiki 문서 생성 또는 업데이트
+            WikiDocument document;
+            boolean isNewDocument = (wikiFile.getDocument() == null);
+
+            if (!isNewDocument) {
+                document = wikiFile.getDocument();
+                document.setContent(markdown);
+                document.setUpdatedBy(wikiFile.getUploadedBy());
+            } else {
+                String title = wikiFile.getOriginalFileName().replaceAll("\\.pdf$", "");
+
+                WikiCategory category = null;
+                if (categoryId != null) {
+                    category = wikiCategoryRepository.findById(categoryId).orElse(null);
+                }
+
+                document = WikiDocument.builder()
+                        .title(title)
+                        .content(markdown)
+                        .category(category)
+                        .createdBy(wikiFile.getUploadedBy())
+                        .updatedBy(wikiFile.getUploadedBy())
+                        .build();
+            }
+
+            WikiDocument savedDocument = wikiDocumentRepository.save(document);
+
+            // 추출된 이미지를 WikiFile로 등록
+            for (PdfConversionService.ExtractedImage extractedImage : extractedImages) {
+                try {
+                    WikiFile imageFile = WikiFile.builder()
+                            .document(savedDocument)
+                            .originalFileName(extractedImage.getFilename())
+                            .storedFileName(extractedImage.getFilename())
+                            .filePath(extractedImage.getFilepath())
+                            .fileSize(extractedImage.getFileSize())
+                            .mimeType("image/png")
+                            .type(WikiFile.FileType.IMAGE)
+                            .conversionStatus(WikiFile.ConversionStatus.NOT_APPLICABLE)
+                            .uploadedBy(wikiFile.getUploadedBy())
+                            .build();
+
+                    WikiFile savedImageFile = wikiFileRepository.save(imageFile);
+
+                    int pageNum = extractedImage.getPageNumber();
+                    pageImageLinks.putIfAbsent(pageNum, new ArrayList<>());
+
+                    String imageMarkdown = String.format("![%s - Page %d](%s)",
+                            extractedImage.getFilename(),
+                            pageNum,
+                            "/api/wiki/files/" + savedImageFile.getId());
+                    pageImageLinks.get(pageNum).add(imageMarkdown);
+
+                } catch (Exception e) {
+                    log.error("이미지 파일 등록 실패: {}", extractedImage.getFilename(), e);
+                }
+            }
+
+            // 마커를 실제 이미지 링크로 대체
+            for (int pageNum = 1; pageNum <= conversionResult.getTotalPages(); pageNum++) {
+                String marker = "{{IMAGES_PAGE_" + pageNum + "}}";
+                List<String> images = pageImageLinks.get(pageNum);
+
+                if (images != null && !images.isEmpty()) {
+                    String imageSection = "\n\n### 📷 이미지\n\n" + String.join("\n\n", images) + "\n";
+                    markdown = markdown.replace(marker, imageSection);
+                } else {
+                    markdown = markdown.replace(marker, "");
+                }
+            }
+
+            // 최종 마크다운으로 문서 업데이트
+            savedDocument.setContent(markdown);
+            savedDocument = wikiDocumentRepository.save(savedDocument);
+
+            // 새 문서인 경우 버전 1 생성
+            if (isNewDocument) {
+                String changeSummary = enableAiEnhancement
+                        ? String.format("PDF 변환으로 생성 (AI 보정: 표 %d개, 수식 %d개)",
+                                conversionResult.getTablesFound(), conversionResult.getFormulasFound())
+                        : "PDF 변환으로 생성";
+
+                WikiVersion firstVersion = WikiVersion.builder()
+                        .document(savedDocument)
+                        .version(1)
+                        .content(markdown)
+                        .changeSummary(changeSummary)
+                        .createdBy(wikiFile.getUploadedBy())
+                        .build();
+                wikiVersionRepository.save(firstVersion);
+                log.info("버전 1 생성 완료: document={}", savedDocument.getId());
+            }
+
+            // 파일과 문서 연결
+            wikiFile.setDocument(savedDocument);
+            wikiFile.setConversionStatus(WikiFile.ConversionStatus.COMPLETED);
+            wikiFile.setConvertedAt(java.time.LocalDateTime.now());
+            wikiFileRepository.save(wikiFile);
+
+            log.info("PDF conversion with AI enhancement completed: file={}, document={}", fileId, savedDocument.getId());
+            return savedDocument;
+
+        } catch (Exception e) {
+            log.error("PDF conversion with AI enhancement failed for file: {}", fileId, e);
+
+            wikiFile.setConversionStatus(WikiFile.ConversionStatus.FAILED);
+            wikiFile.setConversionErrorMessage(e.getMessage());
+            wikiFileRepository.save(wikiFile);
+
+            throw new RuntimeException("PDF 변환 실패: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * 대기 중인 PDF 변환 처리
      */
     @Transactional

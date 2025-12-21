@@ -8,6 +8,7 @@ SR(Service Request) 관리 시스템 - PUBC 오픈API 전환 지원을 위한 �
 - Backend: Spring Boot 3.2 (Java 17) + Maven
 - Frontend: React 18 (TypeScript) + Vite + Redux Toolkit
 - Database: H2 (기본/개발), CUBRID 10.x+, MySQL 8.x, PostgreSQL
+- AI Tools: Python 3.13 + Ollama (로컬 LLM) - Wiki AI 검색용
 
 ## 개발 명령어
 
@@ -182,7 +183,9 @@ mvn spring-boot:run -Dspring-boot.run.profiles=cubrid
 - **데이터베이스 설계**: `docs/DATABASE.md`
 - **개인정보 암호화 가이드**: `docs/JPA_CONVERTER.md`
 - **운영 가이드**: `docs/OPERATION_GUIDE.md`
-- **변경 이력**: `docs/HISTORY_YYYYMMDD.md` (최신: `docs/HISTORY_20251205.md`)
+- **변경 이력**: `docs/HISTORY_YYYYMMDD.md` (최신: `docs/HISTORY_20251218.md`)
+- **Wiki Phase 1**: `docs/HISTORY_20251219_WIKI_PHASE1.md`
+- **프로젝트 전체 개요**: `docs/PROJECT_OVERVIEW.md`
 
 ## SR 관리 핵심 기능
 
@@ -190,6 +193,51 @@ mvn spring-boot:run -Dspring-boot.run.profiles=cubrid
 - 우선순위: LOW, MEDIUM, HIGH, CRITICAL
 - 변경 이력 추적 및 Diff View 지원
 - 담당자 지정 및 검색 (행정표준코드 기반)
+- 처리예정일자 관리 (마감 임박 시 시각적 강조)
+
+## Wiki 시스템 (AI 기반 지식 관리)
+
+### 아키텍처
+Wiki 기능은 `backend/src/main/java/com/srmanagement/wiki/` 패키지에 별도 구현됨:
+```
+wiki/
+├── controller/     # WikiDocumentController, WikiCategoryController, WikiSearchController 등
+├── service/        # WikiDocumentService, AiSearchService, ContentEmbeddingService 등
+├── repository/     # WikiDocumentRepository, ContentEmbeddingRepository 등
+├── entity/         # WikiDocument, WikiCategory, WikiVersion, WikiFile, ContentEmbedding 등
+└── dto/            # Request/Response DTO
+```
+
+### 핵심 기능
+- **마크다운 기반 문서**: Toast UI Editor (편집) + react-markdown (렌더링)
+- **계층형 카테고리**: Self-referencing 구조 (무제한 depth)
+- **버전 관리**: 문서 수정 시 자동 버전 생성, 롤백 지원
+- **파일 첨부**: 이미지 업로드, 문서 첨부 (UUID 기반 저장)
+- **SR-Wiki 연계**: ManyToMany 관계, 슬라이드 패널 네비게이션
+- **AI 검색**: Ollama 임베딩 + 코사인 유사도 기반 시맨틱 검색
+- **PDF 변환**: Apache Tika + AI 구조 보정 (표/수식 인식)
+
+### AI 검색 관련 파일
+- Backend: `wiki/service/AiSearchService.java`, `wiki/service/ContentEmbeddingService.java`
+- Frontend: `services/aiSearchService.ts`, `components/wiki/AiSearch.tsx`
+- 임베딩 모델: Ollama `nomic-embed-text` (768차원)
+- 벡터 저장: H2 DB `content_embedding` 테이블
+
+### PDF 변환 및 AI 구조 보정 (D-3)
+- **PDF 텍스트 추출**: `wiki/service/PdfConversionService.java` (Apache Tika + PDFBox)
+- **AI 구조 보정**: `wiki/service/StructureEnhancementService.java`
+  - 표(Table) 구조 인식 및 마크다운 변환
+  - 수식(LaTeX) 인식 및 변환
+  - Pandoc 통합 (선택적, 고품질 표/수식 변환)
+- **설정**: `application.yml`의 `wiki.structure-enhancement` 섹션
+- **API**: `/api/wiki/files/upload-pdf-enhanced` (AI 구조 보정 적용 PDF 업로드)
+
+### Wiki API 엔드포인트
+- 문서: `/api/wiki/documents/**`
+- 카테고리: `/api/wiki/categories/**`
+- 버전: `/api/wiki/documents/{id}/versions/**`
+- 파일: `/api/wiki/files/**`
+- AI 검색: `/api/wiki/search/**`
 
 ## 흔한 실수 방지
 
@@ -204,3 +252,8 @@ mvn spring-boot:run -Dspring-boot.run.profiles=cubrid
 ### Database
 - CUBRID 사용 시 반드시 `CubridDialect` 확인
 - H2는 파일 모드 (메모리 모드 아님)
+
+### Wiki
+- 문서 저장 시 AI 임베딩 자동 생성 (Ollama 서버 필요)
+- 파일 업로드 경로: `./data/wiki-uploads/`
+- PDF 변환 시 Apache PDFBox 사용 (`PdfConversionService.java`)

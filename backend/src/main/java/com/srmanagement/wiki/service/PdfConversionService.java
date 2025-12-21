@@ -1,7 +1,9 @@
 package com.srmanagement.wiki.service;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -31,6 +33,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class PdfConversionService {
+
+    private final StructureEnhancementService structureEnhancementService;
 
     /**
      * PDF 파일을 텍스트로 추출
@@ -360,12 +364,113 @@ public class PdfConversionService {
     }
 
     /**
-     * PDF 변환 결과 (마크다운 + 페이지 수)
+     * PDF를 마크다운으로 변환하고 AI 구조 보정 적용
+     *
+     * @param filePath PDF 파일 경로
+     * @param originalFileName 원본 파일명
+     * @param enableAiEnhancement AI 구조 보정 활성화 여부
+     * @return 변환 결과 (마크다운 + 페이지 수 + AI 보정 정보)
+     * @throws IOException PDF 읽기 실패
+     * @throws TikaException Tika 파싱 실패
+     * @throws SAXException XML 파싱 실패
+     */
+    public PdfConversionResult convertPdfToMarkdownWithAiEnhancement(
+            String filePath, String originalFileName, boolean enableAiEnhancement)
+            throws IOException, TikaException, SAXException {
+
+        log.info("PDF 변환 시작 (AI 보정: {}): {}", enableAiEnhancement, filePath);
+        long startTime = System.currentTimeMillis();
+
+        // 1. 기본 PDF → 마크다운 변환
+        PdfConversionResult basicResult = convertPdfToMarkdownWithImages(filePath, originalFileName);
+        String markdown = basicResult.getMarkdown();
+
+        // 2. AI 구조 보정 적용 (선택적)
+        StructureEnhancementService.EnhancementResult enhancementResult = null;
+        if (enableAiEnhancement) {
+            try {
+                enhancementResult = structureEnhancementService.enhanceMarkdown(markdown, originalFileName);
+                if (enhancementResult.isEnhanced()) {
+                    markdown = enhancementResult.getEnhancedMarkdown();
+                    log.info("AI 구조 보정 적용됨: 표 {}개, 수식 {}개",
+                            enhancementResult.getTablesFound(),
+                            enhancementResult.getFormulasFound());
+                }
+            } catch (Exception e) {
+                log.warn("AI 구조 보정 실패, 기본 변환 결과 사용: {}", e.getMessage());
+            }
+        }
+
+        long elapsedTime = System.currentTimeMillis() - startTime;
+        log.info("PDF 변환 완료: {}ms", elapsedTime);
+
+        return PdfConversionResult.builder()
+                .markdown(markdown)
+                .totalPages(basicResult.getTotalPages())
+                .aiEnhanced(enhancementResult != null && enhancementResult.isEnhanced())
+                .tablesFound(enhancementResult != null ? enhancementResult.getTablesFound() : 0)
+                .formulasFound(enhancementResult != null ? enhancementResult.getFormulasFound() : 0)
+                .processingTimeMs(elapsedTime)
+                .build();
+    }
+
+    /**
+     * Pandoc을 사용한 PDF 변환 (고품질 표/수식 변환)
+     *
+     * @param filePath PDF 파일 경로
+     * @param originalFileName 원본 파일명
+     * @return 변환 결과
+     */
+    public PdfConversionResult convertPdfWithPandoc(String filePath, String originalFileName)
+            throws IOException, TikaException, SAXException {
+
+        log.info("Pandoc PDF 변환 시도: {}", filePath);
+
+        // Pandoc 변환 시도
+        StructureEnhancementService.PandocResult pandocResult =
+                structureEnhancementService.convertWithPandoc(filePath);
+
+        if (pandocResult.isSuccess() && pandocResult.getMarkdown() != null) {
+            log.info("Pandoc 변환 성공");
+            return PdfConversionResult.builder()
+                    .markdown(pandocResult.getMarkdown())
+                    .totalPages(0)  // Pandoc은 페이지 수를 제공하지 않음
+                    .aiEnhanced(true)
+                    .usedPandoc(true)
+                    .processingTimeMs(pandocResult.getProcessingTimeMs())
+                    .build();
+        }
+
+        // Pandoc 실패 시 기본 변환으로 폴백
+        log.warn("Pandoc 변환 실패, 기본 변환 사용: {}", pandocResult.getMessage());
+        return convertPdfToMarkdownWithAiEnhancement(filePath, originalFileName, true);
+    }
+
+    /**
+     * PDF 변환 결과 (마크다운 + 페이지 수 + AI 보정 정보)
      */
     @Data
+    @Builder
+    @NoArgsConstructor
     @AllArgsConstructor
     public static class PdfConversionResult {
         private String markdown;
         private int totalPages;
+        private boolean aiEnhanced;
+        private boolean usedPandoc;
+        private int tablesFound;
+        private int formulasFound;
+        private long processingTimeMs;
+
+        // 기존 호환성을 위한 생성자
+        public PdfConversionResult(String markdown, int totalPages) {
+            this.markdown = markdown;
+            this.totalPages = totalPages;
+            this.aiEnhanced = false;
+            this.usedPandoc = false;
+            this.tablesFound = 0;
+            this.formulasFound = 0;
+            this.processingTimeMs = 0;
+        }
     }
 }

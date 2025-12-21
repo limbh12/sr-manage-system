@@ -4,9 +4,9 @@
 
 | 항목 | 내용 |
 |------|------|
-| **문서 버전** | 1.1 |
-| **작성일** | 2024-12-21 |
-| **상태** | Phase 1-5 완료 |
+| **문서 버전** | 1.2 |
+| **작성일** | 2025-12-22 |
+| **상태** | Phase 1-5 완료, Vision 기능 준비됨 |
 | **관련 문서** | [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md), [API.md](API.md), [DATABASE.md](DATABASE.md) |
 
 ---
@@ -719,6 +719,57 @@ DELETE /api/wiki/search/history/{historyId}     # 검색 이력 삭제
 - [API.md](API.md) - REST API 명세
 - [DATABASE.md](DATABASE.md) - 데이터베이스 설계
 - [PB_AI-Powered_Wiki.md](PB_AI-Powered_Wiki.md) - 상세 기술 명세
+
+---
+
+## 11. Future Enhancements (향후 개선 사항)
+
+> **Note**: Phase 1-5 핵심 기능이 모두 완료되었습니다. 아래는 선택적 개선 사항입니다.
+
+### 11.1 Vision 기반 복잡한 표 추출 [준비 완료]
+
+| 항목 | 내용 |
+|------|------|
+| **Priority** | HIGH |
+| **Status** | 코드 구현 완료, 모델 설치 필요 |
+
+**User Story**
+> 사용자로서, 셀 병합, 중첩 표, 다중 헤더가 포함된 복잡한 표 이미지를 정확하게 마크다운으로 변환하고 싶습니다.
+
+**구현 완료 내용 (2025-12-22)**
+- [x] `StructureEnhancementService.extractTableFromImage()` - Vision 모델로 이미지에서 표 추출
+- [x] `StructureEnhancementService.analyzeTableComplexity()` - 표 복잡도 분석 (LOW/MEDIUM/HIGH)
+- [x] `callOllamaVision()` - Ollama Vision API 호출 (application.yml 설정 사용)
+- [x] Vision API 엔드포인트 추가 (WikiFileController)
+
+**활성화 방법**
+```bash
+# 1. Ollama 서버에서 Vision 모델 설치 (~4.7GB)
+ollama pull llava:7b
+
+# 2. application.yml 설정 변경
+wiki:
+  structure-enhancement:
+    vision-enabled: true
+    vision-model: llava
+
+# 3. 서버 재시작 후 테스트
+GET /api/wiki/files/vision-status
+```
+
+**Vision 모델 용량 비교**
+| 모델 | 파라미터 | 용량 | 특징 |
+|------|----------|------|------|
+| llava:7b | 70억 | ~4.7GB | 가장 가벼움, 기본 표 인식 (권장) |
+| llama3.2-vision:11b | 110억 | ~7.9GB | 최신 모델, 정확도 높음 |
+
+### 11.2 기타 백로그
+
+| 기능 | 우선순위 | 비고 |
+|------|----------|------|
+| W-4: 드래그 앤 드롭 문서 이동 | MEDIUM | React DnD 라이브러리 필요 |
+| A-1: H2 Full-text Index | LOW | 벡터 검색 보조 기능 |
+| A-4: OCR 검색 | FUTURE | Tesseract로 이미지 내 텍스트 추출 |
 
 ---
 

@@ -174,7 +174,55 @@ export const wikiFileApi = {
     });
   },
 
+  // PDF 업로드 및 AI 구조 보정 적용 변환 (D-3)
+  uploadPdfWithAiEnhancement: (file: File, categoryId?: number, enableAiEnhancement: boolean = true) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (categoryId) {
+      formData.append('categoryId', categoryId.toString());
+    }
+    formData.append('enableAiEnhancement', enableAiEnhancement.toString());
+    return api.post<EnhancedPdfConversionResponse>('/wiki/files/upload-pdf-enhanced', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  // Pandoc 상태 확인
+  checkPandocStatus: () =>
+    api.get<PandocStatusResponse>('/wiki/files/pandoc-status'),
+
+  // 마크다운 AI 구조 보정 (테스트용)
+  enhanceMarkdown: (markdown: string, fileName?: string) =>
+    api.post<EnhancementResult>('/wiki/files/enhance-markdown', { markdown, fileName }),
+
   // PDF 변환 (파일 ID로)
   convertPdf: (fileId: number) =>
     api.post<WikiDocument>(`/wiki/files/${fileId}/convert`),
 };
+
+// D-3 AI 구조 보정 관련 타입 정의
+export interface EnhancedPdfConversionResponse {
+  document: WikiDocument;
+  aiEnhanced: boolean;
+  tablesFound?: number;
+  formulasFound?: number;
+  usedPandoc?: boolean;
+  processingTimeMs?: number;
+  message?: string;
+}
+
+export interface PandocStatusResponse {
+  available: boolean;
+  message: string;
+}
+
+export interface EnhancementResult {
+  enhancedMarkdown: string;
+  tablesFound: number;
+  formulasFound: number;
+  enhanced: boolean;
+  processingTimeMs?: number;
+  message?: string;
+}
