@@ -228,6 +228,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '14px',
     lineHeight: '1.6',
     color: 'var(--text-primary)',
+    maxHeight: 'none', /* 높이 제한 없음 - 부모 컨테이너에서 스크롤 처리 */
+    overflowWrap: 'break-word',
   },
   processingTime: {
     marginTop: '12px',

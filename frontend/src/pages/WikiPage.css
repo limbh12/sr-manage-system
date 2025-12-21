@@ -342,9 +342,11 @@
 /* AI 검색 결과 컨테이너 */
 .wiki-ai-search-container {
   flex: 1;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 24px;
   background: #f6f8fa;
+  min-height: 0; /* flexbox 스크롤 문제 해결 */
 }
 
 /* 연계된 SR 목록 */
