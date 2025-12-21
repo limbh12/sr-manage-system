@@ -21,6 +21,7 @@ import com.srmanagement.dto.response.UserResponse;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 import com.srmanagement.util.CryptoUtil;
+import com.srmanagement.wiki.service.WikiNotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -63,6 +64,9 @@ public class OpenApiSurveyService {
 
     @Autowired
     private SrService srService;
+
+    @Autowired
+    private WikiNotificationService notificationService;
 
     @Transactional(readOnly = true)
     public Page<OpenApiSurveyResponse> getSurveys(String keyword, String currentMethod, String desiredMethod, Pageable pageable) {
@@ -227,6 +231,14 @@ public class OpenApiSurveyService {
         User currentUser = getCurrentUser();
         if (currentUser != null) {
             createSrForNewSurvey(savedSurvey, currentUser);
+
+            // 알림 발송 (모든 사용자에게)
+            notificationService.notifySurveyCreated(
+                    savedSurvey.getId(),
+                    savedSurvey.getOrganization().getName(),
+                    savedSurvey.getSystemName(),
+                    currentUser
+            );
         }
 
         return convertToResponse(savedSurvey);
@@ -303,6 +315,14 @@ public class OpenApiSurveyService {
         User currentUser = getCurrentUser();
         if (currentUser != null) {
             createSrForUpdatedSurvey(oldSurvey, survey, currentUser);
+
+            // 알림 발송 (모든 사용자에게)
+            notificationService.notifySurveyUpdated(
+                    survey.getId(),
+                    survey.getOrganization().getName(),
+                    survey.getSystemName(),
+                    currentUser
+            );
         }
 
         return convertToResponse(survey);

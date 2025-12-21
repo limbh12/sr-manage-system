@@ -134,6 +134,7 @@ function UserEditModal({ user, onClose, onSave, loading = false }: UserEditModal
               disabled={loading}
             >
               <option value="USER">일반 사용자 (USER)</option>
+              <option value="WIKI_EDITOR">위키 편집자 (WIKI_EDITOR)</option>
               <option value="ADMIN">관리자 (ADMIN)</option>
             </select>
           </div>

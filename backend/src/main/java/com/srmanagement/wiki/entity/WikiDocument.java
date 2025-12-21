@@ -71,6 +71,12 @@ public class WikiDocument {
     @Builder.Default
     private Integer viewCount = 0;
 
+    @Column(name = "ai_summary", columnDefinition = "TEXT")
+    private String aiSummary;
+
+    @Column(name = "summary_generated_at")
+    private LocalDateTime summaryGeneratedAt;
+
     // 조회수 증가
     public void incrementViewCount() {
         this.viewCount = (this.viewCount == null ? 0 : this.viewCount) + 1;

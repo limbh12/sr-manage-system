@@ -63,6 +63,19 @@ public class DataInitializer implements CommandLineRunner {
             logger.info("Regular user created: user / user123");
         }
 
+        // 초기 위키 편집자 계정 생성
+        if (!userRepository.existsByUsername("editor")) {
+            User editor = User.builder()
+                    .username("editor")
+                    .password(passwordEncoder.encode("editor123"))
+                    .name("위키편집자")
+                    .email("editor@example.com")
+                    .role(Role.WIKI_EDITOR)
+                    .build();
+            userRepository.save(editor);
+            logger.info("Wiki editor user created: editor / editor123");
+        }
+
         // 초기 데이터 적재 (기관 코드 및 공통 코드)
         // 운영 환경(prod)에서는 spring.sql.init.mode=never로 설정되어 있어 data.sql이 자동 실행되지 않음
         // 따라서 데이터가 없는 경우 수동으로 스크립트를 실행함

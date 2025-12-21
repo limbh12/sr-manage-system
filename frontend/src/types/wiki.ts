@@ -22,6 +22,9 @@ export interface WikiDocument {
   viewCount: number;
   currentVersion?: number;
   files?: WikiFile[]; // 첨부 파일 목록
+  aiSummary?: string; // AI 요약
+  summaryGeneratedAt?: string; // 요약 생성 시간
+  summaryUpToDate?: boolean; // 요약이 최신인지 여부
 }
 
 // Wiki 문서 생성/수정 요청

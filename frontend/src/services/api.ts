@@ -1,5 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { getAccessToken, getRefreshToken, setAccessToken, setRefreshToken, clearTokens } from '../utils/tokenUtils';
+import { toast } from '../utils/toast';
 
 // API 기본 URL
 const API_BASE_URL = '/api';
@@ -55,12 +56,20 @@ api.interceptors.response.use(
           return api(originalRequest);
         } catch {
           // 갱신 실패 시 로그아웃
-          clearTokens();
-          window.location.href = '/login';
+          toast.warning('세션이 만료되었습니다. 다시 로그인해주세요.');
+          setTimeout(() => {
+            clearTokens();
+            window.location.href = '/login';
+          }, 1500);
+          return new Promise(() => {}); // 리다이렉트 전까지 대기
         }
       } else {
-        clearTokens();
-        window.location.href = '/login';
+        toast.warning('로그인이 필요합니다.');
+        setTimeout(() => {
+          clearTokens();
+          window.location.href = '/login';
+        }, 1500);
+        return new Promise(() => {}); // 리다이렉트 전까지 대기
       }
     }
 

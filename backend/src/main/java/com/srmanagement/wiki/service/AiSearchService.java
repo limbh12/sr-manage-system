@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.srmanagement.wiki.dto.AiSearchRequest;
 import com.srmanagement.wiki.dto.AiSearchResponse;
 import com.srmanagement.wiki.dto.EmbeddingProgressEvent;
+import com.srmanagement.wiki.dto.SummaryResponse;
 import com.srmanagement.wiki.entity.WikiDocument;
 import com.srmanagement.wiki.entity.WikiDocumentEmbedding;
 import com.srmanagement.wiki.repository.WikiDocumentEmbeddingRepository;
@@ -16,10 +17,13 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.embedding.EmbeddingResponse;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.ollama.OllamaEmbeddingModel;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -49,9 +53,11 @@ public class AiSearchService {
     /**
      * Wiki 문서 임베딩 생성
      * - 긴 문서는 청크로 분할하여 각각 임베딩 생성
+     * - 생성 완료 후 임베딩 상태 캐시 무효화
      *
      * @param documentId Wiki 문서 ID
      */
+    @CacheEvict(value = "embeddingStatus", key = "#documentId")
     @Transactional
     public void generateEmbeddings(Long documentId) {
         long startTime = System.currentTimeMillis();
@@ -126,9 +132,11 @@ public class AiSearchService {
     /**
      * 비동기 임베딩 생성 (문서 저장 시 자동 호출)
      * - 진행률을 SSE로 실시간 전송
+     * - 생성 완료 후 임베딩 상태 캐시 무효화
      *
      * @param documentId Wiki 문서 ID
      */
+    @CacheEvict(value = "embeddingStatus", key = "#documentId")
     @Async("embeddingTaskExecutor")
     @Transactional
     public void generateEmbeddingsAsync(Long documentId) {
@@ -280,10 +288,12 @@ public class AiSearchService {
 
     /**
      * 문서의 임베딩 상태 조회
+     * - 캐시 적용 (30초 TTL)
      *
      * @param documentId Wiki 문서 ID
      * @return 임베딩 상태 정보
      */
+    @Cacheable(value = "embeddingStatus", key = "#documentId")
     @Transactional(readOnly = true)
     public com.srmanagement.wiki.dto.EmbeddingStatusResponse getEmbeddingStatus(Long documentId) {
         // 1. 문서 조회
@@ -546,6 +556,178 @@ public class AiSearchService {
             return text;
         }
         return text.substring(0, maxLength) + "...";
+    }
+
+    // 요약 생성 진행 중인 문서 ID 저장 (동시 요청 방지)
+    private final Set<Long> summaryInProgress = Collections.synchronizedSet(new HashSet<>());
+
+    /**
+     * 요약 상태 조회 (캐시된 요약 또는 생성 상태 확인)
+     *
+     * @param documentId Wiki 문서 ID
+     * @return 요약 응답 (캐시된 요약이 있으면 반환, 없으면 상태만 반환)
+     */
+    @Transactional(readOnly = true)
+    public SummaryResponse getSummaryStatus(Long documentId) {
+        WikiDocument document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new RuntimeException("문서를 찾을 수 없습니다: " + documentId));
+
+        // 생성 중인지 확인
+        if (summaryInProgress.contains(documentId)) {
+            return SummaryResponse.builder()
+                    .documentId(documentId)
+                    .status("GENERATING")
+                    .message("요약을 생성하고 있습니다...")
+                    .build();
+        }
+
+        // 캐시된 요약이 최신인지 확인
+        if (document.getAiSummary() != null && document.getSummaryGeneratedAt() != null) {
+            if (document.getSummaryGeneratedAt().isAfter(document.getUpdatedAt()) ||
+                document.getSummaryGeneratedAt().isEqual(document.getUpdatedAt())) {
+                return SummaryResponse.builder()
+                        .documentId(documentId)
+                        .summary(document.getAiSummary())
+                        .generatedAt(document.getSummaryGeneratedAt())
+                        .status("CACHED")
+                        .message("캐시된 요약")
+                        .build();
+            }
+        }
+
+        // 요약이 없거나 오래됨
+        return SummaryResponse.builder()
+                .documentId(documentId)
+                .summary(document.getAiSummary())
+                .generatedAt(document.getSummaryGeneratedAt())
+                .status("NEEDS_UPDATE")
+                .message("요약 생성이 필요합니다")
+                .build();
+    }
+
+    /**
+     * 비동기 문서 요약 생성 시작
+     * - 캐시된 요약이 있고 최신이면 즉시 반환
+     * - 없거나 오래되었으면 비동기로 생성 시작
+     *
+     * @param documentId Wiki 문서 ID
+     * @param forceRegenerate 강제 재생성 여부
+     * @return 요약 응답 (즉시 반환: 캐시 또는 생성 시작 상태)
+     */
+    @Transactional(readOnly = true)
+    public SummaryResponse generateSummary(Long documentId, boolean forceRegenerate) {
+        // 1. 문서 조회
+        WikiDocument document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new RuntimeException("문서를 찾을 수 없습니다: " + documentId));
+
+        // 2. 이미 생성 중인지 확인
+        if (summaryInProgress.contains(documentId)) {
+            return SummaryResponse.builder()
+                    .documentId(documentId)
+                    .status("GENERATING")
+                    .message("요약을 생성하고 있습니다...")
+                    .build();
+        }
+
+        // 3. 캐시된 요약이 최신인지 확인
+        if (!forceRegenerate && document.getAiSummary() != null && document.getSummaryGeneratedAt() != null) {
+            if (document.getSummaryGeneratedAt().isAfter(document.getUpdatedAt()) ||
+                document.getSummaryGeneratedAt().isEqual(document.getUpdatedAt())) {
+                log.info("📋 [문서 {}] 캐시된 요약 반환", documentId);
+                return SummaryResponse.builder()
+                        .documentId(documentId)
+                        .summary(document.getAiSummary())
+                        .generatedAt(document.getSummaryGeneratedAt())
+                        .status("CACHED")
+                        .message("캐시된 요약을 반환합니다")
+                        .build();
+            }
+        }
+
+        // 4. 문서 내용 검증
+        String content = document.getContent();
+        if (content == null || content.trim().isEmpty()) {
+            return SummaryResponse.builder()
+                    .documentId(documentId)
+                    .summary(null)
+                    .status("FAILED")
+                    .message("문서 내용이 없습니다")
+                    .build();
+        }
+
+        // 5. 비동기 생성 시작
+        generateSummaryAsync(documentId, document.getTitle(), content);
+
+        return SummaryResponse.builder()
+                .documentId(documentId)
+                .status("GENERATING")
+                .message("요약 생성을 시작했습니다. 잠시 후 확인해주세요.")
+                .build();
+    }
+
+    /**
+     * 비동기 요약 생성 (내부 메서드)
+     */
+    @Async("embeddingTaskExecutor")
+    @Transactional
+    public void generateSummaryAsync(Long documentId, String title, String content) {
+        // 중복 생성 방지
+        if (!summaryInProgress.add(documentId)) {
+            log.info("🔄 [문서 {}] 이미 요약 생성 중, 스킵", documentId);
+            return;
+        }
+
+        long startTime = System.currentTimeMillis();
+
+        try {
+            log.info("🤖 [문서 {}] AI 요약 비동기 생성 시작 - 내용 길이: {}자", documentId, content.length());
+
+            // 요약 생성용 프롬프트
+            String promptText = buildSummaryPrompt(title, content);
+            Prompt prompt = new Prompt(promptText);
+            ChatResponse chatResponse = chatModel.call(prompt);
+            String summary = chatResponse.getResult().getOutput().getContent();
+
+            // 요약 저장 (updatedAt을 변경하지 않도록 네이티브 쿼리 사용)
+            LocalDateTime now = LocalDateTime.now();
+            documentRepository.updateAiSummary(documentId, summary, now);
+
+            long elapsedTime = System.currentTimeMillis() - startTime;
+            log.info("✅ [문서 {}] AI 요약 비동기 생성 완료 - {}ms", documentId, elapsedTime);
+
+        } catch (Exception e) {
+            log.error("AI 요약 비동기 생성 실패: documentId={}", documentId, e);
+        } finally {
+            summaryInProgress.remove(documentId);
+        }
+    }
+
+    /**
+     * 요약 생성용 프롬프트
+     */
+    private String buildSummaryPrompt(String title, String content) {
+        // 긴 문서는 앞부분만 사용 (토큰 제한 고려)
+        String truncatedContent = content.length() > 8000
+                ? content.substring(0, 8000) + "\n...(이하 생략)"
+                : content;
+
+        return String.format("""
+                다음 문서의 내용을 3줄 이내로 요약해주세요.
+
+                **문서 제목:** %s
+
+                **문서 내용:**
+                %s
+
+                **요약 작성 지침:**
+                1. 핵심 내용만 간결하게 3줄 이내로 요약
+                2. 기술적인 용어는 유지하되 이해하기 쉽게 작성
+                3. 마크다운 형식 사용 금지 (일반 텍스트만)
+                4. 한국어로 작성
+                5. "이 문서는~" 같은 불필요한 서두 없이 바로 핵심 내용으로 시작
+
+                요약:
+                """, title, truncatedContent);
     }
 
     /**

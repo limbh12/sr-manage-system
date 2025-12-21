@@ -16,6 +16,7 @@ import OpenApiSurveyPage from './pages/OpenApiSurveyPage';
 import SurveyForm from './components/survey/SurveyForm';
 import CommonCodePage from './pages/CommonCodePage';
 import WikiPage from './pages/WikiPage';
+import NotificationsPage from './pages/NotificationsPage';
 
 /**
  * 메인 App 컴포넌트
@@ -94,6 +95,9 @@ function App() {
             {/* Wiki 라우트 추가 */}
             <Route path="/wiki" element={isAuthenticated ? <WikiPage /> : <Navigate to="/login" />} />
             <Route path="/wiki/:id" element={isAuthenticated ? <WikiPage /> : <Navigate to="/login" />} />
+
+            {/* 알림 라우트 추가 */}
+            <Route path="/notifications" element={isAuthenticated ? <NotificationsPage /> : <Navigate to="/login" />} />
 
             {/* Admin Routes */}
             <Route 

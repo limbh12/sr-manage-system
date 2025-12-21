@@ -68,4 +68,9 @@ public interface WikiDocumentRepository extends JpaRepository<WikiDocument, Long
     @Modifying
     @Query("UPDATE WikiDocument wd SET wd.viewCount = wd.viewCount + 1 WHERE wd.id = :id")
     void incrementViewCount(@Param("id") Long id);
+
+    // AI 요약 업데이트 (updatedAt을 변경하지 않음)
+    @Modifying
+    @Query("UPDATE WikiDocument wd SET wd.aiSummary = :summary, wd.summaryGeneratedAt = :generatedAt WHERE wd.id = :id")
+    void updateAiSummary(@Param("id") Long id, @Param("summary") String summary, @Param("generatedAt") java.time.LocalDateTime generatedAt);
 }

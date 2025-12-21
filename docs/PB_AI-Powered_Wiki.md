@@ -798,6 +798,15 @@ export OLLAMA_EMBEDDING_MODEL=nomic-embed-text
 - ✅ **목차 링크 클릭 시 페이지 내 스크롤 이동**
 - ✅ **드래그 앤 드롭 PDF 뷰어 버그 수정**
 
+**주요 트러블슈팅**
+- MultipleBagFetchException: 여러 List 컬렉션 fetch join 시 오류 → 쿼리 3개로 분리
+- 폐쇄망 PDF.js Worker 로딩 실패 → Vite `import.meta.url` 패턴으로 번들 포함
+- react-pdf와 pdfjs-dist 버전 불일치 → pdfjs-dist 5.4.296 버전 고정
+- Spring Boot .mjs 파일 MIME 타입 미지원 → WebConfig에 MIME 타입 매핑 추가
+- 드래그 앤 드롭 시 Chrome PDF 뷰어 열림 → `preventDefault()` + `stopPropagation()` 적용
+- 목차 링크 클릭 시 401 오류 → 앵커 링크와 외부 링크 구분 처리
+- 상세 내용: [TROUBLESHOOTING_AI-Powered_Wiki.md](TROUBLESHOOTING_AI-Powered_Wiki.md)
+
 ---
 
 ### Phase 3: AI 검색 기능 (5주) ✅ 완료
@@ -841,20 +850,40 @@ export OLLAMA_EMBEDDING_MODEL=nomic-embed-text
 
 ---
 
-### Phase 4: 고급 기능 및 최적화 (4주)
+### Phase 4: 고급 기능 및 최적화 (4주) ✅ 완료
 **목표**: 시스템 안정화 및 추가 기능
 
-* [ ] A-3: 자동 요약 기능
-* [ ] D-3: Pandoc 연동 (Optional)
-* [ ] 검색 성능 최적화 (캐싱)
-* [ ] 사용자 권한 관리 (위키 편집 권한)
-* [ ] 알림 기능 (문서 업데이트 시)
-* [ ] 백업 및 마이그레이션 스크립트
+* [x] A-3: 자동 요약 기능
+  - AI 기반 3줄 요약 자동 생성
+  - 요약 캐싱 (문서 상단 표시)
+  - 수동 요약 갱신 버튼
+  - AiSummaryBox 컴포넌트 구현
+* [x] 검색 성능 최적화 (Caffeine 캐싱)
+  - aiSearchResults 캐시 (TTL: 10분)
+  - embeddingStatus 캐시 (TTL: 5분)
+  - documentSummary 캐시 (TTL: 30분)
+* [x] 사용자 권한 관리 (위키 편집 권한)
+  - WIKI_EDITOR 역할 추가
+  - 문서 생성/수정: ADMIN, WIKI_EDITOR 권한 필요
+  - 문서 삭제: ADMIN 권한만 허용
+  - 프론트엔드 권한 기반 버튼 표시
+* [x] 알림 기능 (문서 업데이트 시)
+  - WikiNotification 엔티티 구현
+  - 문서 생성/수정/삭제 시 자동 알림 발송
+  - 알림 드롭다운 컴포넌트 (헤더)
+  - 읽음/전체 읽음 처리
+* [x] 백업 및 마이그레이션 스크립트
+  - backup.sh: H2 DB + 위키 파일 백업
+  - restore.sh: 백업 복원 스크립트
+  - 옵션: --db-only, --files-only, --no-confirm
+* [ ] D-3: Pandoc 연동 (Optional - 향후 검토)
 
-**Deliverables**
-- 긴 문서에 대한 AI 요약 제공
-- 검색 응답 속도 개선 (캐싱)
-- 위키 시스템 안정화 및 프로덕션 배포 준비
+**Deliverables** ✅
+- ✅ 긴 문서에 대한 AI 요약 제공
+- ✅ 검색 응답 속도 개선 (Caffeine 캐싱)
+- ✅ 역할 기반 위키 편집 권한 관리
+- ✅ 문서 변경 시 실시간 알림
+- ✅ 백업/복원 스크립트로 프로덕션 배포 준비
 
 ---
 

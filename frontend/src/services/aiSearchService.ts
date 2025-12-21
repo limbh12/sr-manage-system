@@ -1,5 +1,5 @@
 import api from './api';
-import { AiSearchRequest, AiSearchResponse, EmbeddingStatusResponse, EmbeddingProgressEvent } from '../types/aiSearch';
+import { AiSearchRequest, AiSearchResponse, EmbeddingStatusResponse, EmbeddingProgressEvent, SummaryResponse } from '../types/aiSearch';
 
 /**
  * AI 검색 서비스
@@ -100,6 +100,30 @@ class AiSearchService {
       isActive = false;
       if (intervalId) clearInterval(intervalId);
     };
+  }
+
+  /**
+   * 문서 AI 요약 생성
+   * @param documentId 문서 ID
+   * @param forceRegenerate 강제 재생성 여부
+   */
+  async generateSummary(documentId: number, forceRegenerate = false): Promise<SummaryResponse> {
+    const response = await api.post<SummaryResponse>(
+      `/wiki/search/summary/${documentId}?forceRegenerate=${forceRegenerate}`
+    );
+    return response.data;
+  }
+
+  /**
+   * 문서 AI 요약 상태 조회 (폴링용)
+   * - 생성 중이면 GENERATING 상태 반환
+   * - 캐시가 있으면 CACHED 상태와 요약 반환
+   * - 없으면 NEEDS_UPDATE 상태 반환
+   * @param documentId 문서 ID
+   */
+  async getSummaryStatus(documentId: number): Promise<SummaryResponse> {
+    const response = await api.get<SummaryResponse>(`/wiki/search/summary/${documentId}`);
+    return response.data;
   }
 }
 

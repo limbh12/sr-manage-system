@@ -34,6 +34,7 @@ public class WikiDocumentService {
     private final UserRepository userRepository;
     private final SrRepository srRepository;
     private final AiSearchService aiSearchService;
+    private final WikiNotificationService notificationService;
 
     @Transactional
     public WikiDocumentResponse createDocument(WikiDocumentRequest request, Long userId) {
@@ -88,6 +89,9 @@ public class WikiDocumentService {
         // 비동기로 임베딩 자동 생성
         log.info("Wiki document created with ID: {}, 비동기 임베딩 생성 시작", savedDocument.getId());
         aiSearchService.generateEmbeddingsAsync(savedDocument.getId());
+
+        // 알림 발송
+        notificationService.notifyDocumentCreated(savedDocument, user);
 
         return WikiDocumentResponse.fromEntity(savedDocument);
     }
@@ -154,12 +158,39 @@ public class WikiDocumentService {
             // 비동기로 임베딩 재생성
             log.info("문서 내용 변경됨: documentId={}, 비동기 임베딩 재생성 시작", savedDocument.getId());
             aiSearchService.generateEmbeddingsAsync(savedDocument.getId());
+
+            // 알림 발송
+            notificationService.notifyDocumentUpdated(savedDocument, user);
         }
 
         log.info("Wiki document updated: {}", id);
         return WikiDocumentResponse.fromEntity(savedDocument);
     }
 
+    @Transactional
+    public void deleteDocument(Long id, Long userId) {
+        log.info("Deleting wiki document: {} by user: {}", id, userId);
+
+        WikiDocument document = wikiDocumentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("문서를 찾을 수 없습니다"));
+
+        User deletedBy = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다"));
+
+        String documentTitle = document.getTitle();
+        User documentCreator = document.getCreatedBy();
+
+        wikiDocumentRepository.deleteById(id);
+        log.info("Wiki document deleted: {}", id);
+
+        // 알림 발송
+        notificationService.notifyDocumentDeleted(documentTitle, deletedBy, documentCreator);
+    }
+
+    /**
+     * @deprecated 권한 확인 없이 삭제 - 하위 호환을 위해 유지
+     */
+    @Deprecated
     @Transactional
     public void deleteDocument(Long id) {
         log.info("Deleting wiki document: {}", id);

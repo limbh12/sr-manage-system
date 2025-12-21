@@ -1,7 +1,7 @@
 /**
  * 사용자 역할
  */
-export type Role = 'ADMIN' | 'USER';
+export type Role = 'ADMIN' | 'WIKI_EDITOR' | 'USER';
 
 /**
  * SR 상태

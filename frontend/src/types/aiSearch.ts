@@ -55,3 +55,15 @@ export interface EmbeddingProgressEvent {
   estimatedRemainingMs?: number;
   message?: string;
 }
+
+/**
+ * AI 요약 응답
+ */
+export interface SummaryResponse {
+  documentId: number;
+  summary?: string;
+  generatedAt?: string;
+  processingTimeMs?: number;
+  status: 'GENERATED' | 'CACHED' | 'FAILED' | 'GENERATING' | 'NEEDS_UPDATE';
+  message?: string;
+}

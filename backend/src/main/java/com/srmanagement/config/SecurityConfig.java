@@ -95,7 +95,18 @@ public class SecurityConfig {
                         .requestMatchers(
                             "/",
                             "/index.html",
-                            "/favicon.ico"
+                            "/favicon.ico",
+                            // SPA 라우트 (프론트엔드 React Router 경로)
+                            "/login",
+                            "/dashboard",
+                            "/sr",
+                            "/sr/**",
+                            "/surveys",
+                            "/surveys/**",
+                            "/users",
+                            "/users/**",
+                            "/wiki",
+                            "/wiki/**"
                         ).permitAll()
                         .requestMatchers("/static/**", "/assets/**").permitAll()
                         .requestMatchers("/*.js", "/*.mjs", "/*.css", "/*.png", "/*.svg", "/*.ico").permitAll()

@@ -32,6 +32,9 @@ public class WikiDocumentResponse {
     private Integer viewCount;
     private Integer currentVersion;
     private List<WikiFileResponse> files;
+    private String aiSummary;
+    private LocalDateTime summaryGeneratedAt;
+    private Boolean summaryUpToDate;
 
     @Data
     @NoArgsConstructor
@@ -94,6 +97,20 @@ public class WikiDocumentResponse {
             builder.files(fileResponses);
         } else {
             builder.files(new ArrayList<>());
+        }
+
+        // AI 요약 정보 매핑
+        builder.aiSummary(document.getAiSummary())
+               .summaryGeneratedAt(document.getSummaryGeneratedAt());
+
+        // 요약이 최신인지 확인 (문서 수정 후 요약이 생성되었는지)
+        if (document.getSummaryGeneratedAt() != null && document.getUpdatedAt() != null) {
+            builder.summaryUpToDate(
+                document.getSummaryGeneratedAt().isAfter(document.getUpdatedAt()) ||
+                document.getSummaryGeneratedAt().isEqual(document.getUpdatedAt())
+            );
+        } else {
+            builder.summaryUpToDate(false);
         }
 
         return builder.build();

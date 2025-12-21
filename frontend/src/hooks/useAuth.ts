@@ -64,6 +64,21 @@ export const useAuth = () => {
     await dispatch(fetchCurrentUserAsync());
   }, [dispatch]);
 
+  /**
+   * 관리자 여부 확인
+   */
+  const isAdmin = user?.role === 'ADMIN';
+
+  /**
+   * 위키 편집 권한 확인 (ADMIN 또는 WIKI_EDITOR)
+   */
+  const canEditWiki = user?.role === 'ADMIN' || user?.role === 'WIKI_EDITOR';
+
+  /**
+   * 위키 삭제 권한 확인 (ADMIN만)
+   */
+  const canDeleteWiki = user?.role === 'ADMIN';
+
   return {
     user,
     isAuthenticated,
@@ -73,5 +88,8 @@ export const useAuth = () => {
     logout,
     resetError,
     checkAuth,
+    isAdmin,
+    canEditWiki,
+    canDeleteWiki,
   };
 };

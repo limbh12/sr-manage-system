@@ -9,7 +9,9 @@ import SrDetailPanel from '../components/sr/SrDetailPanel';
 import PdfUploadModal from '../components/wiki/PdfUploadModal';
 import VersionHistoryModal from '../components/wiki/VersionHistoryModal';
 import AiSearchBox from '../components/wiki/AiSearchBox';
+import AiSummaryBox from '../components/wiki/AiSummaryBox';
 import aiSearchService from '../services/aiSearchService';
+import { useAuth } from '../hooks/useAuth';
 import {
   wikiDocumentApi,
   wikiCategoryApi,
@@ -23,6 +25,7 @@ const WikiPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const categoryIdParam = searchParams.get('categoryId');
+  const { canEditWiki, canDeleteWiki, isAdmin } = useAuth();
 
   const [categories, setCategories] = useState<WikiCategory[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>();
@@ -419,9 +422,9 @@ const WikiPage: React.FC = () => {
           categories={categories}
           selectedCategoryId={selectedCategoryId}
           onCategorySelect={setSelectedCategoryId}
-          onCategoryCreate={handleCreateCategory}
-          onCategoryEdit={handleEditCategory}
-          onCategoryDelete={handleDeleteCategory}
+          onCategoryCreate={isAdmin ? handleCreateCategory : undefined}
+          onCategoryEdit={isAdmin ? handleEditCategory : undefined}
+          onCategoryDelete={isAdmin ? handleDeleteCategory : undefined}
         />
 
         <div className="document-list">
@@ -456,17 +459,23 @@ const WikiPage: React.FC = () => {
         <div className="wiki-toolbar">
           {!isEditing && !isCreating && (
             <>
-              <button className="btn-primary" onClick={handleCreateDocument}>
-                + 새 문서
-              </button>
-              <button className="btn-secondary" onClick={() => setShowPdfUpload(true)}>
-                📄 PDF 업로드
-              </button>
+              {canEditWiki && (
+                <>
+                  <button className="btn-primary" onClick={handleCreateDocument}>
+                    + 새 문서
+                  </button>
+                  <button className="btn-secondary" onClick={() => setShowPdfUpload(true)}>
+                    📄 PDF 업로드
+                  </button>
+                </>
+              )}
               {currentDocument && (
                 <>
-                  <button className="btn-secondary" onClick={() => setIsEditing(true)}>
-                    편집
-                  </button>
+                  {canEditWiki && (
+                    <button className="btn-secondary" onClick={() => setIsEditing(true)}>
+                      편집
+                    </button>
+                  )}
                   <button className="btn-secondary" onClick={() => setShowVersionHistory(true)}>
                     📜 버전 이력
                   </button>
@@ -571,9 +580,11 @@ const WikiPage: React.FC = () => {
                         : '❌ 임베딩 없음'}
                     </span>
                   )}
-                  <button className="btn-danger" onClick={handleDeleteDocument}>
-                    삭제
-                  </button>
+                  {canDeleteWiki && (
+                    <button className="btn-danger" onClick={handleDeleteDocument}>
+                      삭제
+                    </button>
+                  )}
                 </>
               )}
             </>
@@ -654,6 +665,14 @@ const WikiPage: React.FC = () => {
               <span>수정일: {new Date(currentDocument.updatedAt).toLocaleString()}</span>
               <span>조회수: {currentDocument.viewCount}</span>
             </div>
+
+            {/* AI 요약 */}
+            <AiSummaryBox
+              documentId={currentDocument.id}
+              aiSummary={currentDocument.aiSummary}
+              summaryGeneratedAt={currentDocument.summaryGeneratedAt}
+              summaryUpToDate={currentDocument.summaryUpToDate}
+            />
 
             {/* 연계된 SR 목록 */}
             {currentDocument.srs && currentDocument.srs.length > 0 && (

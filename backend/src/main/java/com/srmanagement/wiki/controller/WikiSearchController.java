@@ -4,6 +4,7 @@ import com.srmanagement.wiki.dto.AiSearchRequest;
 import com.srmanagement.wiki.dto.AiSearchResponse;
 import com.srmanagement.wiki.dto.EmbeddingProgressEvent;
 import com.srmanagement.wiki.dto.EmbeddingStatusResponse;
+import com.srmanagement.wiki.dto.SummaryResponse;
 import com.srmanagement.wiki.service.AiSearchService;
 import com.srmanagement.wiki.service.EmbeddingProgressService;
 import jakarta.validation.Valid;
@@ -113,5 +114,39 @@ public class WikiSearchController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok(progress);
+    }
+
+    /**
+     * 문서 AI 요약 생성
+     * - 캐시된 요약이 최신이면 바로 반환
+     * - 아니면 새로 생성
+     *
+     * @param documentId Wiki 문서 ID
+     * @param forceRegenerate 강제 재생성 여부 (기본값: false)
+     * @return AI 요약 응답
+     */
+    @PostMapping("/summary/{documentId}")
+    public ResponseEntity<SummaryResponse> generateSummary(
+            @PathVariable Long documentId,
+            @RequestParam(defaultValue = "false") boolean forceRegenerate) {
+        log.info("문서 요약 생성 요청: documentId={}, forceRegenerate={}", documentId, forceRegenerate);
+        SummaryResponse response = aiSearchService.generateSummary(documentId, forceRegenerate);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 문서 AI 요약 상태 조회 (폴링용)
+     * - 생성 중이면 GENERATING 상태 반환
+     * - 캐시가 있으면 CACHED 상태와 요약 반환
+     * - 없으면 NEEDS_UPDATE 상태 반환
+     *
+     * @param documentId Wiki 문서 ID
+     * @return AI 요약 상태 및 요약 (있으면)
+     */
+    @GetMapping("/summary/{documentId}")
+    public ResponseEntity<SummaryResponse> getSummaryStatus(@PathVariable Long documentId) {
+        log.debug("문서 요약 상태 조회: documentId={}", documentId);
+        SummaryResponse response = aiSearchService.getSummaryStatus(documentId);
+        return ResponseEntity.ok(response);
     }
 }

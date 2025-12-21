@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import ThemeToggle from './ThemeToggle';
+import NotificationDropdown from './NotificationDropdown';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -29,6 +30,7 @@ function Header({ onToggleSidebar }: HeaderProps) {
         <ThemeToggle />
         {user && (
           <>
+            <NotificationDropdown />
             <div className="header-user">
               <Link to="/profile" style={{ color: 'inherit', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span className="user-name">{user.username}</span>

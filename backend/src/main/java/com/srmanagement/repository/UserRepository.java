@@ -1,9 +1,11 @@
 package com.srmanagement.repository;
 
+import com.srmanagement.entity.Role;
 import com.srmanagement.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -39,4 +41,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @return 존재하면 true
      */
     boolean existsByEmail(String email);
+
+    /**
+     * 역할 목록으로 사용자 조회
+     * @param roles 역할 목록
+     * @return 해당 역할을 가진 사용자 목록
+     */
+    List<User> findByRoleIn(List<Role> roles);
 }

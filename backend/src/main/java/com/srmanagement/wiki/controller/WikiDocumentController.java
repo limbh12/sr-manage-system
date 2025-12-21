@@ -15,6 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,6 +31,7 @@ public class WikiDocumentController {
     private final UserRepository userRepository;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'WIKI_EDITOR')")
     public ResponseEntity<WikiDocumentResponse> createDocument(
             @Valid @RequestBody WikiDocumentRequest request,
             Authentication authentication) {
@@ -40,6 +42,7 @@ public class WikiDocumentController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'WIKI_EDITOR')")
     public ResponseEntity<WikiDocumentResponse> updateDocument(
             @PathVariable Long id,
             @Valid @RequestBody WikiDocumentRequest request,
@@ -51,8 +54,13 @@ public class WikiDocumentController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteDocument(@PathVariable Long id) {
-        wikiDocumentService.deleteDocument(id);
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteDocument(
+            @PathVariable Long id,
+            Authentication authentication) {
+        User user = userRepository.findByUsername(authentication.getName())
+                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
+        wikiDocumentService.deleteDocument(id, user.getId());
         return ResponseEntity.noContent().build();
     }
 

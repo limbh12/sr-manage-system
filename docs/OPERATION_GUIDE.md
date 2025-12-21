@@ -374,3 +374,145 @@ A. 백엔드 로그를 확인하세요. DB 연결 오류이거나, `CubridDialec
 
 **Q. CORS 오류가 발생합니다.**
 A. 프론트엔드와 백엔드가 다른 도메인/포트에서 실행 중인 경우 발생할 수 있습니다. `backend/src/main/java/com/srmanagement/config/CorsConfig.java`에서 허용할 Origin을 추가하세요.
+
+---
+
+## 4. 백업 및 복원
+
+시스템 데이터를 안전하게 보관하고 장애 발생 시 복원할 수 있도록 백업/복원 스크립트를 제공합니다.
+
+### 4.1 백업 스크립트
+
+**위치:** `backend/scripts/backup.sh`
+
+**기능:**
+- H2 데이터베이스 파일 백업 (`backend/data/srdb.mv.db`)
+- 업로드된 파일 백업 (`backend/uploads/`)
+- 백업 파일 형식: `sr_backup_YYYYMMDD_HHMMSS.tar.gz`
+- 타임스탬프 기반 고유 파일명 생성
+
+**사용법:**
+```bash
+# 프로젝트 루트에서 실행
+./backend/scripts/backup.sh
+
+# 백업 파일 생성 위치
+ls backend/backups/
+# 예: sr_backup_20251221_143052.tar.gz
+```
+
+**백업 대상:**
+| 항목 | 경로 | 설명 |
+|------|------|------|
+| 데이터베이스 | `backend/data/` | H2 DB 파일 (srdb.mv.db, srdb.trace.db) |
+| 업로드 파일 | `backend/uploads/` | Wiki 첨부파일, PDF 등 |
+
+### 4.2 복원 스크립트
+
+**위치:** `backend/scripts/restore.sh`
+
+**기능:**
+- 백업 파일(tar.gz)에서 데이터 복원
+- 기존 데이터 덮어쓰기 전 확인
+- 데이터베이스 및 업로드 파일 동시 복원
+
+**사용법:**
+```bash
+# 프로젝트 루트에서 실행
+./backend/scripts/restore.sh backend/backups/sr_backup_20251221_143052.tar.gz
+```
+
+**주의사항:**
+- 복원 전 반드시 서버를 중지하세요 (`./backend/scripts/stop.sh`)
+- 복원 시 기존 데이터가 덮어쓰기됩니다
+- 중요 데이터는 복원 전 별도 백업을 권장합니다
+
+### 4.3 자동 백업 설정 (Cron)
+
+정기적인 자동 백업을 위해 cron 작업을 설정할 수 있습니다.
+
+```bash
+# crontab 편집
+crontab -e
+
+# 매일 새벽 3시에 백업 실행 (예시)
+0 3 * * * /path/to/sr-manage-system/backend/scripts/backup.sh >> /path/to/sr-manage-system/backend/logs/backup.log 2>&1
+
+# 매주 일요일 새벽 2시에 백업 실행 (예시)
+0 2 * * 0 /path/to/sr-manage-system/backend/scripts/backup.sh >> /path/to/sr-manage-system/backend/logs/backup.log 2>&1
+```
+
+### 4.4 백업 보관 정책 권장
+
+| 주기 | 보관 기간 | 설명 |
+|------|----------|------|
+| 일간 백업 | 7일 | 최근 7일간 일일 백업 유지 |
+| 주간 백업 | 4주 | 매주 일요일 백업 4주 보관 |
+| 월간 백업 | 12개월 | 매월 1일 백업 1년 보관 |
+
+오래된 백업 파일 정리 예시:
+```bash
+# 30일 이상 된 백업 파일 삭제
+find backend/backups/ -name "sr_backup_*.tar.gz" -mtime +30 -delete
+```
+
+---
+
+## 5. 데이터베이스 마이그레이션
+
+운영 환경에서 스키마 변경이 필요한 경우 마이그레이션 스크립트를 사용합니다.
+
+### 5.1 마이그레이션 스크립트 위치
+
+모든 마이그레이션 스크립트는 날짜별로 정리되어 있습니다:
+
+```
+backend/src/main/resources/db/migration/
+├── 20251211_sr_soft_delete/      # SR 소프트 삭제 기능
+├── 20251211_contact_position/    # 담당자 직급 필드
+├── 20251211_survey_assignee_status/  # 현황조사 담당자/상태
+├── 20251219_wiki_tables/         # Wiki 테이블 전체
+├── 20251220_notification_fields/ # 알림 확장 필드
+└── ...
+```
+
+각 폴더에는 DB별 스크립트가 포함되어 있습니다:
+- `h2.sql` - H2 데이터베이스용
+- `mysql.sql` - MySQL 8.x용
+- `postgresql.sql` - PostgreSQL용
+- `cubrid.sql` - CUBRID용
+- `rollback.sql` - 롤백 스크립트
+
+### 5.2 마이그레이션 실행 방법
+
+**H2 (개발 환경)**
+1. http://localhost:8080/h2-console 접속
+2. 해당 `.sql` 파일 내용을 복사하여 실행
+3. 또는 `ddl-auto: update` 설정 시 자동 반영
+
+**운영 환경 (MySQL/PostgreSQL/CUBRID)**
+```bash
+# MySQL
+mysql -u username -p database_name < mysql.sql
+
+# PostgreSQL
+psql -U username -d database_name -f postgresql.sql
+
+# CUBRID
+csql -u dba database_name < cubrid.sql
+```
+
+### 5.3 롤백
+
+문제 발생 시 각 폴더의 `rollback.sql` 파일을 실행합니다:
+
+```bash
+# 예: Wiki 테이블 롤백
+psql -U username -d database_name -f rollback.sql
+```
+
+**주의:** 롤백은 데이터 손실을 야기할 수 있으므로 반드시 백업 후 진행하세요.
+
+### 5.4 상세 가이드
+
+마이그레이션 이력, DB별 실행 방법, 트러블슈팅, 체크리스트 등 상세 내용은 [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md)를 참조하세요.

@@ -1,7 +1,7 @@
 -- Initial data for organizations table
 -- Generated from docs/ORGANIZATIONS.csv
 
-INSERT INTO organizations (code, name) VALUES ('﻿1140100', '국민권익위원회');
+INSERT INTO organizations (code, name) VALUES ('1140100', '국민권익위원회');
 INSERT INTO organizations (code, name) VALUES ('6410000', '경기도');
 INSERT INTO organizations (code, name) VALUES ('B552522', '한국서부발전(주)');
 INSERT INTO organizations (code, name) VALUES ('6500000', '제주특별자치도');

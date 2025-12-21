@@ -11,6 +11,7 @@ import com.srmanagement.exception.CustomException;
 import com.srmanagement.repository.SrHistoryRepository;
 import com.srmanagement.repository.SrRepository;
 import com.srmanagement.repository.UserRepository;
+import com.srmanagement.wiki.service.WikiNotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -39,6 +40,9 @@ public class SrService {
 
     @Autowired
     private SrHistoryRepository srHistoryRepository;
+
+    @Autowired
+    private WikiNotificationService notificationService;
 
     /**
      * SR ID 생성 (SR-YYMM-XXXX)
@@ -172,6 +176,12 @@ public class SrService {
                 .build();
 
         Sr savedSr = srRepository.save(sr);
+
+        // SR 생성 알림 발송 (담당자에게)
+        if (assignee != null) {
+            notificationService.notifySrCreated(savedSr.getId(), savedSr.getTitle(), assignee, requester);
+        }
+
         return SrResponse.from(savedSr);
     }
 
@@ -243,10 +253,14 @@ public class SrService {
         if (request.getAssigneeId() != null) {
             User assignee = userRepository.findById(request.getAssigneeId())
                     .orElseThrow(() -> new CustomException("Assignee not found", HttpStatus.NOT_FOUND));
-            
+
             if (sr.getAssignee() == null || !sr.getAssignee().getId().equals(assignee.getId())) {
                 String oldAssigneeName = sr.getAssignee() != null ? sr.getAssignee().getName() : "없음";
                 createHistory(sr, "담당자가 변경되었습니다: " + oldAssigneeName + " -> " + assignee.getName(), SrHistoryType.ASSIGNEE_CHANGE, modifier);
+
+                // 담당자 변경 알림 발송 (새 담당자에게)
+                notificationService.notifySrAssigned(sr.getId(), sr.getTitle(), assignee, modifier);
+
                 sr.setAssignee(assignee);
             }
         }
@@ -274,6 +288,16 @@ public class SrService {
         }
 
         Sr updatedSr = srRepository.save(sr);
+
+        // SR 수정 알림 발송 (담당자와 등록자에게)
+        notificationService.notifySrUpdated(
+                updatedSr.getId(),
+                updatedSr.getTitle(),
+                updatedSr.getAssignee(),
+                updatedSr.getRequester(),
+                modifier
+        );
+
         return SrResponse.from(updatedSr);
     }
 
@@ -349,15 +373,30 @@ public class SrService {
     public SrResponse updateSrStatus(Long id, SrStatusUpdateRequest request, String username) {
         Sr sr = srRepository.findById(id)
                 .orElseThrow(() -> new CustomException("SR not found with id: " + id, HttpStatus.NOT_FOUND));
-        
+
         User modifier = userRepository.findByUsername(username)
                 .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
 
         if (request.getStatus() != sr.getStatus()) {
             createHistory(sr, "상태가 변경되었습니다: " + getStatusLabel(sr.getStatus()) + " -> " + getStatusLabel(request.getStatus()), SrHistoryType.STATUS_CHANGE, modifier);
+            SrStatus oldStatus = sr.getStatus();
             sr.setStatus(request.getStatus());
+
+            Sr updatedSr = srRepository.save(sr);
+
+            // SR 상태 변경 알림 발송 (담당자와 등록자에게)
+            notificationService.notifySrStatusChanged(
+                    updatedSr.getId(),
+                    updatedSr.getTitle(),
+                    request.getStatus().name(),
+                    updatedSr.getAssignee(),
+                    updatedSr.getRequester(),
+                    modifier
+            );
+
+            return SrResponse.from(updatedSr);
         }
-        
+
         Sr updatedSr = srRepository.save(sr);
         return SrResponse.from(updatedSr);
     }
