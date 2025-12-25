@@ -367,15 +367,13 @@ function SrDetail({ sr, onClose, onEdit, onStatusChange, onWikiClick, isModal = 
             </div>
 
             {/* AI 검색 임베딩 상태 */}
-            <div style={{
+            <div className="bg-info-light" style={{
               marginBottom: '16px',
               padding: '12px',
-              borderRadius: '4px',
-              background: 'var(--bg-info-light, #e8f4fd)',
-              border: '1px solid var(--border-info, #b3d7f5)'
+              borderRadius: '4px'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <strong style={{ fontSize: '14px' }}>AI 검색 임베딩</strong>
+                <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>AI 검색 임베딩</strong>
                 <button
                   className="btn btn-sm btn-secondary"
                   onClick={handleGenerateEmbedding}
@@ -386,23 +384,23 @@ function SrDetail({ sr, onClose, onEdit, onStatusChange, onWikiClick, isModal = 
                 </button>
               </div>
               {embeddingLoading ? (
-                <div style={{ color: '#666', fontSize: '13px' }}>로딩 중...</div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>로딩 중...</div>
               ) : embeddingStatus ? (
-                <div style={{ fontSize: '13px', color: '#444' }}>
+                <div style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     <span>상태:</span>
                     {embeddingStatus.hasEmbedding ? (
                       embeddingStatus.isUpToDate ? (
-                        <span style={{ color: '#28a745', fontWeight: 500 }}>최신 ✓</span>
+                        <span style={{ color: 'var(--success-color)', fontWeight: 500 }}>최신 ✓</span>
                       ) : (
-                        <span style={{ color: '#e36209', fontWeight: 500 }}>업데이트 필요</span>
+                        <span style={{ color: 'var(--warning-color)', fontWeight: 500 }}>업데이트 필요</span>
                       )
                     ) : (
-                      <span style={{ color: '#999' }}>임베딩 없음</span>
+                      <span style={{ color: 'var(--text-muted)' }}>임베딩 없음</span>
                     )}
                   </div>
                   {embeddingStatus.hasEmbedding && (
-                    <div style={{ color: '#666', fontSize: '12px' }}>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
                       청크 수: {embeddingStatus.chunkCount}개
                       {embeddingStatus.lastEmbeddingDate && (
                         <> | 생성일: {new Date(embeddingStatus.lastEmbeddingDate).toLocaleString()}</>
@@ -411,7 +409,7 @@ function SrDetail({ sr, onClose, onEdit, onStatusChange, onWikiClick, isModal = 
                   )}
                 </div>
               ) : (
-                <div style={{ color: '#999', fontSize: '13px' }}>상태를 불러올 수 없습니다</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>상태를 불러올 수 없습니다</div>
               )}
             </div>
           </div>

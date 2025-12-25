@@ -89,22 +89,22 @@ const CsvUploadModal: React.FC<CsvUploadModalProps> = ({ isOpen, onClose, onSucc
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
+              className={isDragging ? 'bg-drag-active' : 'bg-drag-area'}
               style={{
-                border: `2px dashed ${isDragging ? '#2196f3' : '#ccc'}`,
+                border: `2px dashed ${isDragging ? 'var(--primary-color)' : 'var(--border-color)'}`,
                 borderRadius: '8px',
                 padding: '32px',
                 textAlign: 'center',
-                backgroundColor: isDragging ? '#e3f2fd' : '#fafafa',
                 transition: 'all 0.2s',
                 cursor: 'pointer'
               }}
             >
               <div style={{ marginBottom: '16px' }}>
-                <svg style={{ width: '48px', height: '48px', color: '#9e9e9e', margin: '0 auto' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg style={{ width: '48px', height: '48px', color: 'var(--text-secondary)', margin: '0 auto' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
               </div>
-              <p style={{ color: '#666', marginBottom: '8px' }}>
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '8px' }}>
                 CSV 파일을 이곳에 드래그하거나 클릭하여 선택하세요
               </p>
               <input
@@ -158,7 +158,7 @@ const CsvUploadModal: React.FC<CsvUploadModalProps> = ({ isOpen, onClose, onSucc
               </button>
             </div>
             
-            <div style={{ marginTop: '16px', fontSize: '13px', color: '#757575' }}>
+            <div style={{ marginTop: '16px', fontSize: '13px', color: 'var(--text-secondary)' }}>
               <p>※ 템플릿 파일 형식(CSV)을 준수해야 합니다.</p>
               <p>※ 첫 번째 열은 반드시 '기관명'이어야 하며, 시스템에 등록된 기관명과 일치해야 합니다.</p>
             </div>
@@ -166,29 +166,28 @@ const CsvUploadModal: React.FC<CsvUploadModalProps> = ({ isOpen, onClose, onSucc
         ) : (
           <div className="space-y-4">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', textAlign: 'center', marginBottom: '24px' }}>
-              <div style={{ backgroundColor: '#f5f5f5', padding: '16px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '13px', color: '#757575' }}>총 건수</div>
-                <div style={{ fontSize: '24px', fontWeight: 'bold' }}>{result.totalCount}</div>
+              <div className="bg-gray-light" style={{ padding: '16px', borderRadius: '8px' }}>
+                <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>총 건수</div>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--text-primary)' }}>{result.totalCount}</div>
               </div>
-              <div style={{ backgroundColor: '#e8f5e9', padding: '16px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '13px', color: '#2e7d32' }}>성공</div>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#2e7d32' }}>{result.successCount}</div>
+              <div className="bg-success-light" style={{ padding: '16px', borderRadius: '8px' }}>
+                <div style={{ fontSize: '13px', color: 'var(--success-color)' }}>성공</div>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--success-color)' }}>{result.successCount}</div>
               </div>
-              <div style={{ backgroundColor: '#ffebee', padding: '16px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '13px', color: '#c62828' }}>실패</div>
-                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#c62828' }}>{result.failureCount}</div>
+              <div className="bg-error-light" style={{ padding: '16px', borderRadius: '8px' }}>
+                <div style={{ fontSize: '13px', color: 'var(--error-color)' }}>실패</div>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: 'var(--error-color)' }}>{result.failureCount}</div>
               </div>
             </div>
 
             {result.failures.length > 0 && (
               <div>
-                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px', color: '#c62828' }}>실패 상세 내역</h3>
-                <div style={{ 
-                  backgroundColor: '#fafafa', 
-                  border: '1px solid #eee', 
-                  borderRadius: '8px', 
-                  maxHeight: '240px', 
-                  overflowY: 'auto' 
+                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px', color: 'var(--error-color)' }}>실패 상세 내역</h3>
+                <div className="bg-gray-light" style={{
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  maxHeight: '240px',
+                  overflowY: 'auto'
                 }}>
                   <table className="table" style={{ fontSize: '13px' }}>
                     <thead>
@@ -203,7 +202,7 @@ const CsvUploadModal: React.FC<CsvUploadModalProps> = ({ isOpen, onClose, onSucc
                         <tr key={idx}>
                           <td>{fail.rowNumber}</td>
                           <td>{fail.data}</td>
-                          <td style={{ color: '#c62828' }}>{fail.reason}</td>
+                          <td style={{ color: 'var(--error-color)' }}>{fail.reason}</td>
                         </tr>
                       ))}
                     </tbody>

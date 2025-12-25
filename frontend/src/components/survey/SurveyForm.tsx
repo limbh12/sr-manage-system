@@ -114,8 +114,8 @@ function SurveyForm() {
 
   const loadUsers = async () => {
     try {
-      const response = await userService.getUsers();
-      setUserOptions(response.content);
+      const users = await userService.getUserOptions();
+      setUserOptions(users);
     } catch (error) {
       console.error('사용자 목록 로드 실패:', error);
     }
@@ -157,6 +157,7 @@ function SurveyForm() {
   const [embeddingStatus, setEmbeddingStatus] = useState<SurveyEmbeddingStatusResponse | null>(null);
   const [embeddingLoading, setEmbeddingLoading] = useState(false);
   const [isGeneratingEmbedding, setIsGeneratingEmbedding] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -280,7 +281,45 @@ function SurveyForm() {
         <h2 className="page-title">{id ? 'OPEN API 현황조사 수정' : 'OPEN API 현황조사 등록'}</h2>
       </div>
       <form onSubmit={handleSubmit} className="card">
-        
+
+        {/* 현황조사 관리 정보 */}
+        <section className="mb-4 bg-info-light" style={{ padding: '16px', borderRadius: '8px', marginBottom: '24px' }}>
+          <h3 className="section-title" style={{ marginTop: 0, color: 'var(--text-primary)' }}>현황조사 관리</h3>
+          <div className="grid-2">
+            <div className="form-group">
+              <label className="form-label">담당자 *</label>
+              <select
+                name="assigneeId"
+                className="form-select"
+                value={formData.assigneeId || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, assigneeId: e.target.value ? Number(e.target.value) : undefined }))}
+                required
+              >
+                <option value="">담당자 선택</option>
+                {userOptions.map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.name} ({user.username})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">처리상태 *</label>
+              <select
+                name="status"
+                className="form-select"
+                value={formData.status}
+                onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as SurveyStatus }))}
+                required
+              >
+                <option value="PENDING">작성대기</option>
+                <option value="IN_PROGRESS">작성중</option>
+                <option value="COMPLETED">완료</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
         {/* 1. 기본 정보 */}
         <section className="mb-4">
           <h3 className="section-title">1. 기본 정보</h3>
@@ -288,20 +327,20 @@ function SurveyForm() {
             <div className="form-group">
               <label className="form-label">기관명 *</label>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <input 
-                  type="text" 
-                  name="organizationName" 
-                  required 
-                  className="form-input" 
-                  value={organizationNameDisplay} 
+                <input
+                  type="text"
+                  name="organizationName"
+                  required
+                  className="form-input"
+                  value={organizationNameDisplay}
                   readOnly
                   onClick={() => setIsOrgModalOpen(true)}
                   placeholder="기관 검색을 이용하세요"
                   style={{ flex: 1, minWidth: 0 }}
                 />
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
+                <button
+                  type="button"
+                  className="btn btn-secondary"
                   onClick={() => setIsOrgModalOpen(true)}
                   style={{ whiteSpace: 'nowrap' }}
                 >
@@ -328,36 +367,6 @@ function SurveyForm() {
             <div className="form-group">
               <label className="form-label">이메일 *</label>
               <input type="email" name="contactEmail" required className="form-input" value={formData.contactEmail} onChange={handleChange} style={getInputStyle(formData.contactEmail)} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">담당자</label>
-              <select
-                name="assigneeId"
-                className="form-select"
-                value={formData.assigneeId || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, assigneeId: e.target.value ? Number(e.target.value) : undefined }))}
-              >
-                <option value="">선택 안 함</option>
-                {userOptions.map(user => (
-                  <option key={user.id} value={user.id}>
-                    {user.name} ({user.username})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">작성상태 *</label>
-              <select
-                name="status"
-                className="form-select"
-                value={formData.status}
-                onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as SurveyStatus }))}
-                required
-              >
-                <option value="PENDING">작성대기</option>
-                <option value="IN_PROGRESS">작성중</option>
-                <option value="COMPLETED">완료</option>
-              </select>
             </div>
           </div>
         </section>
@@ -776,14 +785,12 @@ function SurveyForm() {
         {id && (
           <section className="mb-4">
             <h3 className="section-title">7. AI 검색 임베딩</h3>
-            <div style={{
+            <div className="bg-info-light" style={{
               padding: '16px',
-              borderRadius: '4px',
-              background: 'var(--bg-info-light, #e8f4fd)',
-              border: '1px solid var(--border-info, #b3d7f5)'
+              borderRadius: '4px'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <strong style={{ fontSize: '14px' }}>AI 검색을 위한 임베딩 상태</strong>
+                <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>AI 검색을 위한 임베딩 상태</strong>
                 <button
                   type="button"
                   className="btn btn-sm btn-secondary"
@@ -795,23 +802,23 @@ function SurveyForm() {
                 </button>
               </div>
               {embeddingLoading ? (
-                <div style={{ color: '#666', fontSize: '13px' }}>로딩 중...</div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>로딩 중...</div>
               ) : embeddingStatus ? (
-                <div style={{ fontSize: '13px', color: '#444' }}>
+                <div style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     <span>상태:</span>
                     {embeddingStatus.hasEmbedding ? (
                       embeddingStatus.isUpToDate ? (
-                        <span style={{ color: '#28a745', fontWeight: 500 }}>최신 ✓</span>
+                        <span style={{ color: 'var(--success-color)', fontWeight: 500 }}>최신 ✓</span>
                       ) : (
-                        <span style={{ color: '#e36209', fontWeight: 500 }}>업데이트 필요</span>
+                        <span style={{ color: 'var(--warning-color)', fontWeight: 500 }}>업데이트 필요</span>
                       )
                     ) : (
-                      <span style={{ color: '#999' }}>임베딩 없음</span>
+                      <span style={{ color: 'var(--text-muted)' }}>임베딩 없음</span>
                     )}
                   </div>
                   {embeddingStatus.hasEmbedding && (
-                    <div style={{ color: '#666', fontSize: '12px' }}>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
                       청크 수: {embeddingStatus.chunkCount}개
                       {embeddingStatus.lastEmbeddingDate && (
                         <> | 생성일: {new Date(embeddingStatus.lastEmbeddingDate).toLocaleString()}</>
@@ -820,17 +827,47 @@ function SurveyForm() {
                   )}
                 </div>
               ) : (
-                <div style={{ color: '#999', fontSize: '13px' }}>상태를 불러올 수 없습니다</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>상태를 불러올 수 없습니다</div>
               )}
             </div>
           </section>
         )}
 
-        <div className="flex-end pt-4">
-          <button type="button" onClick={() => navigate('/survey')} className="btn btn-secondary">취소</button>
-          <button type="submit" disabled={loading} className="btn btn-primary">
-            {loading ? (id ? '수정 중...' : '저장 중...') : (id ? '수정' : '저장')}
-          </button>
+        <div className="flex-end pt-4" style={{ justifyContent: 'space-between' }}>
+          <div>
+            {id && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!window.confirm('정말 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.')) {
+                    return;
+                  }
+                  setIsDeleting(true);
+                  try {
+                    await surveyService.deleteSurvey(Number(id));
+                    alert('삭제되었습니다.');
+                    navigate('/survey');
+                  } catch (error) {
+                    console.error(error);
+                    alert('삭제에 실패했습니다.');
+                  } finally {
+                    setIsDeleting(false);
+                  }
+                }}
+                disabled={isDeleting}
+                className="btn btn-danger"
+                style={{ backgroundColor: '#dc3545', borderColor: '#dc3545', color: '#fff' }}
+              >
+                {isDeleting ? '삭제 중...' : '삭제'}
+              </button>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button type="button" onClick={() => navigate('/survey')} className="btn btn-secondary">취소</button>
+            <button type="submit" disabled={loading} className="btn btn-primary">
+              {loading ? (id ? '수정 중...' : '저장 중...') : (id ? '수정' : '저장')}
+            </button>
+          </div>
         </div>
       </form>
 

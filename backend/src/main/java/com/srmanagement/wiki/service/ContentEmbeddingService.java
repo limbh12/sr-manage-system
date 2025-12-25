@@ -486,6 +486,15 @@ public class ContentEmbeddingService {
     }
 
     /**
+     * 특정 현황조사의 임베딩 삭제
+     */
+    @Transactional
+    public void deleteSurveyEmbeddings(Long surveyId) {
+        embeddingRepository.deleteByResourceTypeAndResourceId(ResourceType.SURVEY, surveyId);
+        log.info("🗑️ 현황조사 임베딩 삭제: surveyId={}", surveyId);
+    }
+
+    /**
      * 공통 임베딩 생성 로직
      */
     private void generateEmbeddings(

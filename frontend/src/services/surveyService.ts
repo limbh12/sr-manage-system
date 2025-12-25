@@ -40,6 +40,14 @@ export const updateSurvey = async (id: number, data: OpenApiSurveyCreateRequest)
 };
 
 /**
+ * 설문 삭제
+ */
+export const deleteSurvey = async (id: number): Promise<void> => {
+  if (USE_MOCK) return;
+  await api.delete(`/surveys/${id}`);
+};
+
+/**
  * 설문 파일 다운로드
  */
 export const downloadSurveyFile = async (id: number): Promise<void> => {

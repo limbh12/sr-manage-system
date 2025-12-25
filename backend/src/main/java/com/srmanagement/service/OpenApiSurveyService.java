@@ -11,6 +11,7 @@ import com.srmanagement.entity.Organization;
 import com.srmanagement.entity.Priority;
 import com.srmanagement.entity.Sr;
 import com.srmanagement.entity.SrStatus;
+import com.srmanagement.entity.SurveyStatus;
 import com.srmanagement.exception.CustomException;
 import com.srmanagement.repository.OpenApiSurveyRepository;
 import com.srmanagement.repository.OrganizationRepository;
@@ -109,15 +110,28 @@ public class OpenApiSurveyService {
             // sanitize original name: remove path separators and control chars
             String sanitized = origName.trim().replaceAll("[\\\\/:*?\"<>|]", "_").replaceAll("[\\u0000-\\u001F\\r\\n\\t]", "");
 
-            // store as survey_{id}__{sanitizedOriginal}
-            String storedName = "survey_" + id + "__" + sanitized;
-            Path target = uploadDir.resolve(storedName);
+            // 기존 파일이 있으면 삭제
+            if (survey.getStoredFileName() != null && !survey.getStoredFileName().isEmpty()) {
+                Path oldFile = uploadDir.resolve(survey.getStoredFileName());
+                Files.deleteIfExists(oldFile);
+            }
+
+            // UUID로 해시된 파일명 생성 (확장자 유지)
+            String extension = "";
+            int dotIndex = sanitized.lastIndexOf('.');
+            if (dotIndex > 0) {
+                extension = sanitized.substring(dotIndex);
+            }
+            String hashedName = java.util.UUID.randomUUID().toString() + extension;
+
+            Path target = uploadDir.resolve(hashedName);
             try (InputStream in = file.getInputStream()) {
                 Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
             }
 
-            // keep original (sanitized) name in DB for Content-Disposition
+            // DB에 원본 파일명과 해시된 저장 파일명 저장
             survey.setReceivedFileName(sanitized);
+            survey.setStoredFileName(hashedName);
             openApiSurveyRepository.save(survey);
         } catch (IOException e) {
             throw new RuntimeException("파일 저장 중 오류가 발생했습니다: " + e.getMessage(), e);
@@ -130,29 +144,26 @@ public class OpenApiSurveyService {
         OpenApiSurvey survey = openApiSurveyRepository.findById(id)
                 .orElseThrow(() -> new CustomException("Survey not found with id: " + id, org.springframework.http.HttpStatus.NOT_FOUND));
 
-        Path projectRoot = Paths.get(System.getProperty("user.dir"));
-        Path uploadDir = projectRoot.resolve("data").resolve("uploads");
-        if (!Files.exists(uploadDir) || !Files.isDirectory(uploadDir)) {
+        // storedFileName이 없으면 파일이 첨부되지 않은 것
+        if (survey.getStoredFileName() == null || survey.getStoredFileName().isEmpty()) {
             throw new CustomException("첨부된 파일이 존재하지 않습니다.", org.springframework.http.HttpStatus.NOT_FOUND);
         }
 
-        String prefix = "survey_" + id + "__";
+        Path projectRoot = Paths.get(System.getProperty("user.dir"));
+        Path uploadDir = projectRoot.resolve("data").resolve("uploads");
+        Path filePath = uploadDir.resolve(survey.getStoredFileName());
+
         try {
-            try (java.util.stream.Stream<Path> stream = Files.list(uploadDir)) {
-                Path found = stream.filter(p -> p.getFileName().toString().startsWith(prefix)).findFirst().orElse(null);
-                if (found == null) {
-                    throw new CustomException("첨부된 파일이 존재하지 않습니다.", org.springframework.http.HttpStatus.NOT_FOUND);
-                }
-                org.springframework.core.io.UrlResource resource = new org.springframework.core.io.UrlResource(found.toUri());
-                if (!resource.exists() || !resource.isReadable()) {
-                    throw new CustomException("파일을 읽을 수 없습니다.", org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR);
-                }
-                return resource;
+            if (!Files.exists(filePath)) {
+                throw new CustomException("첨부된 파일이 존재하지 않습니다.", org.springframework.http.HttpStatus.NOT_FOUND);
             }
+            org.springframework.core.io.UrlResource resource = new org.springframework.core.io.UrlResource(filePath.toUri());
+            if (!resource.exists() || !resource.isReadable()) {
+                throw new CustomException("파일을 읽을 수 없습니다.", org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+            return resource;
         } catch (MalformedURLException e) {
             throw new RuntimeException("파일을 로드하는 동안 오류가 발생했습니다: " + e.getMessage(), e);
-        } catch (IOException e) {
-            throw new RuntimeException("업로드 디렉터리를 읽는 중 오류가 발생했습니다: " + e.getMessage(), e);
         }
     }
 
@@ -274,6 +285,20 @@ public class OpenApiSurveyService {
     }
 
     @Transactional
+    public void deleteSurvey(Long id) {
+        OpenApiSurvey survey = openApiSurveyRepository.findById(id)
+                .orElseThrow(() -> new CustomException("Survey not found with id: " + id, HttpStatus.NOT_FOUND));
+
+        // 연관된 임베딩 삭제
+        if (contentEmbeddingService != null) {
+            contentEmbeddingService.deleteSurveyEmbeddings(id);
+        }
+
+        // 현황조사 삭제
+        openApiSurveyRepository.delete(survey);
+    }
+
+    @Transactional
     public OpenApiSurveyResponse updateSurvey(Long id, OpenApiSurveyCreateRequest request) {
         OpenApiSurvey survey = openApiSurveyRepository.findById(id)
                 .orElseThrow(() -> new CustomException("Survey not found with id: " + id, HttpStatus.NOT_FOUND));
@@ -298,8 +323,10 @@ public class OpenApiSurveyService {
 
         survey.setDepartment(request.getDepartment());
         survey.setContactName(request.getContactName());
+        survey.setContactPosition(request.getContactPosition());
         survey.setContactPhone(request.getContactPhone());
         survey.setContactEmail(request.getContactEmail());
+        survey.setStatus(request.getStatus() != null ? request.getStatus() : SurveyStatus.PENDING);
         survey.setReceivedFileName(request.getReceivedFileName());
         survey.setReceivedDate(request.getReceivedDate());
         survey.setSystemName(request.getSystemName());
@@ -710,8 +737,9 @@ public class OpenApiSurveyService {
         try {
             // 1. SR 생성 (generateEmbedding 플래그 전달)
             SrCreateRequest srRequest = new SrCreateRequest();
-            srRequest.setTitle(String.format("[OPEN API 현황조사] %s - %s",
-                    survey.getOrganization().getName(), survey.getSystemName()));
+            String desiredMethodLabel = getMethodLabel(survey.getDesiredMethod());
+            srRequest.setTitle(String.format("[OPEN API 현황조사] %s - %s - %s",
+                    survey.getOrganization().getName(), desiredMethodLabel, survey.getSystemName()));
             srRequest.setDescription(buildSurveyDescription(survey, true));
             srRequest.setPriority(Priority.MEDIUM);
             srRequest.setCategory("OPEN_API");
@@ -723,11 +751,11 @@ public class OpenApiSurveyService {
 
             SrResponse createdSr = srService.createSr(srRequest, requester.getUsername(), generateEmbedding);
 
-            // 2. SR을 CLOSED 상태로 변경하고 처리내용 설정
+            // 2. SR을 RESOLVED 상태로 변경하고 처리내용 설정
             Sr sr = srRepository.findById(createdSr.getId())
                     .orElseThrow(() -> new CustomException("SR not found", HttpStatus.NOT_FOUND));
-            sr.setStatus(SrStatus.CLOSED);
-            sr.setProcessingDetails("현황조사 정보가 신규 등록되었습니다.");
+            sr.setStatus(SrStatus.RESOLVED);
+            sr.setProcessingDetails(buildProcessingDetails(survey, true));
             srRepository.save(sr);
         } catch (Exception e) {
             // SR 생성 실패 시 로그만 남기고 현황조사 저장은 계속 진행
@@ -744,8 +772,9 @@ public class OpenApiSurveyService {
 
             // 1. SR 생성
             SrCreateRequest srRequest = new SrCreateRequest();
-            srRequest.setTitle(String.format("[OPEN API 현황조사 수정] %s - %s",
-                    newSurvey.getOrganization().getName(), newSurvey.getSystemName()));
+            String desiredMethodLabel = getMethodLabel(newSurvey.getDesiredMethod());
+            srRequest.setTitle(String.format("[OPEN API 현황조사 수정] %s - %s - %s",
+                    newSurvey.getOrganization().getName(), desiredMethodLabel, newSurvey.getSystemName()));
             srRequest.setDescription(buildSurveyDescription(newSurvey, false));
             srRequest.setPriority(Priority.MEDIUM);
             srRequest.setCategory("OPEN_API");
@@ -757,11 +786,11 @@ public class OpenApiSurveyService {
 
             SrResponse createdSr = srService.createSr(srRequest, requester.getUsername());
 
-            // 2. SR을 CLOSED 상태로 변경하고 처리내용 설정 (변경사항 요약)
+            // 2. SR을 RESOLVED 상태로 변경하고 처리내용 설정 (변경사항 요약 + 전체 정보)
             Sr sr = srRepository.findById(createdSr.getId())
                     .orElseThrow(() -> new CustomException("SR not found", HttpStatus.NOT_FOUND));
-            sr.setStatus(SrStatus.CLOSED);
-            sr.setProcessingDetails(changes);
+            sr.setStatus(SrStatus.RESOLVED);
+            sr.setProcessingDetails(buildProcessingDetails(newSurvey, false) + "\n\n---\n\n" + changes);
             srRepository.save(sr);
         } catch (Exception e) {
             // SR 생성 실패 시 로그만 남기고 현황조사 저장은 계속 진행
@@ -802,6 +831,235 @@ public class OpenApiSurveyService {
         sb.append("- **이메일**: ").append(survey.getContactEmail()).append("\n");
 
         return sb.toString();
+    }
+
+    /**
+     * 현황조사 정보로 SR 처리내용 생성 (모든 항목 포함)
+     */
+    private String buildProcessingDetails(OpenApiSurvey survey, boolean isNew) {
+        StringBuilder sb = new StringBuilder();
+
+        if (isNew) {
+            sb.append("## 현황조사 정보 신규 등록 완료\n\n");
+        } else {
+            sb.append("## 현황조사 정보 수정 완료\n\n");
+        }
+
+        // 1. 기본 정보
+        sb.append("### 1. 기본 정보\n");
+        sb.append("- **기관명**: ").append(survey.getOrganization().getName()).append("\n");
+        sb.append("- **부서**: ").append(survey.getDepartment()).append("\n");
+        sb.append("- **담당자명**: ").append(survey.getContactName()).append("\n");
+        if (survey.getContactPosition() != null && !survey.getContactPosition().isEmpty()) {
+            sb.append("- **직급**: ").append(survey.getContactPosition()).append("\n");
+        }
+        sb.append("- **연락처**: ").append(survey.getContactPhone()).append("\n");
+        sb.append("- **이메일**: ").append(survey.getContactEmail()).append("\n");
+        sb.append("- **수신일자**: ").append(survey.getReceivedDate()).append("\n");
+        if (survey.getReceivedFileName() != null && !survey.getReceivedFileName().isEmpty()) {
+            sb.append("- **수신파일명**: ").append(survey.getReceivedFileName()).append("\n");
+        }
+        sb.append("\n");
+
+        // 2. 시스템 현황
+        sb.append("### 2. 시스템 현황\n");
+        sb.append("- **시스템명**: ").append(survey.getSystemName()).append("\n");
+        sb.append("- **운영상태**: ").append(getOperationStatusLabel(survey.getOperationStatus())).append("\n");
+        sb.append("- **현재방식**: ").append(getMethodLabel(survey.getCurrentMethod())).append("\n");
+        sb.append("- **희망전환방식**: ").append(getMethodLabel(survey.getDesiredMethod())).append("\n");
+        if (survey.getReasonForDistributed() != null && !survey.getReasonForDistributed().isEmpty()) {
+            sb.append("- **분산형 희망사유**: ").append(survey.getReasonForDistributed()).append("\n");
+        }
+        sb.append("\n");
+
+        // 3. 유지보수 정보
+        sb.append("### 3. 유지보수 정보\n");
+        sb.append("- **유지보수 운영**: ").append(getMaintenanceOperationLabel(survey.getMaintenanceOperation())).append("\n");
+        sb.append("- **유지보수 위치**: ").append(getMaintenanceLocationLabel(survey.getMaintenanceLocation())).append("\n");
+        if (survey.getMaintenanceAddress() != null && !survey.getMaintenanceAddress().isEmpty()) {
+            sb.append("- **유지보수 주소**: ").append(survey.getMaintenanceAddress()).append("\n");
+        }
+        if (survey.getMaintenanceNote() != null && !survey.getMaintenanceNote().isEmpty()) {
+            sb.append("- **유지보수 비고**: ").append(survey.getMaintenanceNote()).append("\n");
+        }
+        sb.append("\n");
+
+        // 4. 운영 환경
+        sb.append("### 4. 운영 환경\n");
+        sb.append("- **운영환경**: ").append(getOperationEnvLabel(survey.getOperationEnv())).append("\n");
+        if (survey.getServerLocation() != null && !survey.getServerLocation().isEmpty()) {
+            sb.append("- **서버 위치**: ").append(survey.getServerLocation()).append("\n");
+        }
+        sb.append("\n");
+
+        // 5. 서버 환경
+        sb.append("### 5. 서버 환경\n");
+
+        // WEB Server
+        if (survey.getWebServerOs() != null && !survey.getWebServerOs().isEmpty()) {
+            sb.append("**WEB Server**\n");
+            sb.append("- OS: ").append(survey.getWebServerOs());
+            if (survey.getWebServerOsType() != null && !survey.getWebServerOsType().isEmpty()) {
+                sb.append(" ").append(survey.getWebServerOsType());
+            }
+            if (survey.getWebServerOsVersion() != null && !survey.getWebServerOsVersion().isEmpty()) {
+                sb.append(" ").append(survey.getWebServerOsVersion());
+            }
+            sb.append("\n");
+            if (survey.getWebServerType() != null && !survey.getWebServerType().isEmpty()) {
+                sb.append("- 서버타입: ").append(survey.getWebServerType());
+                if ("OTHER".equals(survey.getWebServerType()) && survey.getWebServerTypeOther() != null) {
+                    sb.append(" (").append(survey.getWebServerTypeOther()).append(")");
+                }
+                if (survey.getWebServerVersion() != null && !survey.getWebServerVersion().isEmpty()) {
+                    sb.append(" ").append(survey.getWebServerVersion());
+                }
+                sb.append("\n");
+            }
+            sb.append("\n");
+        }
+
+        // WAS Server
+        if (survey.getWasServerOs() != null && !survey.getWasServerOs().isEmpty()) {
+            sb.append("**WAS Server**\n");
+            sb.append("- OS: ").append(survey.getWasServerOs());
+            if (survey.getWasServerOsType() != null && !survey.getWasServerOsType().isEmpty()) {
+                sb.append(" ").append(survey.getWasServerOsType());
+            }
+            if (survey.getWasServerOsVersion() != null && !survey.getWasServerOsVersion().isEmpty()) {
+                sb.append(" ").append(survey.getWasServerOsVersion());
+            }
+            sb.append("\n");
+            if (survey.getWasServerType() != null && !survey.getWasServerType().isEmpty()) {
+                sb.append("- 서버타입: ").append(survey.getWasServerType());
+                if ("OTHER".equals(survey.getWasServerType()) && survey.getWasServerTypeOther() != null) {
+                    sb.append(" (").append(survey.getWasServerTypeOther()).append(")");
+                }
+                if (survey.getWasServerVersion() != null && !survey.getWasServerVersion().isEmpty()) {
+                    sb.append(" ").append(survey.getWasServerVersion());
+                }
+                sb.append("\n");
+            }
+            sb.append("\n");
+        }
+
+        // DB Server
+        if (survey.getDbServerOs() != null && !survey.getDbServerOs().isEmpty()) {
+            sb.append("**DB Server**\n");
+            sb.append("- OS: ").append(survey.getDbServerOs());
+            if (survey.getDbServerOsType() != null && !survey.getDbServerOsType().isEmpty()) {
+                sb.append(" ").append(survey.getDbServerOsType());
+            }
+            if (survey.getDbServerOsVersion() != null && !survey.getDbServerOsVersion().isEmpty()) {
+                sb.append(" ").append(survey.getDbServerOsVersion());
+            }
+            sb.append("\n");
+            if (survey.getDbServerType() != null && !survey.getDbServerType().isEmpty()) {
+                sb.append("- DB타입: ").append(survey.getDbServerType());
+                if ("OTHER".equals(survey.getDbServerType()) && survey.getDbServerTypeOther() != null) {
+                    sb.append(" (").append(survey.getDbServerTypeOther()).append(")");
+                }
+                if (survey.getDbServerVersion() != null && !survey.getDbServerVersion().isEmpty()) {
+                    sb.append(" ").append(survey.getDbServerVersion());
+                }
+                sb.append("\n");
+            }
+            sb.append("\n");
+        }
+
+        // 6. 개발 환경
+        sb.append("### 6. 개발 환경\n");
+        if (survey.getDevLanguage() != null && !survey.getDevLanguage().isEmpty()) {
+            sb.append("- **개발언어**: ").append(survey.getDevLanguage());
+            if ("OTHER".equals(survey.getDevLanguage()) && survey.getDevLanguageOther() != null) {
+                sb.append(" (").append(survey.getDevLanguageOther()).append(")");
+            }
+            if (survey.getDevLanguageVersion() != null && !survey.getDevLanguageVersion().isEmpty()) {
+                sb.append(" ").append(survey.getDevLanguageVersion());
+            }
+            sb.append("\n");
+        }
+        if (survey.getDevFramework() != null && !survey.getDevFramework().isEmpty()) {
+            sb.append("- **프레임워크**: ").append(survey.getDevFramework());
+            if ("OTHER".equals(survey.getDevFramework()) && survey.getDevFrameworkOther() != null) {
+                sb.append(" (").append(survey.getDevFrameworkOther()).append(")");
+            }
+            if (survey.getDevFrameworkVersion() != null && !survey.getDevFrameworkVersion().isEmpty()) {
+                sb.append(" ").append(survey.getDevFrameworkVersion());
+            }
+            sb.append("\n");
+        }
+        sb.append("\n");
+
+        // 7. 기타
+        if ((survey.getOtherRequests() != null && !survey.getOtherRequests().isEmpty()) ||
+            (survey.getNote() != null && !survey.getNote().isEmpty())) {
+            sb.append("### 7. 기타\n");
+            if (survey.getOtherRequests() != null && !survey.getOtherRequests().isEmpty()) {
+                sb.append("- **기타 요청사항**: ").append(survey.getOtherRequests()).append("\n");
+            }
+            if (survey.getNote() != null && !survey.getNote().isEmpty()) {
+                sb.append("- **비고**: ").append(survey.getNote()).append("\n");
+            }
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * 유지보수 운영 코드를 한글 레이블로 변환
+     */
+    private String getMaintenanceOperationLabel(String operationCode) {
+        if (operationCode == null) return "미지정";
+
+        switch (operationCode) {
+            case "SELF":
+                return "자체운영";
+            case "OUTSOURCING":
+                return "위탁운영";
+            case "MIXED":
+                return "혼합운영";
+            default:
+                return operationCode;
+        }
+    }
+
+    /**
+     * 유지보수 위치 코드를 한글 레이블로 변환
+     */
+    private String getMaintenanceLocationLabel(String locationCode) {
+        if (locationCode == null) return "미지정";
+
+        switch (locationCode) {
+            case "INTERNAL":
+                return "자체";
+            case "IDC":
+                return "IDC";
+            case "CLOUD":
+                return "클라우드";
+            case "OTHER":
+                return "기타";
+            default:
+                return locationCode;
+        }
+    }
+
+    /**
+     * 운영환경 코드를 한글 레이블로 변환
+     */
+    private String getOperationEnvLabel(String envCode) {
+        if (envCode == null) return "미지정";
+
+        switch (envCode) {
+            case "ON_PREMISE":
+                return "온프레미스";
+            case "CLOUD":
+                return "클라우드";
+            case "HYBRID":
+                return "하이브리드";
+            default:
+                return envCode;
+        }
     }
 
     /**

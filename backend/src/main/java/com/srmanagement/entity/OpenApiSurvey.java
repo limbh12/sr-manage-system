@@ -57,13 +57,16 @@ public class OpenApiSurvey {
     @Column(length = 255)
     private String receivedFileName;
 
+    @Column(length = 255)
+    private String storedFileName;
+
     @Column(nullable = false)
     private LocalDate receivedDate;
 
     @Column(nullable = false, length = 100)
     private String systemName;
 
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 30)
     @Builder.Default
     private String operationStatus = "OPERATING";
 

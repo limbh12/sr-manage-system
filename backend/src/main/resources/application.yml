@@ -215,6 +215,10 @@ spring:
         - classpath:db/migration/20251220_notification_fields/h2.sql
         # WIKI_EDITOR Role 추가 (Check Constraint 업데이트)
         - classpath:db/migration/20251222_wiki_editor_role/h2.sql
+        # 현황조사 파일 해시 저장
+        - classpath:db/migration/20251224_survey_stored_filename/h2.sql
+        # 운영상태 컬럼 길이 확장 (VARCHAR 20→30)
+        - classpath:db/migration/20251224_operation_status_length/h2.sql
         # 공통 마이그레이션 스크립트
         - classpath:db/migration/add_survey_status_column.sql
         - classpath:db/migration/migrate_method_values.sql

@@ -51,6 +51,12 @@ public class OpenApiSurveyController {
         return ResponseEntity.ok(survey);
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteSurvey(@PathVariable Long id) {
+        openApiSurveyService.deleteSurvey(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<BulkUploadResult> uploadSurveyCsv(@RequestParam("file") MultipartFile file) {
         BulkUploadResult result = openApiSurveyService.bulkCreateSurveys(file);
@@ -92,8 +98,17 @@ public class OpenApiSurveyController {
 
         String fileName = openApiSurveyService.getReceivedFileName(id);
 
+        // 한글 파일명 지원을 위해 RFC 5987 인코딩 적용
+        String encodedFileName;
+        try {
+            encodedFileName = java.net.URLEncoder.encode(fileName, "UTF-8").replace("+", "%20");
+        } catch (java.io.UnsupportedEncodingException e) {
+            encodedFileName = fileName;
+        }
+
         return ResponseEntity.ok()
-                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + fileName + "\"; filename*=UTF-8''" + encodedFileName)
                 .contentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM)
                 .body(resource);
     }

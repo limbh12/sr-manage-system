@@ -458,7 +458,7 @@ function SurveyList() {
       </div>
 
       <div className="card table-container">
-        <table className="table">
+        <table className="table table-clickable">
           <thead>
             <tr>
               <th>No</th>
@@ -468,14 +468,14 @@ function SurveyList() {
               <th>시스템명</th>
               <th>현재방식</th>
               <th>희망방식</th>
-              <th>등록일</th>
-              <th>관리</th>
+              <th>조사담당자</th>
+              <th>처리상태</th>
             </tr>
           </thead>
           <tbody>
             {surveys.length === 0 && !loading ? (
               <tr>
-                <td colSpan={9} style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                <td colSpan={9} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
                   등록된 데이터가 없습니다.
                 </td>
               </tr>
@@ -485,33 +485,44 @@ function SurveyList() {
                   key={survey.id}
                   data-survey-id={survey.id}
                   className={selectedId === survey.id ? 'bg-highlight' : ''}
+                  onClick={() => {
+                    saveScrollPosition(survey.id);
+                    navigate(`/survey/${survey.id}`);
+                  }}
+                  style={{ cursor: 'pointer' }}
                 >
                   <td>{totalElements - index}</td>
                   <td>{survey.organization.name}</td>
-                  <td>{survey.department}</td>
-                  <td>{survey.contactName}</td>
+                  <td>{survey.department || '-'}</td>
+                  <td>{survey.contactName || '-'}</td>
                   <td>{survey.systemName}</td>
                   <td>
-                    {survey.currentMethod === 'CENTRAL' ? '중앙형' : 
-                      survey.currentMethod === 'DISTRIBUTED' ? '분산형' : 
+                    {survey.currentMethod === 'CENTRAL' ? '중앙형' :
+                      survey.currentMethod === 'DISTRIBUTED' ? '분산형' :
                       survey.currentMethod === 'NO_RESPONSE' ? '미회신' : survey.currentMethod}
                   </td>
                   <td>
-                    {survey.desiredMethod === 'CENTRAL_IMPROVED' ? '중앙개선형' : 
-                      survey.desiredMethod === 'DISTRIBUTED_IMPROVED' ? '분산개선형' : 
+                    {survey.desiredMethod === 'CENTRAL_IMPROVED' ? '중앙개선형' :
+                      survey.desiredMethod === 'DISTRIBUTED_IMPROVED' ? '분산개선형' :
                       survey.desiredMethod === 'NO_RESPONSE' ? '미회신' : survey.desiredMethod}
                   </td>
-                  <td>{new Date(survey.createdAt).toLocaleDateString()}</td>
+                  <td>{survey.assignee ? survey.assignee.name : '-'}</td>
                   <td>
-                    <button 
-                      className="btn btn-sm btn-secondary"
-                      onClick={() => {
-                        saveScrollPosition(survey.id);
-                        navigate(`/survey/${survey.id}`);
-                      }}
-                    >
-                      상세
-                    </button>
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontSize: '0.85em',
+                      fontWeight: 500,
+                      backgroundColor: survey.status === 'COMPLETED' ? 'var(--badge-success-bg, #d4edda)' :
+                        survey.status === 'IN_PROGRESS' ? 'var(--badge-warning-bg, #fff3cd)' : 'var(--badge-danger-bg, #f8d7da)',
+                      color: survey.status === 'COMPLETED' ? 'var(--badge-success-text, #155724)' :
+                        survey.status === 'IN_PROGRESS' ? 'var(--badge-warning-text, #856404)' : 'var(--badge-danger-text, #721c24)'
+                    }}>
+                      {survey.status === 'PENDING' ? '작성대기' :
+                        survey.status === 'IN_PROGRESS' ? '작성중' :
+                        survey.status === 'COMPLETED' ? '완료' : survey.status}
+                    </span>
                   </td>
                 </tr>
               ))
